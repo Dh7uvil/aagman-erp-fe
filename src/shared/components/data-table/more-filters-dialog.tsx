@@ -1,0 +1,131 @@
+"use client";
+
+import { ListFilter } from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+
+import { NestedFilterLabel } from "@/shared/components/data-table/filter-select";
+import {
+  ToolbarControl,
+  toolbarFilterButtonClass,
+  toolbarLabelClass,
+} from "@/shared/components/data-table/toolbar";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import { Label } from "@/shared/components/ui/label";
+
+export function FilterField({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: ReactNode;
+}) {
+  return (
+    <NestedFilterLabel>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={htmlFor} className={toolbarLabelClass}>
+          {label}
+        </Label>
+        {children}
+      </div>
+    </NestedFilterLabel>
+  );
+}
+
+export function MoreFiltersDialog({
+  extraCount,
+  draftCount,
+  description,
+  title = "More filters",
+  contentClassName = "sm:max-w-lg",
+  children,
+  onOpen,
+  onApply,
+  onClearDraft,
+}: {
+  extraCount: number;
+  draftCount: number;
+  description: string;
+  title?: string;
+  contentClassName?: string;
+  children: ReactNode;
+  onOpen: () => void;
+  onApply: () => void;
+  onClearDraft: () => void;
+}) {
+  const triggerId = useId();
+  const [open, setOpen] = useState(false);
+
+  function handleOpenChange(next: boolean) {
+    if (next) {
+      onOpen();
+    }
+    setOpen(next);
+  }
+
+  function apply() {
+    onApply();
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <ToolbarControl label="Filters" htmlFor={triggerId}>
+        <Button
+          id={triggerId}
+          type="button"
+          variant="default"
+          size="sm"
+          className={toolbarFilterButtonClass(extraCount > 0)}
+          onClick={() => handleOpenChange(true)}
+        >
+          <ListFilter className="size-3.5" />
+          More filters
+          {extraCount > 0 ? (
+            <Badge className="text-info h-5 min-w-5 border-transparent bg-white px-1">
+              {extraCount}
+            </Badge>
+          ) : null}
+        </Button>
+      </ToolbarControl>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className={contentClassName}>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+          <div data-slot="form-grid" className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+            {children}
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {draftCount > 0 ? (
+              <Button type="button" variant="ghost" onClick={onClearDraft}>
+                Clear extra filters
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={apply}>
+                Apply
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

@@ -1,0 +1,287 @@
+"use client";
+
+import { CheckIcon, ChevronDownIcon, Plus, Search } from "lucide-react";
+import { forwardRef, useEffect, useMemo, useRef, useState, type ButtonHTMLAttributes } from "react";
+
+import { useFormField } from "@/shared/components/ui/form";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import { Input } from "@/shared/components/ui/input";
+import { cn } from "@/shared/lib/cn";
+
+export type SearchableSelectOption = {
+  value: string;
+  label: string;
+};
+
+export type SearchableSelectCreateAction = {
+  label: string;
+  onSelect: () => void;
+};
+
+export const SEARCHABLE_SELECT_MIN_OPTIONS = 10;
+
+export function shouldSearchOptions({
+  searchable,
+  optionCount,
+  remote,
+}: {
+  searchable?: boolean;
+  optionCount: number;
+  remote?: boolean;
+}) {
+  if (searchable != null) {
+    return searchable;
+  }
+  return Boolean(remote) || optionCount > SEARCHABLE_SELECT_MIN_OPTIONS;
+}
+
+type SelectTriggerButtonProps = {
+  selectedLabel?: string;
+  placeholder: string;
+  ariaLabel?: string;
+} & ButtonHTMLAttributes<HTMLButtonElement>;
+
+const SelectTriggerButton = forwardRef<HTMLButtonElement, SelectTriggerButtonProps>(
+  function SelectTriggerButton(
+    { id, disabled, className, selectedLabel, placeholder, ariaLabel, ...props },
+    ref,
+  ) {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        type="button"
+        disabled={disabled}
+        id={id}
+        aria-label={ariaLabel}
+        data-slot="select-trigger"
+        data-placeholder={selectedLabel ? undefined : ""}
+        className={cn(
+          "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 bg-input-background flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm whitespace-nowrap transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          className,
+        )}
+      >
+        <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
+        <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
+      </button>
+    );
+  },
+);
+
+const FormBoundSelectTrigger = forwardRef<HTMLButtonElement, SelectTriggerButtonProps>(
+  function FormBoundSelectTrigger(props, ref) {
+    const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+    return (
+      <SelectTriggerButton
+        {...props}
+        ref={ref}
+        id={props.id ?? formItemId}
+        aria-invalid={Boolean(error)}
+        aria-describedby={!error ? formDescriptionId : `${formDescriptionId} ${formMessageId}`}
+      />
+    );
+  },
+);
+
+export function SearchableSelect({
+  options,
+  value,
+  onValueChange,
+  disabled,
+  placeholder = "Select…",
+  searchPlaceholder = "Search…",
+  emptyText = "No matches.",
+  className,
+  createActions,
+  asFormControl = true,
+  id,
+  "aria-label": ariaLabel,
+  onQueryChange,
+  loading = false,
+  searchable,
+}: {
+  options: SearchableSelectOption[];
+  value: string;
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  className?: string;
+  createActions?: SearchableSelectCreateAction[];
+  asFormControl?: boolean;
+  id?: string;
+  "aria-label"?: string;
+  onQueryChange?: (query: string) => void;
+  loading?: boolean;
+  searchable?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const onQueryChangeRef = useRef(onQueryChange);
+  const skipQueryChange = useRef(true);
+  const selected = options.find((option) => option.value === value);
+  const showSearch = shouldSearchOptions({
+    searchable,
+    optionCount: options.length,
+    remote: Boolean(onQueryChange),
+  });
+
+  useEffect(() => {
+    onQueryChangeRef.current = onQueryChange;
+  }, [onQueryChange]);
+
+  useEffect(() => {
+    if (!open || !showSearch) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      searchRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, showSearch]);
+
+  useEffect(() => {
+    if (!onQueryChangeRef.current) {
+      return;
+    }
+    if (skipQueryChange.current) {
+      skipQueryChange.current = false;
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      onQueryChangeRef.current?.(query);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+
+  const filtered = useMemo(() => {
+    if (onQueryChange) {
+      return options;
+    }
+    const needle = query.trim().toLowerCase();
+    if (!needle) {
+      return options;
+    }
+    return options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(needle) || option.value.toLowerCase().includes(needle),
+    );
+  }, [onQueryChange, options, query]);
+
+  const triggerProps = {
+    disabled,
+    className,
+    selectedLabel: selected?.label,
+    placeholder,
+    ariaLabel,
+  };
+
+  return (
+    <DropdownMenu
+      modal={false}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setQuery("");
+        }
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        {asFormControl ? (
+          <FormBoundSelectTrigger id={id} {...triggerProps} />
+        ) : (
+          <SelectTriggerButton id={id} {...triggerProps} />
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="flex max-h-60 min-w-(--radix-dropdown-menu-trigger-width) w-max max-w-[min(36rem,calc(100vw-2rem))] flex-col overflow-hidden p-0"
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        {showSearch ? (
+          <div className="shrink-0 p-1.5">
+            <div className="relative">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+              <Input
+                ref={searchRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                autoComplete="off"
+                autoFocus
+                className="h-8 pl-8"
+                onPointerDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "ArrowDown" ||
+                    event.key === "ArrowUp" ||
+                    event.key === "Enter" ||
+                    event.key === "Escape" ||
+                    event.key === "Home" ||
+                    event.key === "End" ||
+                    event.key === "Tab"
+                  ) {
+                    return;
+                  }
+                  event.stopPropagation();
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
+          onWheel={(event) => event.stopPropagation()}
+        >
+          {filtered.length === 0 ? (
+            <p className="text-muted-foreground px-2 py-1.5 text-sm">
+              {loading ? "Searching…" : emptyText}
+            </p>
+          ) : (
+            filtered.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onSelect={() => onValueChange(option.value)}
+                className="justify-between gap-2"
+              >
+                <span className="min-w-0 whitespace-normal break-words" title={option.label}>
+                  {option.label}
+                </span>
+                {option.value === value ? <CheckIcon className="size-4 shrink-0" /> : null}
+              </DropdownMenuItem>
+            ))
+          )}
+        </div>
+        {createActions && createActions.length > 0 ? (
+          <>
+            <DropdownMenuSeparator className="shrink-0" />
+            <div className="shrink-0 p-1">
+              {createActions.map((action) => (
+                <DropdownMenuItem
+                  key={action.label}
+                  onSelect={() => {
+                    setOpen(false);
+                    action.onSelect();
+                  }}
+                >
+                  <Plus className="size-4" />
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </div>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
