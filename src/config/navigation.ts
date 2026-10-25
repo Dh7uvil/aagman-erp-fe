@@ -10,11 +10,13 @@ import {
   User,
   UserCog,
   Warehouse,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 
 import { auditLogPermissions } from "@/modules/users-management/audit-logs/permissions";
 import { branchPermissions } from "@/modules/users-management/branches/permissions";
+import { companyPermissions } from "@/modules/users-management/companies/permissions";
 import { departmentPermissions } from "@/modules/users-management/departments/permissions";
 import { organizationSettingsPermissions } from "@/modules/users-management/organization-settings/permissions";
 import { permissionCatalogPermissions } from "@/modules/users-management/permissions/permissions";
@@ -41,6 +43,17 @@ export const navigation: NavigationGroup[] = [
   {
     label: "Overview",
     items: [{ label: "Dashboard", href: "/", permission: null, icon: LayoutDashboard }],
+  },
+  {
+    label: "Masters",
+    items: [
+      {
+        label: "Companies",
+        href: "/companies",
+        permission: companyPermissions.read,
+        icon: Briefcase,
+      },
+    ],
   },
   {
     label: "Settings",

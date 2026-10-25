@@ -138,6 +138,10 @@
     "identity.branch.delete",
     "identity.branch.read",
     "identity.branch.update",
+    "identity.company.create",
+    "identity.company.delete",
+    "identity.company.read",
+    "identity.company.update",
     "identity.department.create",
     "identity.department.delete",
     "identity.department.read",
@@ -441,6 +445,12 @@
         "delete"
       ],
       "branch": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ],
+      "company": [
         "create",
         "read",
         "update",

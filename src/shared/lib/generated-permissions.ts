@@ -140,6 +140,10 @@ export const catalogPermissions = [
   "identity.branch.delete",
   "identity.branch.read",
   "identity.branch.update",
+  "identity.company.create",
+  "identity.company.delete",
+  "identity.company.read",
+  "identity.company.update",
   "identity.department.create",
   "identity.department.delete",
   "identity.department.read",
@@ -635,6 +639,12 @@ export const permissionsByModule = {
       delete: "identity.branch.delete",
       read: "identity.branch.read",
       update: "identity.branch.update",
+    },
+    company: {
+      create: "identity.company.create",
+      delete: "identity.company.delete",
+      read: "identity.company.read",
+      update: "identity.company.update",
     },
     department: {
       create: "identity.department.create",
