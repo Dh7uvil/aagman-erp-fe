@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { warehousesApi } from "@/modules/users-management/warehouses/api";
 import { warehouseKeys } from "@/modules/users-management/warehouses/queries";
+import { upsertQueryListItem } from "@/shared/api/upsert-query-list";
 
 async function invalidateWarehouses(queryClient: ReturnType<typeof useQueryClient>) {
   await queryClient.invalidateQueries({ queryKey: warehouseKeys.all });
@@ -13,7 +14,8 @@ export function useCreateWarehouse() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: warehousesApi.create,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      upsertQueryListItem(queryClient, warehouseKeys.allItems(), data);
       await invalidateWarehouses(queryClient);
     },
   });

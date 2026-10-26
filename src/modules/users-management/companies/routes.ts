@@ -1,6 +1,10 @@
+import { appSegments } from "@/config/app-segments";
+
+const base = `${appSegments.masters}/companies`;
+
 export const companyRoutes = {
-  list: "/companies",
-  new: "/companies/new",
-  view: (id: string) => `/companies/${id}`,
-  edit: (id: string) => `/companies/${id}/edit`,
+  list: base,
+  new: `${base}/new`,
+  view: (id: string) => `${base}/${id}`,
+  edit: (id: string) => `${base}/${id}/edit`,
 } as const;

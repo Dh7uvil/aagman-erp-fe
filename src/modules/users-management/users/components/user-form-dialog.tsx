@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { RoleFormDialog } from "@/modules/users-management/roles/components/role-form-dialog";
+import { rolePermissions } from "@/modules/users-management/roles/permissions";
 import { useAllRoles } from "@/modules/users-management/roles/queries";
 import { UserEmployeeFields } from "@/modules/users-management/users/components/user-employee-fields";
 import {
@@ -45,7 +47,7 @@ import {
   FormMessage,
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
-import { MultiSelect } from "@/shared/components/ui/multi-select";
+import { MasterMultiSelect } from "@/shared/components/form/master-multi-select";
 import {
   Select,
   SelectContent,
@@ -64,11 +66,15 @@ function RolesField({
   onChange,
   roles,
   disabled,
+  onCreateRole,
+  canCreateRole,
 }: {
   value: string[];
   onChange: (roleIds: string[]) => void;
   roles: { id: string; name: string }[];
   disabled?: boolean;
+  onCreateRole?: () => void;
+  canCreateRole?: boolean;
 }) {
   const selectedRoles = roles.filter((role) => value.includes(role.id));
 
@@ -76,7 +82,7 @@ function RolesField({
     <FormItem>
       <FormLabel>Roles</FormLabel>
       <FormControl>
-        <MultiSelect
+        <MasterMultiSelect
           options={roles.map((role) => ({ value: role.id, label: role.name }))}
           value={value}
           onValueChange={onChange}
@@ -84,6 +90,8 @@ function RolesField({
           emptyText="No roles available."
           showSelectedSummary={false}
           disabled={disabled}
+          createLabel={canCreateRole ? "Create role" : undefined}
+          onCreate={canCreateRole ? onCreateRole : undefined}
         />
       </FormControl>
       {selectedRoles.length > 0 ? (
@@ -129,7 +137,9 @@ export function UserFormDialog({
   const assignRoles = useAssignUserRoles();
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const canAssignRoles = can(userPermissions.assignRoles);
+  const canCreateRole = can(rolePermissions.create);
 
   const createForm = useForm<UserCreateFormValues>({
     resolver: zodResolver(UserCreateFormSchema),
@@ -179,6 +189,28 @@ export function UserFormDialog({
 
   function close() {
     handleOpenChange(false);
+  }
+
+  function appendRoleId(roleId: string) {
+    if (isEdit) {
+      const current = updateForm.getValues("role_ids");
+      if (current.includes(roleId)) {
+        return;
+      }
+      updateForm.setValue("role_ids", [...current, roleId], {
+        shouldValidate: false,
+        shouldDirty: true,
+      });
+      return;
+    }
+    const current = createForm.getValues("role_ids");
+    if (current.includes(roleId)) {
+      return;
+    }
+    createForm.setValue("role_ids", [...current, roleId], {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
   }
 
   async function onCreate(values: UserCreateFormValues) {
@@ -239,6 +271,7 @@ export function UserFormDialog({
   const roles = rolesQuery.data ?? [];
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
@@ -333,6 +366,8 @@ export function UserFormDialog({
                       onChange={field.onChange}
                       roles={roles}
                       disabled={rolesQuery.isLoading}
+                      canCreateRole={canCreateRole}
+                      onCreateRole={() => setRoleDialogOpen(true)}
                     />
                   )}
                 />
@@ -474,6 +509,8 @@ export function UserFormDialog({
                       onChange={field.onChange}
                       roles={roles}
                       disabled={rolesQuery.isLoading}
+                      canCreateRole={canCreateRole}
+                      onCreateRole={() => setRoleDialogOpen(true)}
                     />
                   )}
                 />
@@ -494,5 +531,13 @@ export function UserFormDialog({
         )}
       </DialogContent>
     </Dialog>
+    <RoleFormDialog
+      open={roleDialogOpen}
+      role={null}
+      nested
+      onCreated={(entity) => appendRoleId(entity.id)}
+      onOpenChange={setRoleDialogOpen}
+    />
+    </>
   );
 }

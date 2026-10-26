@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { branchesApi } from "@/modules/users-management/branches/api";
 import { branchKeys } from "@/modules/users-management/branches/queries";
 import { organizationKeys } from "@/modules/users-management/organization/queries";
+import { upsertQueryListItem } from "@/shared/api/upsert-query-list";
 
 async function invalidateBranches(queryClient: ReturnType<typeof useQueryClient>) {
   await queryClient.invalidateQueries({ queryKey: branchKeys.all });
@@ -15,7 +16,8 @@ export function useCreateBranch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: branchesApi.create,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      upsertQueryListItem(queryClient, branchKeys.allItems(), data);
       await invalidateBranches(queryClient);
     },
   });

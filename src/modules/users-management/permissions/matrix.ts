@@ -4,28 +4,77 @@ import type {
 } from "@/modules/users-management/permissions/schemas";
 import { humanizeEnum } from "@/shared/lib/format";
 
-const PREFERRED_ACTIONS = ["create", "read", "update", "delete"];
+const PREFERRED_ACTIONS = ["create", "read", "update", "delete", "view_price"];
 
 const ACTION_LABELS: Record<string, string> = {
   create: "Create",
   read: "Read",
   update: "Update",
   delete: "Delete",
-  ar_ap: "AR/AP reports",
-  ledger: "Ledger reports",
-  tax: "Tax reports",
-  inventory: "Inventory reports",
-  financial: "Financial reports",
-  override: "Override",
-  post: "Post",
-  cancel: "Cancel",
-  approve: "Approve",
-  confirm: "Confirm",
-  send: "Send",
-  retry: "Retry",
-  import: "Import",
-  export: "Export",
+  view_price: "View price",
 };
+
+type MatrixResourceRef = {
+  module: string;
+  resource: string;
+  label: string;
+};
+
+type MatrixDisplayModule = {
+  label: string;
+  resources: MatrixResourceRef[];
+};
+
+/** Display order and grouping for the permissions matrix (API keys unchanged). */
+export const PERMISSION_MATRIX_LAYOUT: MatrixDisplayModule[] = [
+  {
+    label: "User management",
+    resources: [
+      { module: "identity", resource: "user", label: "Users" },
+      { module: "identity", resource: "role", label: "Roles" },
+      { module: "identity", resource: "permission", label: "Permissions" },
+    ],
+  },
+  {
+    label: "Organization",
+    resources: [
+      { module: "identity", resource: "settings", label: "Settings" },
+      { module: "identity", resource: "audit_log", label: "Audit logs" },
+    ],
+  },
+  {
+    label: "Locations",
+    resources: [
+      { module: "identity", resource: "branch", label: "Branches" },
+      { module: "identity", resource: "department", label: "Departments" },
+      { module: "identity", resource: "warehouse", label: "Warehouses" },
+    ],
+  },
+  {
+    label: "Masters",
+    resources: [
+      { module: "identity", resource: "company", label: "Companies" },
+      { module: "inventory", resource: "unit", label: "Units" },
+    ],
+  },
+  {
+    label: "Inventory",
+    resources: [
+      { module: "inventory", resource: "material", label: "Materials" },
+      { module: "inventory", resource: "materials_report", label: "Materials report" },
+    ],
+  },
+];
+
+const RESOURCE_LABELS: Record<string, string> = Object.fromEntries(
+  PERMISSION_MATRIX_LAYOUT.flatMap((mod) =>
+    mod.resources.map((ref) => [ref.resource, ref.label] as const),
+  ),
+);
+
+export function matrixResourceLabel(resource: string): string {
+  return RESOURCE_LABELS[resource] ?? humanizeEnum(resource);
+}
 
 export function matrixActionLabel(action: string): string {
   return ACTION_LABELS[action] ?? humanizeEnum(action);
@@ -34,6 +83,7 @@ export function matrixActionLabel(action: string): string {
 export type PermissionMatrixRow = {
   module: string;
   resource: string;
+  resourceLabel: string;
   actions: Record<string, PermissionMatrixAction>;
 };
 
@@ -184,19 +234,67 @@ export function normalizePermissionIds(
   return [...next];
 }
 
-export function permissionMatrixTable(matrix: PermissionMatrixResponse): {
-  actions: string[];
-  rows: PermissionMatrixRow[];
-} {
-  const rows: PermissionMatrixRow[] = [];
-
+function catalogActionMap(
+  matrix: PermissionMatrixResponse,
+): Map<string, Record<string, PermissionMatrixAction>> {
+  const map = new Map<string, Record<string, PermissionMatrixAction>>();
   for (const mod of matrix.modules) {
     for (const resource of mod.resources) {
+      const key = `${mod.module}:${resource.resource}`;
       const actions: Record<string, PermissionMatrixAction> = {};
       for (const item of resource.actions) {
         actions[item.action] = item;
       }
-      rows.push({ module: mod.module, resource: resource.resource, actions });
+      map.set(key, actions);
+    }
+  }
+  return map;
+}
+
+const layoutKeys = new Set(
+  PERMISSION_MATRIX_LAYOUT.flatMap((mod) =>
+    mod.resources.map((ref) => `${ref.module}:${ref.resource}`),
+  ),
+);
+
+export function permissionMatrixTable(matrix: PermissionMatrixResponse): {
+  actions: string[];
+  rows: PermissionMatrixRow[];
+} {
+  const actionMap = catalogActionMap(matrix);
+  const rows: PermissionMatrixRow[] = [];
+
+  for (const displayMod of PERMISSION_MATRIX_LAYOUT) {
+    for (const ref of displayMod.resources) {
+      const actions = actionMap.get(`${ref.module}:${ref.resource}`);
+      if (!actions || Object.keys(actions).length === 0) {
+        continue;
+      }
+      rows.push({
+        module: displayMod.label,
+        resource: ref.resource,
+        resourceLabel: ref.label,
+        actions,
+      });
+    }
+  }
+
+  for (const mod of matrix.modules) {
+    for (const resource of mod.resources) {
+      const key = `${mod.module}:${resource.resource}`;
+      if (layoutKeys.has(key)) {
+        continue;
+      }
+      const actions: Record<string, PermissionMatrixAction> = {};
+      for (const item of resource.actions) {
+        actions[item.action] = item;
+      }
+      rows.push({
+        module: humanizeEnum(mod.module),
+        resource: resource.resource,
+        resourceLabel: matrixResourceLabel(resource.resource),
+        actions,
+      });
     }
   }
 

@@ -6,10 +6,11 @@ import { useId } from "react";
 import { PAGE_SIZE_OPTIONS } from "@/config/constants";
 import type { PaginationMeta } from "@/shared/api/envelope";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
-import { toolbarLabelClass } from "@/shared/components/data-table/toolbar";
 import { Button } from "@/shared/components/ui/button";
-import { Label } from "@/shared/components/ui/label";
 import { useTableParams } from "@/shared/hooks/use-table-params";
+
+/** Shown in the page-size select on list screens (e.g. "10 / page"). */
+export const PAGE_SIZE_OPTION_SUFFIX = " / page";
 
 function compactPageItems(current: number, total: number): Array<number | "ellipsis"> {
   if (total <= 7) {
@@ -31,10 +32,16 @@ function PaginationControls({
   meta,
   onPageChange,
   onPageSizeChange,
+  rangeItemLabel,
+  pageSizeOptionSuffix = PAGE_SIZE_OPTION_SUFFIX,
 }: {
   meta: PaginationMeta;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  /** e.g. "widths" → "1–25 of 79 widths" */
+  rangeItemLabel?: string;
+  /** Appended to each page-size option (default `" / page"`). */
+  pageSizeOptionSuffix?: string;
 }) {
   const pageSizeId = useId();
   const totalPages = Math.max(meta.total_pages, 1);
@@ -57,26 +64,24 @@ function PaginationControls({
   return (
     <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2.5">
-        <div className="flex items-center gap-1.5">
-          <Label htmlFor={pageSizeId} className={toolbarLabelClass}>
-            Items
-          </Label>
-          <FilterSelect
-            id={pageSizeId}
-            hideLabel
-            className="h-9 w-20 px-2 text-sm"
-            placeholder="Items"
-            aria-label="Items"
-            value={pageSize}
-            onValueChange={handlePageSizeChange}
-            options={pageSizeOptions.map((option) => ({
-              value: String(option),
-              label: String(option),
-            }))}
-          />
-        </div>
+        <FilterSelect
+          id={pageSizeId}
+          hideLabel
+          className="h-9 min-w-[3.25rem] w-20 shrink-0 px-2 text-sm tabular-nums"
+          placeholder="10"
+          aria-label="Rows per page"
+          value={pageSize}
+          onValueChange={handlePageSizeChange}
+          options={pageSizeOptions.map((option) => ({
+            value: String(option),
+            label: `${option}${pageSizeOptionSuffix}`,
+            ...(pageSizeOptionSuffix ? { triggerLabel: String(option) } : {}),
+          }))}
+        />
         {meta.total > 0 ? (
-          <p className="text-muted-foreground text-sm">{`${from}–${to} of ${meta.total}`}</p>
+          <p className="text-muted-foreground text-sm">
+            {`${from}–${to} of ${meta.total}${rangeItemLabel ? ` ${rangeItemLabel}` : ""}`}
+          </p>
         ) : null}
       </div>
       {meta.total > 0 ? (
@@ -148,7 +153,12 @@ function DataTablePaginationFromUrl({
 }) {
   const { setPageSize } = useTableParams();
   return (
-    <PaginationControls meta={meta} onPageChange={onPageChange} onPageSizeChange={setPageSize} />
+    <PaginationControls
+      meta={meta}
+      onPageChange={onPageChange}
+      onPageSizeChange={setPageSize}
+      pageSizeOptionSuffix={PAGE_SIZE_OPTION_SUFFIX}
+    />
   );
 }
 
@@ -156,10 +166,14 @@ export function DataTablePagination({
   meta,
   onPageChange,
   onPageSizeChange,
+  rangeItemLabel,
+  pageSizeOptionSuffix,
 }: {
   meta: PaginationMeta;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  rangeItemLabel?: string;
+  pageSizeOptionSuffix?: string;
 }) {
   if (onPageSizeChange) {
     return (
@@ -167,6 +181,8 @@ export function DataTablePagination({
         meta={meta}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        rangeItemLabel={rangeItemLabel}
+        pageSizeOptionSuffix={pageSizeOptionSuffix}
       />
     );
   }

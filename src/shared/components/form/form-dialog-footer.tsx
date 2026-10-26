@@ -1,7 +1,8 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
 import { Button } from "@/shared/components/ui/button";
-import { SubmitButton } from "@/shared/components/form/submit-button";
 import { DialogFooter } from "@/shared/components/ui/dialog";
 
 export function FormDialogFooter({
@@ -9,11 +10,14 @@ export function FormDialogFooter({
   canSubmit,
   submitLabel,
   onClose,
+  onSubmit,
 }: {
   pending: boolean;
   canSubmit: boolean;
   submitLabel: string;
   onClose: () => void;
+  /** Use type="button" so nested dialogs never submit a parent page form. */
+  onSubmit: () => void;
 }) {
   return (
     <DialogFooter>
@@ -21,7 +25,10 @@ export function FormDialogFooter({
         {canSubmit ? "Cancel" : "Close"}
       </Button>
       {canSubmit ? (
-        <SubmitButton isPending={pending}>{submitLabel}</SubmitButton>
+        <Button type="button" disabled={pending} onClick={onSubmit}>
+          {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+          {submitLabel}
+        </Button>
       ) : null}
     </DialogFooter>
   );

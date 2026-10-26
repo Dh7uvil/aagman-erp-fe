@@ -10,11 +10,13 @@ import {
   grantedPermissionIds,
   matrixActionColumns,
   matrixActionLabel,
+  matrixResourceLabel,
   normalizePermissionIds,
   permissionMatrixTable,
   sameIdSet,
 } from "@/modules/users-management/permissions/matrix";
 import { usePermissionMatrix } from "@/modules/users-management/permissions/queries";
+import { permissionRoutes } from "@/modules/users-management/permissions/routes";
 import {
   useResetRolePermissions,
   useSetRolePermissions,
@@ -27,7 +29,6 @@ import { useAllRoles } from "@/modules/users-management/roles/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { DataTable } from "@/shared/components/data-table/data-table";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
-import { FilterField, MoreFiltersDialog } from "@/shared/components/data-table/more-filters-dialog";
 import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
 import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
 import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action-dialog";
@@ -53,7 +54,9 @@ const FROZEN_SHADOW = "shadow-[2px_0_6px_-2px_rgba(0,0,0,0.18)]";
 
 function writePermissionsQuery(params: URLSearchParams) {
   const query = params.toString();
-  const href = query ? `/permissions?${query}` : "/permissions";
+  const href = query
+    ? `${permissionRoutes.list}?${query}`
+    : permissionRoutes.list;
   window.history.replaceState(window.history.state, "", href);
 }
 
@@ -71,7 +74,6 @@ export function PermissionsScreen() {
   const [draft, setDraft] = useState<{ roleId: string; ids: string[] } | null>(null);
   const [pendingRoleId, setPendingRoleId] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
-  const [draftResource, setDraftResource] = useState(ALL);
 
   const canSave = can(rolePermissions.assignPermissions) || can(rolePermissions.update);
   const selectedRole = rolesQuery.data?.find((role) => role.id === selectedRoleId) ?? null;
@@ -204,6 +206,10 @@ export function PermissionsScreen() {
     replaceFilters({ module: value, resource: nextResource });
   }
 
+  function selectResource(value: string) {
+    replaceFilters({ resource: value });
+  }
+
   async function onSave() {
     if (!selectedRoleId) {
       return;
@@ -300,29 +306,22 @@ export function PermissionsScreen() {
             ...modules.map((module) => ({ value: module, label: module })),
           ]}
         />
-        <MoreFiltersDialog
-          extraCount={resourceFilter !== ALL ? 1 : 0}
-          draftCount={draftResource !== ALL ? 1 : 0}
-          description="Narrow the matrix by resource."
-          onOpen={() => setDraftResource(resourceFilter)}
-          onApply={() => replaceFilters({ resource: draftResource })}
-          onClearDraft={() => setDraftResource(ALL)}
-        >
-          <FilterField label="Resource" htmlFor="permissions-filter-resource">
-            <FilterSelect
-              id="permissions-filter-resource"
-              className="w-full"
-              placeholder="All resources"
-              value={draftResource}
-              onValueChange={setDraftResource}
-              disabled={matrixQuery.isLoading || resources.length === 0}
-              options={[
-                { value: ALL, label: "All resources" },
-                ...resources.map((resource) => ({ value: resource, label: resource })),
-              ]}
-            />
-          </FilterField>
-        </MoreFiltersDialog>
+        <FilterSelect
+          id="permissions-filter-resource"
+          label="Resource"
+          className="w-56"
+          placeholder="All resources"
+          value={resourceFilter}
+          onValueChange={selectResource}
+          disabled={matrixQuery.isLoading || resources.length === 0}
+          options={[
+            { value: ALL, label: "All resources" },
+            ...resources.map((resource) => ({
+              value: resource,
+              label: matrixResourceLabel(resource),
+            })),
+          ]}
+        />
         {moduleFilter !== ALL || resourceFilter !== ALL ? (
           <div className="flex items-end self-end">
             <Button
@@ -423,7 +422,7 @@ export function PermissionsScreen() {
                 <TableCell
                   className={`bg-card group-hover:bg-muted sticky left-36 z-10 truncate ${RESOURCE_COL_CLASS} ${FROZEN_SHADOW}`}
                 >
-                  {row.resource}
+                  {row.resourceLabel}
                 </TableCell>
                 {visibleActions.map((action) => {
                   const permission = row.actions[action];

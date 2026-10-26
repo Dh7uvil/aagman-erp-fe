@@ -4,7 +4,6 @@ import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { branchPermissions } from "@/modules/users-management/branches/permissions";
 import { useAllBranches } from "@/modules/users-management/branches/queries";
 import { DepartmentFormDialog } from "@/modules/users-management/departments/components/department-form-dialog";
 import { useDeleteDepartment } from "@/modules/users-management/departments/mutations";
@@ -33,7 +32,6 @@ import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useTableParams } from "@/shared/hooks/use-table-params";
-import { useCan } from "@/shared/providers/session-provider";
 
 const ALL = "all";
 const SORT_FIELDS: SortFieldOption[] = [
@@ -45,8 +43,6 @@ const SORT_BY = new Set(SORT_FIELDS.map((field) => field.value));
 
 export function DepartmentsScreen() {
   const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(departmentPermissions);
-  const can = useCan();
-  const canReadBranches = can(branchPermissions.read);
   const deleteDepartment = useDeleteDepartment();
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<Department | null>(null);
@@ -64,7 +60,7 @@ export function DepartmentsScreen() {
     sort_order: sortBy ? sort_order : undefined,
     branch_id: branchId,
   });
-  const branchesQuery = useAllBranches(canReadBranches);
+  const branchesQuery = useAllBranches();
   const showActions = hasRowActions(canRead, canUpdate, canDelete);
   const departments = departmentsQuery.data?.data ?? [];
   const meta = departmentsQuery.data?.meta;
@@ -160,22 +156,20 @@ export function DepartmentsScreen() {
           onChange={(value) => setParams({ search: value || null })}
           placeholder="Search code, name, branch, manager…"
         />
-        {canReadBranches ? (
-          <FilterSelect
-            label="Branch"
-            className="w-52"
-            placeholder="All branches"
-            value={branchId ?? ALL}
-            onValueChange={(value) =>
-              setParams({ filters: { branch_id: value === ALL ? null : value } })
-            }
-            disabled={branchesQuery.isLoading}
-            options={[
-              { value: ALL, label: "All branches" },
-              ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
-            ]}
-          />
-        ) : null}
+        <FilterSelect
+          label="Branch"
+          className="w-52"
+          placeholder="All branches"
+          value={branchId ?? ALL}
+          onValueChange={(value) =>
+            setParams({ filters: { branch_id: value === ALL ? null : value } })
+          }
+          disabled={branchesQuery.isLoading}
+          options={[
+            { value: ALL, label: "All branches" },
+            ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
+          ]}
+        />
         <SortDialog
           fields={SORT_FIELDS}
           sortBy={sortBy}

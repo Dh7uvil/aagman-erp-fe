@@ -150,6 +150,31 @@ export function formatPercent(value: string | null | undefined): string {
   return `${formatFixedDecimal(value, 2)}%`;
 }
 
+/** Keeps only digits and at most one decimal point while typing. */
+export function sanitizeNumericTyping(value: string): string {
+  let seenDot = false;
+  let out = "";
+  for (const char of value) {
+    if (char >= "0" && char <= "9") {
+      out += char;
+      continue;
+    }
+    if (char === "." && !seenDot) {
+      seenDot = true;
+      out += char;
+    }
+  }
+  return out;
+}
+
+export function isNumericDecimalString(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return false;
+  }
+  return /^\d+(\.\d+)?$/.test(trimmed);
+}
+
 export function normalizeDecimalInput(value: string, fractionDigits = 2): string {
   const trimmed = value.trim();
   if (trimmed === "") {

@@ -2,12 +2,9 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 
-import { branchPermissions } from "@/modules/users-management/branches/permissions";
 import { useAllBranches } from "@/modules/users-management/branches/queries";
-import { departmentPermissions } from "@/modules/users-management/departments/permissions";
 import { useAllDepartments } from "@/modules/users-management/departments/queries";
 import type { Department } from "@/modules/users-management/departments/schemas";
-import { rolePermissions } from "@/modules/users-management/roles/permissions";
 import { useAllRoles } from "@/modules/users-management/roles/queries";
 import type {
   EmployeeStatus,
@@ -15,16 +12,17 @@ import type {
   UserListSortBy,
   UserStatus,
 } from "@/modules/users-management/users/schemas";
+import { ActiveFilterPills, type ActiveFilterPill } from "@/shared/components/data-table/filter-chip";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { FilterField, MoreFiltersDialog } from "@/shared/components/data-table/more-filters-dialog";
 import type { SortFieldOption } from "@/shared/components/data-table/sort";
 import { SortDialog } from "@/shared/components/data-table/sort-dialog";
+import { sortFilterPillLabel } from "@/shared/components/data-table/sort-filter-label";
 import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
-import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { formatDate } from "@/shared/lib/format";
 import { useTableParams } from "@/shared/hooks/use-table-params";
-import { useCan } from "@/shared/providers/session-provider";
 
 const ALL = "all" as const;
 const EMPTY_DEPARTMENTS: Department[] = [];
@@ -212,10 +210,6 @@ export function userListParamsFromTable(input: {
 }
 
 export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode }) {
-  const can = useCan();
-  const canReadRoles = can(rolePermissions.read);
-  const canReadBranches = can(branchPermissions.read);
-  const canReadDepartments = can(departmentPermissions.read);
   const { search, sort_by, sort_order, filters, setParams } = useTableParams();
   const extraFilters = extraFromUrl(filters);
   const status = parseUserStatus(filters.status) ?? ALL;
@@ -223,9 +217,9 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
 
   const [draftExtra, setDraftExtra] = useState<ExtraFilters>(EMPTY_EXTRA);
 
-  const rolesQuery = useAllRoles(canReadRoles);
-  const branchesQuery = useAllBranches(canReadBranches);
-  const departmentsQuery = useAllDepartments({}, canReadDepartments);
+  const rolesQuery = useAllRoles();
+  const branchesQuery = useAllBranches();
+  const departmentsQuery = useAllDepartments({});
 
   const roles = rolesQuery.data ?? [];
   const branches = branchesQuery.data ?? [];
@@ -273,7 +267,146 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
     setDraftExtra((current) => ({ ...current, [key]: value }));
   }
 
+  function patchExtra(partial: Partial<ExtraFilters>) {
+    setParams({ filters: extraToUrlPatch({ ...extraFilters, ...partial }) });
+  }
+
+  const selectedRole = roles.find((role) => role.id === roleId);
+
+  const filterPills = useMemo(() => {
+    const pills: ActiveFilterPill[] = [];
+    const trimmedSearch = search?.trim();
+    if (trimmedSearch) {
+      pills.push({
+        id: "search",
+        label: `Search: ${trimmedSearch}`,
+        onRemove: () => setParams({ search: null }),
+      });
+    }
+    if (status !== ALL) {
+      const statusLabel =
+        status === "ACTIVE" ? "Active" : status === "INVITED" ? "Invited" : "Disabled";
+      pills.push({
+        id: "status",
+        label: `Status: ${statusLabel}`,
+        onRemove: () => setParams({ filters: { status: null } }),
+      });
+    }
+    if (roleId !== ALL) {
+      pills.push({
+        id: "role",
+        label: `Role: ${selectedRole?.name ?? roleId}`,
+        onRemove: () => setParams({ filters: { role_id: null } }),
+      });
+    }
+    if (extraFilters.branchId !== ALL) {
+      const branch = branches.find((item) => item.id === extraFilters.branchId);
+      pills.push({
+        id: "branch",
+        label: `Branch: ${branch?.name ?? extraFilters.branchId}`,
+        onRemove: () => patchExtra({ branchId: ALL, departmentId: ALL }),
+      });
+    }
+    if (extraFilters.departmentId !== ALL) {
+      const department = departments.find((item) => item.id === extraFilters.departmentId);
+      pills.push({
+        id: "department",
+        label: `Department: ${department?.name ?? extraFilters.departmentId}`,
+        onRemove: () => patchExtra({ departmentId: ALL }),
+      });
+    }
+    if (extraFilters.employeeStatus !== ALL) {
+      pills.push({
+        id: "employee_status",
+        label: `Employee: ${extraFilters.employeeStatus === "ACTIVE" ? "Active" : "Inactive"}`,
+        onRemove: () => patchExtra({ employeeStatus: ALL }),
+      });
+    }
+    if (extraFilters.managerId !== ALL) {
+      const manager = managers.find((item) => item.id === extraFilters.managerId);
+      pills.push({
+        id: "manager",
+        label: `Manager: ${manager?.name ?? extraFilters.managerId}`,
+        onRemove: () => patchExtra({ managerId: ALL }),
+      });
+    }
+    const designation = optionalText(extraFilters.designation);
+    if (designation) {
+      pills.push({
+        id: "designation",
+        label: `Designation: ${designation}`,
+        onRemove: () => patchExtra({ designation: "" }),
+      });
+    }
+    const employeeCode = optionalText(extraFilters.employeeCode);
+    if (employeeCode) {
+      pills.push({
+        id: "employee_code",
+        label: `Code: ${employeeCode}`,
+        onRemove: () => patchExtra({ employeeCode: "" }),
+      });
+    }
+    const phone = optionalText(extraFilters.phone);
+    if (phone) {
+      pills.push({
+        id: "phone",
+        label: `Phone: ${phone}`,
+        onRemove: () => patchExtra({ phone: "" }),
+      });
+    }
+    if (extraFilters.joiningDateFrom) {
+      pills.push({
+        id: "joining_from",
+        label: `Joining from: ${formatDate(extraFilters.joiningDateFrom)}`,
+        onRemove: () => patchExtra({ joiningDateFrom: "" }),
+      });
+    }
+    if (extraFilters.joiningDateTo) {
+      pills.push({
+        id: "joining_to",
+        label: `Joining to: ${formatDate(extraFilters.joiningDateTo)}`,
+        onRemove: () => patchExtra({ joiningDateTo: "" }),
+      });
+    }
+    if (extraFilters.lastLoginFrom) {
+      pills.push({
+        id: "login_from",
+        label: `Last login from: ${formatDate(extraFilters.lastLoginFrom)}`,
+        onRemove: () => patchExtra({ lastLoginFrom: "" }),
+      });
+    }
+    if (extraFilters.lastLoginTo) {
+      pills.push({
+        id: "login_to",
+        label: `Last login to: ${formatDate(extraFilters.lastLoginTo)}`,
+        onRemove: () => patchExtra({ lastLoginTo: "" }),
+      });
+    }
+    const sortLabel = sortFilterPillLabel(sort_by, sort_order, USER_SORT_FIELDS);
+    if (sortLabel) {
+      pills.push({
+        id: "sort",
+        label: sortLabel,
+        onRemove: () => setParams({ sort_by: null, sort_order: null }),
+      });
+    }
+    return pills;
+  }, [
+    branches,
+    departments,
+    extraFilters,
+    managers,
+    roleId,
+    search,
+    selectedRole?.name,
+    setParams,
+    sort_by,
+    sort_order,
+    status,
+  ]);
+
   return (
+    <div className="flex flex-col gap-2">
     <DataTableToolbar>
       <ListSearch
         value={search ?? ""}
@@ -293,22 +426,20 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
           { value: "DISABLED", label: "Disabled" },
         ]}
       />
-      {canReadRoles ? (
-        <FilterSelect
-          label="Role"
-          className="w-48"
-          placeholder="Role"
-          value={roleId}
-          onValueChange={(value) =>
-            setParams({ filters: { role_id: value === ALL ? null : value } })
-          }
-          disabled={rolesQuery.isLoading}
-          options={[
-            { value: ALL, label: "All roles" },
-            ...roles.map((role) => ({ value: role.id, label: role.name })),
-          ]}
-        />
-      ) : null}
+      <FilterSelect
+        label="Role"
+        className="w-48"
+        placeholder="Role"
+        value={roleId}
+        onValueChange={(value) =>
+          setParams({ filters: { role_id: value === ALL ? null : value } })
+        }
+        disabled={rolesQuery.isLoading}
+        options={[
+          { value: ALL, label: "All roles" },
+          ...roles.map((role) => ({ value: role.id, label: role.name })),
+        ]}
+      />
       <MoreFiltersDialog
         extraCount={extraCount}
         draftCount={extraFilterCount(draftExtra)}
@@ -318,47 +449,43 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
         onApply={() => setParams({ filters: extraToUrlPatch(draftExtra) })}
         onClearDraft={() => setDraftExtra(EMPTY_EXTRA)}
       >
-        {canReadBranches ? (
-          <FilterField label="Branch" htmlFor="user-filter-branch">
-            <FilterSelect
-              id="user-filter-branch"
-              className="w-full"
-              placeholder="Branch"
-              value={draftExtra.branchId}
-              onValueChange={(value) =>
-                setDraftExtra((current) => ({
-                  ...current,
-                  branchId: value,
-                  departmentId: ALL,
-                }))
-              }
-              disabled={branchesQuery.isLoading}
-              options={[
-                { value: ALL, label: "All branches" },
-                ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
-              ]}
-            />
-          </FilterField>
-        ) : null}
-        {canReadDepartments ? (
-          <FilterField label="Department" htmlFor="user-filter-department">
-            <FilterSelect
-              id="user-filter-department"
-              className="w-full"
-              placeholder="Department"
-              value={draftExtra.departmentId}
-              onValueChange={(value) => updateDraft("departmentId", value)}
-              disabled={departmentsQuery.isLoading}
-              options={[
-                { value: ALL, label: "All departments" },
-                ...departmentOptions.map((department) => ({
-                  value: department.id,
-                  label: department.name,
-                })),
-              ]}
-            />
-          </FilterField>
-        ) : null}
+        <FilterField label="Branch" htmlFor="user-filter-branch">
+          <FilterSelect
+            id="user-filter-branch"
+            className="w-full"
+            placeholder="Branch"
+            value={draftExtra.branchId}
+            onValueChange={(value) =>
+              setDraftExtra((current) => ({
+                ...current,
+                branchId: value,
+                departmentId: ALL,
+              }))
+            }
+            disabled={branchesQuery.isLoading}
+            options={[
+              { value: ALL, label: "All branches" },
+              ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
+            ]}
+          />
+        </FilterField>
+        <FilterField label="Department" htmlFor="user-filter-department">
+          <FilterSelect
+            id="user-filter-department"
+            className="w-full"
+            placeholder="Department"
+            value={draftExtra.departmentId}
+            onValueChange={(value) => updateDraft("departmentId", value)}
+            disabled={departmentsQuery.isLoading}
+            options={[
+              { value: ALL, label: "All departments" },
+              ...departmentOptions.map((department) => ({
+                value: department.id,
+                label: department.name,
+              })),
+            ]}
+          />
+        </FilterField>
         <FilterField label="Employee status" htmlFor="user-filter-employee-status">
           <FilterSelect
             id="user-filter-employee-status"
@@ -375,7 +502,7 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
             ]}
           />
         </FilterField>
-        {canReadDepartments && managers.length > 0 ? (
+        {managers.length > 0 ? (
           <FilterField label="Manager" htmlFor="user-filter-manager">
             <FilterSelect
               id="user-filter-manager"
@@ -454,11 +581,11 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
         onApply={setParams}
       />
       {columnsDialog}
-      {hasActiveFilters ? (
-        <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-          Clear
-        </Button>
-      ) : null}
     </DataTableToolbar>
+    <ActiveFilterPills
+      pills={filterPills}
+      onClearAll={hasActiveFilters ? clearFilters : undefined}
+    />
+    </div>
   );
 }

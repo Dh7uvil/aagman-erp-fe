@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { useState } from "react";
 
 import { Input } from "@/shared/components/ui/input";
-import { DISPLAY_SCALE, normalizeDecimalInput } from "@/shared/lib/format";
+import { DISPLAY_SCALE, normalizeDecimalInput, sanitizeNumericTyping } from "@/shared/lib/format";
 
 export type DecimalInputKind = "money" | "quantity" | "percent" | "rate";
 
@@ -19,6 +19,7 @@ const STORAGE_DIGITS: Record<DecimalInputKind, number> = {
 export function DecimalInput({
   kind,
   precision,
+  numericOnly = false,
   onBlur,
   onChange,
   onFocus,
@@ -29,9 +30,12 @@ export function DecimalInput({
 }: Omit<ComponentProps<typeof Input>, "type" | "inputMode"> & {
   kind: DecimalInputKind;
   precision?: number;
+  /** When true, blocks non-numeric characters while typing. */
+  numericOnly?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const storageDigits = precision ?? STORAGE_DIGITS[kind];
+  const blurDigits = precision != null ? precision : storageDigits;
   const raw = value == null ? "" : String(value);
 
   let displayValue: string | number | readonly string[] | undefined = value;
@@ -51,7 +55,15 @@ export function DecimalInput({
       readOnly={readOnly}
       type="text"
       inputMode="decimal"
-      onChange={onChange}
+      onChange={(event) => {
+        if (numericOnly && onChange) {
+          const sanitized = sanitizeNumericTyping(event.target.value);
+          if (sanitized !== event.target.value) {
+            event.target.value = sanitized;
+          }
+        }
+        onChange?.(event);
+      }}
       onFocus={(event) => {
         setFocused(true);
         onFocus?.(event);
@@ -59,7 +71,7 @@ export function DecimalInput({
       onBlur={(event) => {
         setFocused(false);
         const current = event.target.value;
-        const normalized = normalizeDecimalInput(current, storageDigits);
+        const normalized = normalizeDecimalInput(current, blurDigits);
         if (normalized !== current && onChange) {
           event.target.value = normalized;
           onChange(event);

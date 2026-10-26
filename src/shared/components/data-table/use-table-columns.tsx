@@ -12,16 +12,29 @@ import {
 } from "@/shared/table-preferences/mutations";
 import { useTableColumnPreferences } from "@/shared/table-preferences/queries";
 
-export function useTableColumns<T>(tableKey: string, defs: readonly DataTableColumn<T>[]) {
+type UseTableColumnsOptions = {
+  pinnedCount?: number;
+};
+
+export function useTableColumns<T>(
+  tableKey: string,
+  defs: readonly DataTableColumn<T>[],
+  options?: UseTableColumnsOptions,
+) {
+  const pinnedCount = options?.pinnedCount ?? 2;
   const query = useTableColumnPreferences(tableKey);
   const save = useSaveTableColumnPreferences(tableKey);
   const reset = useResetTableColumnPreferences(tableKey);
-  const columns = useMemo(() => resolveTableColumns(defs, query.data ?? null), [defs, query.data]);
+  const columns = useMemo(
+    () => resolveTableColumns(defs, query.data ?? null, pinnedCount),
+    [defs, query.data, pinnedCount],
+  );
 
   const columnsDialog = (
     <ColumnsDialog
       columns={defs}
       preference={query.data ?? null}
+      pinnedCount={pinnedCount}
       pending={save.isPending || reset.isPending}
       onApply={async (next) => {
         try {

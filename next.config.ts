@@ -66,6 +66,45 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    const permanent = true;
+    return [
+      {
+        source: "/inventory/movements",
+        destination: "/inventory/materials/report",
+        permanent,
+      },
+      // Legacy paths → navigation-group URLs
+      { source: "/companies", destination: "/masters/companies", permanent },
+      { source: "/companies/:path*", destination: "/masters/companies/:path*", permanent },
+      { source: "/inventory/units", destination: "/masters/units", permanent },
+      { source: "/inventory/units/:path*", destination: "/masters/units/:path*", permanent },
+      { source: "/users", destination: "/administration/users", permanent },
+      { source: "/users/:path*", destination: "/administration/users/:path*", permanent },
+      { source: "/roles", destination: "/administration/roles", permanent },
+      { source: "/roles/:path*", destination: "/administration/roles/:path*", permanent },
+      { source: "/permissions", destination: "/administration/permissions", permanent },
+      { source: "/permissions/:path*", destination: "/administration/permissions/:path*", permanent },
+      { source: "/branches", destination: "/administration/branches", permanent },
+      { source: "/branches/:path*", destination: "/administration/branches/:path*", permanent },
+      { source: "/departments", destination: "/administration/departments", permanent },
+      { source: "/departments/:path*", destination: "/administration/departments/:path*", permanent },
+      { source: "/warehouses", destination: "/administration/warehouses", permanent },
+      { source: "/warehouses/:path*", destination: "/administration/warehouses/:path*", permanent },
+      {
+        source: "/organization-settings",
+        destination: "/administration/organization-settings",
+        permanent,
+      },
+      {
+        source: "/organization-settings/:path*",
+        destination: "/administration/organization-settings/:path*",
+        permanent,
+      },
+      { source: "/audit-logs", destination: "/administration/audit-logs", permanent },
+      { source: "/audit-logs/:path*", destination: "/administration/audit-logs/:path*", permanent },
+    ];
+  },
   async rewrites() {
     const apiUrl = process.env.API_URL?.replace(/\/$/, "");
     if (!apiUrl) {
