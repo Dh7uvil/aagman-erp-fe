@@ -2,15 +2,12 @@
 
 import { useMemo } from "react";
 
-import { userPermissions } from "@/modules/users-management/users/permissions";
 import { useAllUsers } from "@/modules/users-management/users/queries";
 import type { DataTableColumn } from "@/shared/components/data-table/columns";
 import { formatDateTime } from "@/shared/lib/format";
-import { useCan } from "@/shared/providers/session-provider";
 
 export function useUserNameMap() {
-  const can = useCan();
-  const query = useAllUsers(can(userPermissions.read));
+  const query = useAllUsers();
   return useMemo(() => {
     const map = new Map<string, string>();
     for (const user of query.data ?? []) {

@@ -15,13 +15,13 @@ import {
   type AuditLogFilterParams,
   type AuditLogListParams,
 } from "@/modules/users-management/audit-logs/schemas";
-import { userPermissions } from "@/modules/users-management/users/permissions";
 import { useAllUsers } from "@/modules/users-management/users/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
 import { DataTable } from "@/shared/components/data-table/data-table";
+import { ActiveFilterPills, type ActiveFilterPill } from "@/shared/components/data-table/filter-chip";
 import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
@@ -29,6 +29,7 @@ import { FilterField, MoreFiltersDialog } from "@/shared/components/data-table/m
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
 import { DataTableRowActions, hasRowActions } from "@/shared/components/data-table/row-actions";
 import { SortDialog } from "@/shared/components/data-table/sort-dialog";
+import { sortFilterPillLabel } from "@/shared/components/data-table/sort-filter-label";
 import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
 import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
 import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
@@ -41,8 +42,7 @@ import { Card, CardContent } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useTableParams } from "@/shared/hooks/use-table-params";
-import { formatDateTime, initials, titleCase } from "@/shared/lib/format";
-import { useCan } from "@/shared/providers/session-provider";
+import { formatDate, formatDateTime, initials, titleCase } from "@/shared/lib/format";
 
 const SORT_FIELDS = [
   { value: "created_at", label: "Timestamp" },
@@ -153,9 +153,7 @@ function KpiCard({
 }
 
 export function AuditLogsScreen() {
-  const can = useCan();
   const { canRead } = useCrudPermissions(auditLogPermissions);
-  const canReadUsers = can(userPermissions.read);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [csvPending, setCsvPending] = useState(false);
   const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
@@ -211,7 +209,7 @@ export function AuditLogsScreen() {
 
   const logsQuery = useAuditLogs(listParams);
   const summaryQuery = useAuditLogSummary(filterParams);
-  const usersQuery = useAllUsers(canReadUsers);
+  const usersQuery = useAllUsers();
 
   const rows = logsQuery.data?.data ?? [];
   const meta = logsQuery.data?.meta;
@@ -368,6 +366,75 @@ export function AuditLogsScreen() {
     });
   }
 
+  function patchExtra(partial: Partial<ExtraFilters>) {
+    setParams({ filters: extraToUrlPatch({ ...extraFilters, ...partial }) });
+  }
+
+  const filterPills = useMemo(() => {
+    const pills: ActiveFilterPill[] = [];
+    const trimmedSearch = search?.trim();
+    if (trimmedSearch) {
+      pills.push({
+        id: "search",
+        label: `Search: ${trimmedSearch}`,
+        onRemove: () => setParams({ search: null }),
+      });
+    }
+    if (moduleFilter !== ALL) {
+      pills.push({
+        id: "module",
+        label: `Module: ${titleCase(moduleFilter)}`,
+        onRemove: () => setParams({ filters: { module: null } }),
+      });
+    }
+    if (extraFilters.action !== ALL) {
+      pills.push({
+        id: "action",
+        label: `Action: ${titleCase(extraFilters.action)}`,
+        onRemove: () => patchExtra({ action: ALL }),
+      });
+    }
+    if (extraFilters.userId !== ALL) {
+      const user = users.find((item) => item.id === extraFilters.userId);
+      pills.push({
+        id: "user",
+        label: `User: ${user?.name ?? extraFilters.userId}`,
+        onRemove: () => patchExtra({ userId: ALL }),
+      });
+    }
+    if (extraFilters.dateFrom) {
+      pills.push({
+        id: "date_from",
+        label: `From: ${formatDate(extraFilters.dateFrom)}`,
+        onRemove: () => patchExtra({ dateFrom: "" }),
+      });
+    }
+    if (extraFilters.dateTo) {
+      pills.push({
+        id: "date_to",
+        label: `To: ${formatDate(extraFilters.dateTo)}`,
+        onRemove: () => patchExtra({ dateTo: "" }),
+      });
+    }
+    const sortLabel = sortFilterPillLabel(sortBy, sort_order, SORT_FIELDS);
+    if (sortLabel) {
+      pills.push({
+        id: "sort",
+        label: sortLabel,
+        onRemove: () => setParams({ sort_by: null, sort_order: null }),
+      });
+    }
+    return pills;
+  }, [
+    extraFilters,
+    moduleFilter,
+    search,
+    setParams,
+    sortBy,
+    sort_order,
+    users,
+  ]);
+
   return (
     <ListPage>
       <PageHeader
@@ -414,6 +481,7 @@ export function AuditLogsScreen() {
           isLoading={summaryQuery.isLoading}
         />
       </div>
+      <div className="flex flex-col gap-2">
       <DataTableToolbar>
         <ListSearch
           value={search ?? ""}
@@ -461,23 +529,21 @@ export function AuditLogsScreen() {
               ]}
             />
           </FilterField>
-          {canReadUsers ? (
-            <FilterField label="User" htmlFor="audit-filter-user">
-              <FilterSelect
-                id="audit-filter-user"
-                className="w-full"
-                placeholder="All Users"
-                value={draftExtra.userId}
-                onValueChange={(value) =>
-                  setDraftExtra((current) => ({ ...current, userId: value }))
-                }
-                options={[
-                  { value: ALL, label: "All Users" },
+          <FilterField label="User" htmlFor="audit-filter-user">
+            <FilterSelect
+              id="audit-filter-user"
+              className="w-full"
+              placeholder="All Users"
+              value={draftExtra.userId}
+              onValueChange={(value) =>
+                setDraftExtra((current) => ({ ...current, userId: value }))
+              }
+              options={[
+                { value: ALL, label: "All Users" },
                   ...users.map((user) => ({ value: user.id, label: user.name })),
                 ]}
               />
             </FilterField>
-          ) : null}
           <DateRangeFilter
             fromId="audit-filter-from"
             toId="audit-filter-to"
@@ -494,12 +560,12 @@ export function AuditLogsScreen() {
           onApply={setParams}
         />
         {columnsDialog}
-        {hasActiveFilters ? (
-          <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-            Clear
-          </Button>
-        ) : null}
       </DataTableToolbar>
+      <ActiveFilterPills
+        pills={filterPills}
+        onClearAll={hasActiveFilters ? clearFilters : undefined}
+      />
+      </div>
       <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
         <TableHeader>
           <TableRow>

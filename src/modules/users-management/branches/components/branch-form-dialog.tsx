@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 
 function toFormValues(branch: Branch | null): BranchFormValues {
@@ -154,7 +155,11 @@ export function BranchFormDialog({
         />
         <Form {...form}>
           <form
-            onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
+            onSubmit={
+              canSubmit
+                ? isolatedFormSubmitHandler(form, onSubmit)
+                : (event) => event.preventDefault()
+            }
             className="flex flex-col gap-3"
           >
             {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
@@ -242,6 +247,11 @@ export function BranchFormDialog({
               canSubmit={canSubmit}
               submitLabel={hasRecord ? "Save Changes" : "Create Branch"}
               onClose={() => handleOpenChange(false)}
+              onSubmit={() => {
+                if (canSubmit) {
+                  void form.handleSubmit(onSubmit)();
+                }
+              }}
             />
           </form>
         </Form>

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { departmentsApi } from "@/modules/users-management/departments/api";
 import { departmentKeys } from "@/modules/users-management/departments/queries";
 import { organizationKeys } from "@/modules/users-management/organization/queries";
+import { upsertQueryListItem } from "@/shared/api/upsert-query-list";
 
 async function invalidateDepartments(queryClient: ReturnType<typeof useQueryClient>) {
   await queryClient.invalidateQueries({ queryKey: departmentKeys.all });
@@ -15,7 +16,9 @@ export function useCreateDepartment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: departmentsApi.create,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      upsertQueryListItem(queryClient, departmentKeys.allItems({}), data);
+      upsertQueryListItem(queryClient, departmentKeys.allItems({ branch_id: data.branch_id }), data);
       await invalidateDepartments(queryClient);
     },
   });

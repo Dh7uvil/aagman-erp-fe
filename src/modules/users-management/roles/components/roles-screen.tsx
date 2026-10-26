@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { RoleFormDialog } from "@/modules/users-management/roles/components/role-form-dialog";
 import { useDeleteRole } from "@/modules/users-management/roles/mutations";
+import { permissionRoutes } from "@/modules/users-management/permissions/routes";
 import { rolePermissions } from "@/modules/users-management/roles/permissions";
 import { useRoles } from "@/modules/users-management/roles/queries";
 import type { Role } from "@/modules/users-management/roles/schemas";
@@ -146,7 +147,7 @@ export function RolesScreen() {
           onDelete={canDelete && !role.is_system_role ? () => setDeleting(role) : undefined}
           extra={
             <Button variant="ghost" size="sm" asChild>
-              <Link href={`/permissions?role_id=${role.id}`}>
+              <Link href={permissionRoutes.withRole(role.id)}>
                 {canAssign || canUpdate ? "Edit Permissions" : "View Permissions"}
               </Link>
             </Button>

@@ -21,9 +21,13 @@ import {
   type DepartmentFormValues,
   type DepartmentUpdateRequest,
 } from "@/modules/users-management/departments/schemas";
-import { userPermissions } from "@/modules/users-management/users/permissions";
 import { useAllUsers } from "@/modules/users-management/users/queries";
 import { getErrorMessage } from "@/shared/api/errors";
+import {
+  setFormValueFromQuickCreate,
+  setFormValueWhenDefaulting,
+} from "@/shared/lib/form-quick-create";
+import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 import {
   formDialogTitle,
   resolveFormDialogMode,
@@ -96,7 +100,7 @@ export function DepartmentFormDialog({
   const createDepartment = useCreateDepartment();
   const updateDepartment = useUpdateDepartment();
   const branchesQuery = useAllBranches(open);
-  const usersQuery = useAllUsers(open && can(userPermissions.read));
+  const usersQuery = useAllUsers(open);
   const [formError, setFormError] = useState<string | null>(null);
   const [creatingBranch, setCreatingBranch] = useState(false);
   const hasRecord = Boolean(department);
@@ -106,7 +110,7 @@ export function DepartmentFormDialog({
     canUpdate,
     forceReadOnly,
   });
-  const canPickManager = can(userPermissions.read);
+  const canPickManager = open;
 
   const form = useForm<DepartmentFormValues>({
     resolver: zodResolver(DepartmentFormSchema),
@@ -120,7 +124,7 @@ export function DepartmentFormDialog({
     }
     const branches = branchesQuery.data ?? [];
     if (branches.length === 1 && !form.getValues("branch_id")) {
-      form.setValue("branch_id", branches[0].id);
+      setFormValueWhenDefaulting(form, "branch_id", branches[0].id);
     }
   }, [branchesQuery.data, defaultBranchId, form, hasRecord, open]);
 
@@ -165,7 +169,7 @@ export function DepartmentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent nested={nested} className="sm:max-w-lg">
+      <DialogContent nested={nested} className="sm:max-w-2xl">
         <FormDialogHeader
           title={formDialogTitle("Department", mode)}
           entity="Department"
@@ -173,23 +177,23 @@ export function DepartmentFormDialog({
         />
         <Form {...form}>
           <form
-            onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
+            onSubmit={
+              canSubmit
+                ? isolatedFormSubmitHandler(form, onSubmit)
+                : (event) => event.preventDefault()
+            }
             className="flex flex-col gap-3"
           >
             {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
             <div
               data-slot="form-grid"
-              className={
-                hasRecord
-                  ? "grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2"
-                  : "grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-3"
-              }
+              className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2"
             >
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className={hasRecord ? "sm:col-span-2" : undefined}>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Department name" disabled={readOnly} {...field} />
@@ -208,6 +212,37 @@ export function DepartmentFormDialog({
                       <FormControl>
                         <Input placeholder="OPS" disabled={readOnly} {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
+              {canPickManager ? (
+                <FormField
+                  control={form.control}
+                  name="manager_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Manager</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={usersQuery.isLoading || readOnly}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Optional" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={DEPARTMENT_SELECT_NONE}>None</SelectItem>
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -240,43 +275,17 @@ export function DepartmentFormDialog({
                   </FormItem>
                 )}
               />
-              {canPickManager ? (
-                <FormField
-                  control={form.control}
-                  name="manager_id"
-                  render={({ field }) => (
-                    <FormItem className="col-span-full">
-                      <FormLabel>Manager</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={usersQuery.isLoading || readOnly}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Optional" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={DEPARTMENT_SELECT_NONE}>None</SelectItem>
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : null}
             </div>
             <FormDialogFooter
               pending={pending}
               canSubmit={canSubmit}
               submitLabel={hasRecord ? "Save Changes" : "Create Department"}
               onClose={() => handleOpenChange(false)}
+              onSubmit={() => {
+                if (canSubmit) {
+                  void form.handleSubmit(onSubmit)();
+                }
+              }}
             />
           </form>
         </Form>
@@ -284,7 +293,7 @@ export function DepartmentFormDialog({
           open={creatingBranch}
           branch={null}
           nested
-          onCreated={(entity) => form.setValue("branch_id", entity.id)}
+          onCreated={(entity) => setFormValueFromQuickCreate(form, "branch_id", entity.id)}
           onOpenChange={setCreatingBranch}
         />
       </DialogContent>

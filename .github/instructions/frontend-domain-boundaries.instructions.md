@@ -1,22 +1,15 @@
 ---
-description: Boundaries that must not be crossed — session and tenant handling, permissions as UX, module ownership, providers, money, posting, lock/stock, VAT, e-invoicing and AI rules.
+description: Boundaries that must not be crossed — session handling, permissions as UX, module ownership, and providers.
 applyTo: "src/**"
 ---
 
 # Front-end Domain Boundaries
 
-This is a multi-tenant UAE trading ERP client for a modular backend. The boundaries below keep
-tenant data separated, keep financial figures trustworthy, and keep a module extractable later.
-Convenience never outranks them.
+Aagman ERP client for a modular backend. The boundaries below keep data trustworthy and modules
+extractable. Convenience never outranks them.
 
-Product scope matches the backend: Zoho Books + Inventory + CRM trading flows. Out of scope:
-manufacturing, POS, full payroll, e-commerce, projects/timesheets. Bank reconciliation, PDC,
-recurring templates, vouchers, import/export cost sheets, charge-type masters, and budgets are
-in scope as planned accounting modules.
-
-Document posting, lock, stock, VAT and e-invoicing UX:
-[erp-documents-and-workflows](erp-documents-and-workflows.instructions.md). Do not mock settings
-the tenant API does not expose.
+**Scope:** administration, company master, inventory (units, materials, daily in/out). Do not mock
+API fields the backend does not expose.
 
 ## Architecture principles
 

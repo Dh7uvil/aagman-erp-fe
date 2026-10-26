@@ -1,10 +1,12 @@
 import { z } from "zod";
 
+import { DEFAULT_PAGE_SIZE } from "@/config/constants";
+
 export const PaginationMetaSchema = z.object({
-  page: z.number().int(),
-  page_size: z.number().int(),
-  total: z.number().int(),
-  total_pages: z.number().int(),
+  page: z.coerce.number().int(),
+  page_size: z.coerce.number().int(),
+  total: z.coerce.number().int(),
+  total_pages: z.coerce.number().int(),
 });
 
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>;
@@ -21,7 +23,7 @@ export function parseListMeta(meta: unknown, itemCount: number): PaginationMeta 
   }
   return {
     page: 1,
-    page_size: itemCount,
+    page_size: DEFAULT_PAGE_SIZE,
     total: itemCount,
     total_pages: itemCount > 0 ? 1 : 0,
   };

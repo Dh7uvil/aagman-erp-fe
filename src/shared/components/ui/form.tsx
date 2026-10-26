@@ -85,7 +85,11 @@ function FormGrid({
   return (
     <div
       data-slot="form-grid"
-      className={cn("grid gap-x-3 gap-y-2", FORM_GRID_COLUMNS[columns], className)}
+      className={cn(
+        "grid auto-rows-min gap-x-3 gap-y-2",
+        FORM_GRID_COLUMNS[columns],
+        className,
+      )}
       {...props}
     />
   );
@@ -99,8 +103,8 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
       <div
         data-slot="form-item"
         className={cn(
-          "grid min-w-0 gap-3",
-          "in-data-[slot=form-grid]:row-span-3 in-data-[slot=form-grid]:grid-rows-subgrid in-data-[slot=form-grid]:content-start in-data-[slot=form-grid]:gap-y-2.5",
+          "grid min-w-0 gap-2",
+          "in-data-[slot=form-grid]:row-span-3 in-data-[slot=form-grid]:grid-rows-subgrid in-data-[slot=form-grid]:content-start in-data-[slot=form-grid]:gap-y-2",
           className,
         )}
         {...props}
@@ -195,6 +199,9 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
 function FormMessage({ className, children, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
   const body = error ? String(error.message ?? "") : children;
+  if (!body) {
+    return null;
+  }
   const text = typeof body === "string" ? body : undefined;
 
   return (
@@ -202,14 +209,11 @@ function FormMessage({ className, children, ...props }: React.ComponentProps<"p"
       data-slot="form-message"
       id={formMessageId}
       title={text || undefined}
-      className={cn(
-        "text-destructive min-w-0 text-sm leading-5",
-        body ? "min-h-5" : "hidden",
-        className,
-      )}
+      aria-live="polite"
+      className={cn("text-destructive min-w-0 text-sm leading-5", className)}
       {...props}
     >
-      {body || "\u00a0"}
+      {body}
     </p>
   );
 }

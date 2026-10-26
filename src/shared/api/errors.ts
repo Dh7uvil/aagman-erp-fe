@@ -23,47 +23,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   RESOURCE_NOT_FOUND: "The requested record could not be found.",
   DUPLICATE_RESOURCE: "A record with these details already exists.",
   INVALID_STATUS_TRANSITION: "This action is not available for the current status.",
-  FINANCIAL_TRANSACTION_LOCKED: "This record is posted and can no longer be changed.",
   INVENTORY_INSUFFICIENT_STOCK: "There is not enough stock to complete this action.",
   INSUFFICIENT_STOCK: "There is not enough stock to complete this action.",
-  SUPPLIER_SKU_NOT_MAPPED: "This supplier SKU is not mapped to a product.",
-  GRN_OVER_RECEIPT: "Received quantity is above the allowed over-receipt tolerance.",
-  GRN_CANNOT_CANCEL: "This goods receipt cannot be cancelled.",
-  QUALITY_QTY_MISMATCH: "Inspection quantities do not add up.",
-  COST_LAYER_IMBALANCE: "Stock cost layers are out of balance. Refresh and try again.",
-  PERIOD_LOCKED: "This date falls in a locked period and cannot be changed.",
-  PERIOD_LOCK_BLOCKED_NEGATIVE_STOCK: "The period cannot be locked while stock is negative.",
-  DRAFT_DOCUMENT_NOT_POSTED: "This document is still a draft and has not been posted.",
-  DOCUMENT_STALE: "This document changed since you opened it. Reload and try again.",
-  IDEMPOTENCY_CONFLICT: "This request was already processed. Refresh to see the latest result.",
-  EXCHANGE_RATE_MISSING: "No exchange rate is recorded for this currency and date.",
-  EINVOICE_NOT_READY: "This document is not ready to submit for e-invoicing.",
-  EINVOICE_REJECTED: "The e-invoice was rejected. Review the message and issue a credit note.",
-  EINVOICE_ASP_UNAVAILABLE: "The e-invoicing service is unavailable. Please try again later.",
-  EINVOICE_ALREADY_EXCHANGED: "This e-invoice has already been exchanged and cannot be changed.",
-  ACCOUNT_ROLE_UNMAPPED: "A required system account is not mapped. Map it before posting.",
-  ACCOUNT_NOT_POSTABLE: "This account cannot be posted to. Choose a postable account.",
-  JOURNAL_LINE_INVALID: "Each journal line must have either a debit or a credit, not both.",
-  JOURNAL_UNBALANCED: "Journal debit and credit totals must match.",
-  INVOICE_QTY_EXCEEDED:
-    "Invoiced quantity is more than the remaining quantity on the source document.",
-  EXPORT_EVIDENCE_MISSING:
-    "Export evidence is missing. Posting is allowed, but BL or customs documents should be attached.",
-  CREDIT_QTY_EXCEEDED: "Credited quantity is more than the remaining quantity on the invoice.",
-  DEBIT_QTY_EXCEEDED: "Debited quantity is more than the remaining quantity on the bill.",
-  PAYMENT_OVER_ALLOCATED: "Allocated amounts are more than the payment can apply.",
-  PAYMENT_ACCOUNT_INVALID: "Choose a postable cash or bank account for this payment.",
-  PAYMENT_NOTHING_TO_APPLY: "There is nothing left to apply on this payment.",
-  CREDIT_LIMIT_EXCEEDED: "This action exceeds the customer credit limit.",
-  PARTY_REQUIRED_FOR_CONTROL_ACCOUNT:
-    "A party is required when posting to an AR or AP control account.",
-  FISCAL_YEAR_LOCKED:
-    "The fiscal year start cannot change after document numbers have been issued.",
-  OPENING_STOCK_VALUE_MISMATCH:
-    "Opening inventory must equal the sum of opening stock cost layers.",
   INTEGRATION_ERROR: "An external service is unavailable. Please try again later.",
   NETWORK_ERROR: "Unable to reach the server. Check your connection and try again.",
   INTERNAL_ERROR: "Something went wrong. Please try again.",
+  RATE_LIMITED: "Too many attempts. Please wait and try again.",
 };
 
 export const FALLBACK_ERROR_MESSAGE = "Something went wrong. Please try again.";
@@ -152,34 +117,6 @@ function firstErrorListMessage(details: Record<string, unknown>): string | null 
   return null;
 }
 
-function negativeStockBalanceFragment(details: Record<string, unknown>): string | null {
-  const balances = details.balances;
-  if (!Array.isArray(balances) || balances.length === 0) {
-    return null;
-  }
-  const parts: string[] = [];
-  for (const row of balances.slice(0, 5)) {
-    if (!row || typeof row !== "object") {
-      continue;
-    }
-    const record = row as Record<string, unknown>;
-    const warehouse = stringDetail(record, "warehouse_code");
-    const sku = stringDetail(record, "sku");
-    const qty = stringDetail(record, "qty_on_hand");
-    const label = [warehouse, sku, qty].filter(Boolean).join(" ");
-    if (label) {
-      parts.push(label);
-    }
-  }
-  if (parts.length === 0) {
-    return null;
-  }
-  const total = numberDetail(details, "total_count");
-  const remaining = total != null ? Math.max(0, total - balances.length) : 0;
-  const listed = `${parts.join("; ")}.`;
-  return remaining > 0 ? `${listed} ${remaining} more.` : listed;
-}
-
 export function apiErrorFromBody(
   code: string,
   status: number,
@@ -228,60 +165,15 @@ export function getErrorMessage(codeOrError: unknown): string {
     return base;
   }
   if (code === "INVENTORY_INSUFFICIENT_STOCK" || code === "INSUFFICIENT_STOCK") {
-    const warehouse =
-      stringDetail(details, "warehouse_code") ?? stringDetail(details, "warehouse_name");
-    const available = stringDetail(details, "available_qty");
-    const requested = stringDetail(details, "requested_qty");
+    const availableRolls = stringDetail(details, "available_rolls");
+    const availableKg = stringDetail(details, "available_kg");
+    const requestedRolls = stringDetail(details, "requested_rolls");
+    const requestedKg = stringDetail(details, "requested_kg");
     return appendDetailSentence(base, [
-      warehouse ? `Warehouse ${warehouse}.` : null,
-      available ? `Available ${available}.` : null,
-      requested ? `Requested ${requested}.` : null,
-    ]);
-  }
-  if (code === "PERIOD_LOCKED") {
-    const lockDate = stringDetail(details, "lock_date");
-    const hardLock = stringDetail(details, "hard_lock_date");
-    const documentDate = stringDetail(details, "document_date");
-    const tier = stringDetail(details, "tier");
-    const reason = stringDetail(details, "reason");
-    const tierLabel =
-      tier === "hard" ? "Books closed." : tier === "soft" ? "Transactions locked." : null;
-    return appendDetailSentence(base, [
-      lockDate ? `Lock date ${lockDate}.` : null,
-      hardLock ? `Hard lock ${hardLock}.` : null,
-      documentDate ? `Document date ${documentDate}.` : null,
-      tierLabel,
-      reason ? `${reason}.` : null,
-    ]);
-  }
-  if (code === "PERIOD_LOCK_BLOCKED_NEGATIVE_STOCK") {
-    const reason = stringDetail(details, "reason");
-    const reasonText =
-      reason === "acknowledgement_required"
-        ? "Negative stock exists. Confirm to lock anyway."
-        : reason === "negative_stock_disallowed"
-          ? "Negative stock is not allowed."
-          : null;
-    return appendDetailSentence(base, [reasonText, negativeStockBalanceFragment(details)]);
-  }
-  if (code === "FISCAL_YEAR_LOCKED") {
-    const requiresOverride = details.requires_override === true;
-    const requiresAck = details.requires_acknowledgement === true;
-    return appendDetailSentence(base, [
-      requiresOverride ? "An override permission is required." : null,
-      requiresAck ? "Confirm the change to continue." : null,
-    ]);
-  }
-  if (code === "CREDIT_LIMIT_EXCEEDED") {
-    const limit = stringDetail(details, "limit");
-    const exposure = stringDetail(details, "exposure");
-    const thisDocument = stringDetail(details, "this_document");
-    const available = stringDetail(details, "available");
-    return appendDetailSentence(base, [
-      limit ? `Limit ${limit}.` : null,
-      exposure ? `Exposure ${exposure}.` : null,
-      thisDocument ? `This document ${thisDocument}.` : null,
-      available ? `Available ${available}.` : null,
+      availableRolls ? `Available rolls ${availableRolls}.` : null,
+      availableKg ? `Available kg ${availableKg}.` : null,
+      requestedRolls ? `Requested rolls ${requestedRolls}.` : null,
+      requestedKg ? `Requested kg ${requestedKg}.` : null,
     ]);
   }
   return base;

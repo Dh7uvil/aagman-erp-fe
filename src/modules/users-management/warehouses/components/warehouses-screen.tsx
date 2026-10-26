@@ -33,24 +33,21 @@ import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useTableParams } from "@/shared/hooks/use-table-params";
+import {
+  LIST_ACTIVE_ALL,
+  LIST_ACTIVE_ACTIVE,
+  LIST_ACTIVE_INACTIVE,
+  isNonDefaultListActiveFilter,
+  listActiveFilterValue,
+  parseListActiveFilter,
+} from "@/shared/lib/list-filters";
 
-const ALL = "all";
 const SORT_FIELDS: SortFieldOption[] = [
   { value: "name", label: "Name" },
   { value: "code", label: "Code" },
   { value: "created_at", label: "Created" },
 ];
 const SORT_BY = new Set(SORT_FIELDS.map((field) => field.value));
-
-function parseActive(value: string | undefined): boolean | undefined {
-  if (value === "active") {
-    return true;
-  }
-  if (value === "inactive") {
-    return false;
-  }
-  return undefined;
-}
 
 export function WarehousesScreen() {
   const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(warehousePermissions);
@@ -59,7 +56,7 @@ export function WarehousesScreen() {
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
   const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
     useTableParams();
-  const isActive = parseActive(filters.active);
+  const isActive = parseListActiveFilter(filters.active);
   const sortBy = sort_by && SORT_BY.has(sort_by) ? sort_by : undefined;
   const warehousesQuery = useWarehouses({
     page,
@@ -72,7 +69,9 @@ export function WarehousesScreen() {
   const showActions = hasRowActions(canRead, canUpdate, canDelete);
   const warehouses = warehousesQuery.data?.data ?? [];
   const meta = warehousesQuery.data?.meta;
-  const hasActiveFilters = Boolean(search || filters.active || sortBy);
+  const hasActiveFilters = Boolean(
+    search || sortBy || isNonDefaultListActiveFilter(filters.active),
+  );
 
   function openCreate() {
     setFormOpen(true);
@@ -156,14 +155,16 @@ export function WarehousesScreen() {
           label="Status"
           className="w-40"
           placeholder="Status"
-          value={filters.active ?? ALL}
+          value={listActiveFilterValue(filters.active)}
           onValueChange={(value) =>
-            setParams({ filters: { active: value === ALL ? null : value } })
+            setParams({
+              filters: { active: value === LIST_ACTIVE_ACTIVE ? null : value },
+            })
           }
           options={[
-            { value: ALL, label: "All statuses" },
-            { value: "active", label: "Active" },
-            { value: "inactive", label: "Inactive" },
+            { value: LIST_ACTIVE_ACTIVE, label: "Active" },
+            { value: LIST_ACTIVE_INACTIVE, label: "Inactive" },
+            { value: LIST_ACTIVE_ALL, label: "All statuses" },
           ]}
         />
         <SortDialog

@@ -23,6 +23,7 @@ import {
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { setFormValueFromQuickCreate } from "@/shared/lib/form-quick-create";
 import { useCan } from "@/shared/providers/session-provider";
 
 export function UserEmployeeFields({
@@ -35,11 +36,10 @@ export function UserEmployeeFields({
   leading?: ReactNode;
 }) {
   const can = useCan();
-  const { control, setValue, watch } = useFormContext<EmployeeFormFields>();
-  const canReadBranches = can(branchPermissions.read);
-  const canReadDepartments = can(departmentPermissions.read);
-  const branchesQuery = useAllBranches(canReadBranches);
-  const departmentsQuery = useAllDepartments({}, canReadDepartments);
+  const form = useFormContext<EmployeeFormFields>();
+  const { control, setValue, watch } = form;
+  const branchesQuery = useAllBranches();
+  const departmentsQuery = useAllDepartments({});
   const [creating, setCreating] = useState<"branch" | "department" | null>(null);
   const branchId = watch("branch_id");
   const branches = branchesQuery.data ?? [];
@@ -82,56 +82,46 @@ export function UserEmployeeFields({
             </FormItem>
           )}
         />
-        {canReadBranches || canReadDepartments ? (
-          <div
-            className={
-              canReadBranches && canReadDepartments
-                ? "col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2"
-                : "col-span-full"
-            }
-          >
-            {canReadBranches ? (
-              <FormField
-                control={control}
-                name="branch_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Branch</FormLabel>
-                    <MasterSelect
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setValue("department_id", EMPLOYEE_SELECT_NONE);
-                      }}
-                      disabled={branchesQuery.isLoading}
-                      placeholder="Select a branch"
-                      searchPlaceholder="Search branch…"
-                      createLabel="Create branch"
-                      onCreate={
-                        can(branchPermissions.create) ? () => setCreating("branch") : undefined
-                      }
-                      options={[
-                        { value: EMPLOYEE_SELECT_NONE, label: "None" },
-                        ...branches.map((branch) => ({
-                          value: branch.id,
-                          label: branch.name,
-                        })),
-                      ]}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : null}
-            {canReadDepartments ? (
-              <FormField
-                control={control}
-                name="department_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <MasterSelect
-                      value={field.value}
+        <div className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField
+            control={control}
+            name="branch_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Branch</FormLabel>
+                <MasterSelect
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    setValue("department_id", EMPLOYEE_SELECT_NONE);
+                  }}
+                  disabled={branchesQuery.isLoading}
+                  placeholder="Select a branch"
+                  searchPlaceholder="Search branch…"
+                  createLabel="Create branch"
+                  onCreate={
+                    can(branchPermissions.create) ? () => setCreating("branch") : undefined
+                  }
+                  options={[
+                    { value: EMPLOYEE_SELECT_NONE, label: "None" },
+                    ...branches.map((branch) => ({
+                      value: branch.id,
+                      label: branch.name,
+                    })),
+                  ]}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="department_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Department</FormLabel>
+                <MasterSelect
+                  value={field.value}
                       onValueChange={field.onChange}
                       disabled={departmentsQuery.isLoading || branchId === EMPLOYEE_SELECT_NONE}
                       placeholder={
@@ -142,7 +132,7 @@ export function UserEmployeeFields({
                       searchPlaceholder="Search department…"
                       createLabel="Create department"
                       onCreate={
-                        can(departmentPermissions.create) && branchId !== EMPLOYEE_SELECT_NONE
+                        can(departmentPermissions.create)
                           ? () => setCreating("department")
                           : undefined
                       }
@@ -154,21 +144,19 @@ export function UserEmployeeFields({
                         })),
                       ]}
                     />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : null}
-          </div>
-        ) : null}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       </div>
       <BranchFormDialog
         open={creating === "branch"}
         branch={null}
         nested
         onCreated={(entity) => {
-          setValue("branch_id", entity.id);
-          setValue("department_id", EMPLOYEE_SELECT_NONE);
+          setFormValueFromQuickCreate(form, "branch_id", entity.id);
+          setFormValueFromQuickCreate(form, "department_id", EMPLOYEE_SELECT_NONE);
         }}
         onOpenChange={(open) => setCreating(open ? "branch" : null)}
       />
@@ -177,7 +165,7 @@ export function UserEmployeeFields({
         department={null}
         nested
         defaultBranchId={branchId === EMPLOYEE_SELECT_NONE ? undefined : branchId}
-        onCreated={(entity) => setValue("department_id", entity.id)}
+        onCreated={(entity) => setFormValueFromQuickCreate(form, "department_id", entity.id)}
         onOpenChange={(open) => setCreating(open ? "department" : null)}
       />
     </div>

@@ -17,6 +17,8 @@ import { cn } from "@/shared/lib/cn";
 export type SearchableSelectOption = {
   value: string;
   label: string;
+  /** Closed trigger text; defaults to `label`. */
+  triggerLabel?: string;
 };
 
 export type SearchableSelectCreateAction = {
@@ -179,7 +181,7 @@ export function SearchableSelect({
   const triggerProps = {
     disabled,
     className,
-    selectedLabel: selected?.label,
+    selectedLabel: selected?.triggerLabel ?? selected?.label,
     placeholder,
     ariaLabel,
   };

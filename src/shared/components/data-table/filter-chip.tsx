@@ -48,3 +48,29 @@ export function ActiveFilterBar({
     </div>
   );
 }
+
+export type ActiveFilterPill = {
+  id: string;
+  label: ReactNode;
+  onRemove: () => void;
+};
+
+export function ActiveFilterPills({
+  pills,
+  onClearAll,
+}: {
+  pills: ActiveFilterPill[];
+  onClearAll?: () => void;
+}) {
+  if (pills.length === 0) {
+    return null;
+  }
+
+  return (
+    <ActiveFilterBar onClear={onClearAll}>
+      {pills.map((pill) => (
+        <FilterChip key={pill.id} label={pill.label} onRemove={pill.onRemove} />
+      ))}
+    </ActiveFilterBar>
+  );
+}

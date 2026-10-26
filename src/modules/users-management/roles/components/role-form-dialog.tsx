@@ -31,17 +31,22 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 
 export function RoleFormDialog({
   open,
   role,
   onOpenChange,
+  onCreated,
+  nested = false,
   forceReadOnly = false,
 }: {
   open: boolean;
   role: Role | null;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (entity: { id: string }) => void;
+  nested?: boolean;
   forceReadOnly?: boolean;
 }) {
   const { canCreate, canUpdate } = useCrudPermissions(rolePermissions);
@@ -86,10 +91,11 @@ export function RoleFormDialog({
         await updateRole.mutateAsync({ id: role.id, values: payload });
         toast.success("Role updated");
       } else {
-        await createRole.mutateAsync(payload);
+        const created = await createRole.mutateAsync(payload);
         toast.success("Role created");
+        onCreated?.(created);
       }
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (error) {
       if (applyFieldErrors(error, form.setError)) {
         return;
@@ -102,13 +108,17 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent nested={nested}>
         <DialogHeader>
           <DialogTitle>{formDialogTitle("Role", mode)}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
+            onSubmit={
+              canSubmit
+                ? isolatedFormSubmitHandler(form, onSubmit)
+                : (event) => event.preventDefault()
+            }
             className="flex flex-col gap-3"
           >
             {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
@@ -143,6 +153,11 @@ export function RoleFormDialog({
               canSubmit={canSubmit}
               submitLabel={hasRecord ? "Save Changes" : "Create Role"}
               onClose={() => handleOpenChange(false)}
+              onSubmit={() => {
+                if (canSubmit) {
+                  void form.handleSubmit(onSubmit)();
+                }
+              }}
             />
           </form>
         </Form>

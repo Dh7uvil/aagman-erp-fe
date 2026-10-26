@@ -1,12 +1,8 @@
 /**
- * Generates src/shared/lib/generated-permissions.ts from the vendored catalog snapshot.
- *
- * Source: src/shared/lib/permissions-catalog.json
- * (copy from plumbit-erp-be/docs/permissions-catalog.json after exporting the backend catalog)
+ * Generates src/shared/lib/generated-permissions.ts from permissions-catalog.json.
  *
  * Run: npm run generate:permissions
  * Check: npm run generate:permissions:check
- * Sync from sibling backend checkout: npm run sync:permissions
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -17,14 +13,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const feRoot = path.join(__dirname, "..");
 const catalogJson = path.join(feRoot, "src/shared/lib/permissions-catalog.json");
 const outFile = path.join(feRoot, "src/shared/lib/generated-permissions.ts");
-const beCatalogJson = path.join(feRoot, "../../plumbit-erp-be/docs/permissions-catalog.json");
 
 function loadCatalog() {
   if (!fs.existsSync(catalogJson)) {
-    throw new Error(
-      `Missing ${catalogJson}. Copy plumbit-erp-be/docs/permissions-catalog.json here, ` +
-        "or run: npm run sync:permissions",
-    );
+    throw new Error(`Missing ${catalogJson}.`);
   }
   const raw = fs.readFileSync(catalogJson, "utf8");
   const parsed = JSON.parse(raw);
@@ -57,7 +49,7 @@ function generateSource(catalog) {
     })
     .join("\n");
 
-  return `/** Generated from plumbit-erp-be/app/auth/catalog.py — do not edit manually. */
+  return `/** Generated from src/shared/lib/permissions-catalog.json — do not edit manually. */
 /** Regenerate: npm run generate:permissions */
 
 export const catalogPermissions = [
@@ -122,5 +114,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });
-
-export { beCatalogJson, catalogJson, outFile };
