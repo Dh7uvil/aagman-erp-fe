@@ -9,6 +9,21 @@ function logoImageHosts(): string[] {
     .filter(Boolean);
 }
 
+function allowedDevOrigins(): string[] {
+  const defaults = [
+    "127.0.0.1",
+    "localhost",
+    "192.168.29.19",
+    "192.168.29.225",
+    "*.ngrok-free.dev",
+  ];
+  const extra = (process.env.DEV_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return [...new Set([...defaults, ...extra])];
+}
+
 function logoImgSrc(): string[] {
   return logoImageHosts().map((host) => (/^https?:\/\//i.test(host) ? host : `https://${host}`));
 }
@@ -54,7 +69,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   poweredByHeader: false,
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  allowedDevOrigins: allowedDevOrigins(),
   images: {
     remotePatterns: logoRemotePatterns(),
   },

@@ -19,7 +19,9 @@ import { FilterField, MoreFiltersDialog } from "@/shared/components/data-table/m
 import type { SortFieldOption } from "@/shared/components/data-table/sort";
 import { SortDialog } from "@/shared/components/data-table/sort-dialog";
 import { sortFilterPillLabel } from "@/shared/components/data-table/sort-filter-label";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
+import type { useListView } from "@/shared/hooks/use-list-view";
 import { Input } from "@/shared/components/ui/input";
 import { formatDate } from "@/shared/lib/format";
 import { useTableParams } from "@/shared/hooks/use-table-params";
@@ -209,7 +211,13 @@ export function userListParamsFromTable(input: {
   });
 }
 
-export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode }) {
+export function UsersTableFilters({
+  columnsDialog,
+  listView,
+}: {
+  columnsDialog?: ReactNode;
+  listView?: ReturnType<typeof useListView>;
+}) {
   const { search, sort_by, sort_order, filters, setParams } = useTableParams();
   const extraFilters = extraFromUrl(filters);
   const status = parseUserStatus(filters.status) ?? ALL;
@@ -415,7 +423,7 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
       />
       <FilterSelect
         label="Status"
-        className="w-40"
+        className="w-full sm:w-40"
         placeholder="Status"
         value={status}
         onValueChange={(value) => setParams({ filters: { status: value === ALL ? null : value } })}
@@ -428,7 +436,7 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
       />
       <FilterSelect
         label="Role"
-        className="w-48"
+        className="w-full sm:w-48"
         placeholder="Role"
         value={roleId}
         onValueChange={(value) =>
@@ -580,7 +588,15 @@ export function UsersTableFilters({ columnsDialog }: { columnsDialog?: ReactNode
         sortOrder={sort_order}
         onApply={setParams}
       />
-      {columnsDialog}
+      {listView ? (
+        <ListViewToolbarControls
+          listView={listView}
+          columnsDialog={columnsDialog}
+          mobileFullRow
+        />
+      ) : (
+        columnsDialog
+      )}
     </DataTableToolbar>
     <ActiveFilterPills
       pills={filterPills}

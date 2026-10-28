@@ -131,7 +131,7 @@ export function CompanyLogoCard() {
           {showLogo ? null : (
             <div>
               <p className="text-sm font-medium">No company logo yet</p>
-              <p className="text-muted-foreground text-xs whitespace-nowrap">
+              <p className="text-muted-foreground text-xs">
                 {canUpdate
                   ? "JPEG, PNG, or WebP up to 2 MB."
                   : "A company logo has not been uploaded."}

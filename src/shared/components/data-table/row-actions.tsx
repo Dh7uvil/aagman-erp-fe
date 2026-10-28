@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit2, Eye, Trash2 } from "lucide-react";
+import { Edit2, Eye, MoreHorizontal, Trash2 } from "lucide-react";
 import Link from "next/link";
 import {
   Children,
@@ -12,7 +12,16 @@ import {
 } from "react";
 
 import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import { useDropdownMenuNavigationSync } from "@/shared/hooks/use-dropdown-menu-navigation-sync";
+import { useIsMobile } from "@/shared/hooks/use-mobile";
 
 export function hasRowActions(...flags: Array<unknown>): boolean {
   return flags.some(Boolean);
@@ -65,6 +74,14 @@ function actionLabel(verb: string, entityName?: string | null) {
   return trimmed ? `${verb} ${trimmed}` : verb;
 }
 
+type RowActionMenuItem = {
+  key: string;
+  label: string;
+  destructive?: boolean;
+  onSelect?: () => void;
+  href?: string;
+};
+
 export function DataTableRowActions({
   entityName,
   onView,
@@ -82,6 +99,9 @@ export function DataTableRowActions({
   onDelete?: () => void;
   extra?: ReactNode;
 }) {
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useDropdownMenuNavigationSync();
+
   if (!onView && !viewHref && !onEdit && !editHref && !onDelete && !extra) {
     return null;
   }
@@ -89,6 +109,67 @@ export function DataTableRowActions({
   const viewLabel = actionLabel("View", entityName);
   const editLabel = actionLabel("Edit", entityName);
   const deleteLabel = actionLabel("Delete", entityName);
+
+  const menuItems: RowActionMenuItem[] = [];
+  if (viewHref || onView) {
+    menuItems.push({
+      key: "view",
+      label: viewLabel,
+      href: viewHref,
+      onSelect: onView,
+    });
+  }
+  if (editHref || onEdit) {
+    menuItems.push({
+      key: "edit",
+      label: editLabel,
+      href: editHref,
+      onSelect: onEdit,
+    });
+  }
+  if (onDelete) {
+    menuItems.push({
+      key: "delete",
+      label: deleteLabel,
+      destructive: true,
+      onSelect: onDelete,
+    });
+  }
+
+  if (isMobile && menuItems.length > 0) {
+    return (
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Row actions">
+            <MoreHorizontal className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClickCapture={() => setMenuOpen(false)}>
+          {menuItems.map((item, index) => (
+            <DropdownMenuItem
+              key={item.key}
+              variant={item.destructive ? "destructive" : "default"}
+              className={index > 0 && item.destructive ? "mt-0" : undefined}
+              onSelect={item.href ? undefined : () => item.onSelect?.()}
+              asChild={Boolean(item.href)}
+            >
+              {item.href ? (
+                <Link href={item.href}>{item.label}</Link>
+              ) : (
+                <span>{item.label}</span>
+              )}
+            </DropdownMenuItem>
+          ))}
+          {extra ? (
+            <>
+              <DropdownMenuSeparator />
+              <div className="px-1 py-0.5">{extra}</div>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
 
   const viewButton = viewHref ? (
     <TableActionTooltip label={viewLabel}>

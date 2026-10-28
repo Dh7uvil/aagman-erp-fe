@@ -14,5 +14,6 @@ export function useTableColumnPreferences(tableKey: string) {
     queryKey: tablePreferenceKeys.detail(tableKey),
     queryFn: () => tablePreferencesApi.get(tableKey),
     staleTime: 5 * 60_000,
+    retry: 1,
   });
 }

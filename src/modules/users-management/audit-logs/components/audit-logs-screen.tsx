@@ -18,9 +18,9 @@ import {
 import { useAllUsers } from "@/modules/users-management/users/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { ActiveFilterPills, type ActiveFilterPill } from "@/shared/components/data-table/filter-chip";
 import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
@@ -40,7 +40,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatDate, formatDateTime, initials, titleCase } from "@/shared/lib/format";
 
@@ -331,6 +331,7 @@ export function AuditLogsScreen() {
   }, [canRead, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.audit_logs", columnDefs);
+  const listView = useListView("identity.audit_logs");
 
   async function exportCsv() {
     setCsvPending(true);
@@ -490,7 +491,7 @@ export function AuditLogsScreen() {
         />
         <FilterSelect
           label="Module"
-          className="w-36 md:w-40"
+          className="w-full sm:w-36 md:w-40"
           placeholder="Module"
           value={moduleFilter}
           onValueChange={(value) =>
@@ -559,64 +560,46 @@ export function AuditLogsScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        {columnsDialog}
+        <ListViewToolbarControls
+          listView={listView}
+          columnsDialog={columnsDialog}
+          mobileFullRow
+        />
       </DataTableToolbar>
       <ActiveFilterPills
         pills={filterPills}
         onClearAll={hasActiveFilters ? clearFilters : undefined}
       />
       </div>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sortBy}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {logsQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : logsQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(logsQuery.error)}
-                  onRetry={() => logsQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty
-                  title="No audit logs"
-                  message={
-                    hasActiveFilters
-                      ? "Try a different search or filter."
-                      : "No activity has been recorded yet."
-                  }
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((log) => (
-              <TableRow key={log.id} data-state={viewingId === log.id ? "selected" : undefined}>
-                <DataTableCells columns={columns} row={log} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={rows}
+        getRowKey={(log) => log.id}
+        getRowLabel={(log) => shortId(log.id)}
+        onRowClick={canRead ? (log) => setViewingId(log.id) : undefined}
+        isLoading={logsQuery.isLoading}
+        isError={logsQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(logsQuery.error)}
+            onRetry={() => logsQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty
+            title="No audit logs"
+            message={
+              hasActiveFilters
+                ? "Try a different search or filter."
+                : "No activity has been recorded yet."
+            }
+          />
+        }
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <AuditLogDetailSheet
         logId={viewingId}
         onOpenChange={(open) => {

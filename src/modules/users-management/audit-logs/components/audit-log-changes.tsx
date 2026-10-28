@@ -43,46 +43,87 @@ function AuditValue({ value, className }: { value: unknown; className?: string }
   return <span className={cn("text-sm break-all", className)}>{formatted.text}</span>;
 }
 
+function AuditChangeCard({
+  change,
+}: {
+  change: AuditLogChange;
+}) {
+  const afterChanged = change.new_value !== null && change.new_value !== undefined;
+
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-sm font-medium">{humanizeAuditField(change.field)}</p>
+      <div className="mt-2 space-y-2 text-sm">
+        <div>
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">Before</p>
+          <AuditValue value={change.old_value} className="text-muted-foreground mt-0.5" />
+        </div>
+        <div
+          className={cn(
+            "rounded-sm p-2",
+            afterChanged && "bg-emerald-50 dark:bg-emerald-950/40",
+          )}
+        >
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">After</p>
+          <AuditValue
+            value={change.new_value}
+            className={cn("mt-0.5", afterChanged && "text-emerald-800 dark:text-emerald-300")}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AuditLogChanges({ changes }: { changes: AuditLogChange[] }) {
   if (changes.length === 0) {
     return <p className="text-muted-foreground text-sm">No field changes recorded</p>;
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Field</TableHead>
-          <TableHead>Before</TableHead>
-          <TableHead>After</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {changes.map((change) => {
-          const afterChanged = change.new_value !== null && change.new_value !== undefined;
-          return (
-            <TableRow key={change.field}>
-              <TableCell className="align-top text-sm whitespace-normal" title={change.field}>
-                {humanizeAuditField(change.field)}
-              </TableCell>
-              <TableCell className="text-muted-foreground align-top whitespace-normal">
-                <AuditValue value={change.old_value} />
-              </TableCell>
-              <TableCell
-                className={cn(
-                  "align-top whitespace-normal",
-                  afterChanged && "bg-emerald-50 dark:bg-emerald-950/40",
-                )}
-              >
-                <AuditValue
-                  value={change.new_value}
-                  className={afterChanged ? "text-emerald-800 dark:text-emerald-300" : undefined}
-                />
-              </TableCell>
+    <>
+      <div className="flex flex-col gap-3 sm:hidden">
+        {changes.map((change) => (
+          <AuditChangeCard key={change.field} change={change} />
+        ))}
+      </div>
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Field</TableHead>
+              <TableHead>Before</TableHead>
+              <TableHead>After</TableHead>
             </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+          </TableHeader>
+          <TableBody>
+            {changes.map((change) => {
+              const afterChanged = change.new_value !== null && change.new_value !== undefined;
+              return (
+                <TableRow key={change.field}>
+                  <TableCell className="align-top text-sm whitespace-normal" title={change.field}>
+                    {humanizeAuditField(change.field)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground align-top whitespace-normal">
+                    <AuditValue value={change.old_value} />
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "align-top whitespace-normal",
+                      afterChanged && "bg-emerald-50 dark:bg-emerald-950/40",
+                    )}
+                  >
+                    <AuditValue
+                      value={change.new_value}
+                      className={afterChanged ? "text-emerald-800 dark:text-emerald-300" : undefined}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }

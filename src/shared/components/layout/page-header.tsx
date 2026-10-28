@@ -1,6 +1,24 @@
-import type { ReactNode } from "react";
+"use client";
 
+import { MoreHorizontal } from "lucide-react";
+import {
+  Children,
+  Fragment,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import { useDropdownMenuNavigationSync } from "@/shared/hooks/use-dropdown-menu-navigation-sync";
+import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { cn } from "@/shared/lib/cn";
 
 function headerCodeTooltip(codeLabel?: string, codeTooltip?: string): string {
@@ -34,6 +52,114 @@ function PageHeaderCode({
   );
 }
 
+function buttonLabel(element: ReactElement): string | null {
+  const props = element.props as { children?: ReactNode };
+  const child = props.children;
+  if (typeof child === "string") {
+    return child.trim();
+  }
+  if (isValidElement(child)) {
+    const inner = (child.props as { children?: ReactNode }).children;
+    if (typeof inner === "string") {
+      return inner.trim();
+    }
+  }
+  return null;
+}
+
+function isPersistHeaderAction(element: ReactElement): boolean {
+  if (element.type !== Button) {
+    return false;
+  }
+  const props = element.props as Record<string, unknown>;
+  if (props["data-page-header-persist"]) {
+    return true;
+  }
+  const label = buttonLabel(element);
+  return label === "Back" || label === "Cancel";
+}
+
+function collectActionButtons(node: ReactNode): ReactElement[] {
+  const buttons: ReactElement[] = [];
+  Children.forEach(node, (child) => {
+    if (!isValidElement(child)) {
+      return;
+    }
+    if (child.type === Fragment) {
+      buttons.push(...collectActionButtons((child.props as { children?: ReactNode }).children));
+      return;
+    }
+    if (child.type === Button) {
+      buttons.push(child);
+      return;
+    }
+    const props = child.props as { children?: ReactNode };
+    if (props.children) {
+      buttons.push(...collectActionButtons(props.children));
+    }
+  });
+  return buttons;
+}
+
+function countActionButtons(node: ReactNode): number {
+  return collectActionButtons(node).length;
+}
+
+function renderHeaderButtons(buttons: readonly ReactElement[]): ReactNode {
+  return buttons.map((button, index) =>
+    cloneElement(button, { key: button.key ?? `page-header-action-${index}` }),
+  );
+}
+
+function PageHeaderActions({ actions }: { actions: ReactNode }) {
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useDropdownMenuNavigationSync();
+  const buttons = collectActionButtons(actions);
+  const persistActions = buttons.filter(isPersistHeaderAction);
+  const menuActions = buttons.filter((button) => !isPersistHeaderAction(button));
+  const collapse = isMobile && menuActions.length >= 2;
+
+  if (!collapse) {
+    return (
+      <div
+        data-page-actions
+        className={cn("flex shrink-0 flex-wrap items-center justify-end gap-2")}
+      >
+        {actions}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        data-page-actions
+        className={cn("hidden shrink-0 flex-wrap items-center gap-2 sm:flex")}
+      >
+        {actions}
+      </div>
+      <div className="flex shrink-0 items-center justify-end gap-2 sm:hidden">
+        {renderHeaderButtons(persistActions)}
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="sm">
+              <MoreHorizontal className="size-4" />
+              Actions
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="flex w-56 flex-col gap-1 p-2"
+            onClickCapture={() => setMenuOpen(false)}
+          >
+            {renderHeaderButtons(menuActions)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </>
+  );
+}
+
 export function PageHeader({
   title,
   subtitle,
@@ -51,22 +177,33 @@ export function PageHeader({
   badges?: ReactNode;
   actions?: ReactNode;
 }) {
+  const isMobile = useIsMobile();
+  const actionCount = actions ? countActionButtons(actions) : 0;
+  const stackActionsOnMobile = Boolean(isMobile && actions && actionCount > 0 && actionCount < 3);
+
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-foreground text-lg font-semibold tracking-tight">{title}</h1>
-          {code && code !== title ? (
-            <PageHeaderCode code={code} codeLabel={codeLabel} codeTooltip={codeTooltip} />
-          ) : null}
-          {badges ? <div className="flex flex-wrap items-center gap-2">{badges}</div> : null}
+    <div className="flex flex-col gap-1.5 sm:gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-foreground text-lg font-semibold tracking-tight">{title}</h1>
+            {code && code !== title ? (
+              <PageHeaderCode code={code} codeLabel={codeLabel} codeTooltip={codeTooltip} />
+            ) : null}
+            {badges ? <div className="flex flex-wrap items-center gap-2">{badges}</div> : null}
+          </div>
         </div>
-        {subtitle ? <p className="text-muted-foreground mt-0.5 text-sm">{subtitle}</p> : null}
+        {actions && !stackActionsOnMobile ? (
+          <div className="flex shrink-0 justify-end">
+            <PageHeaderActions actions={actions} />
+          </div>
+        ) : null}
       </div>
-      {actions ? (
-        <div data-page-actions className={cn("flex shrink-0 flex-wrap items-center gap-2")}>
-          {actions}
-        </div>
+      {subtitle ? (
+        <p className="text-muted-foreground min-w-0 text-sm leading-snug">{subtitle}</p>
+      ) : null}
+      {stackActionsOnMobile ? (
+        <div className="flex w-full flex-col gap-2 [&_a]:w-full [&_button]:w-full">{actions}</div>
       ) : null}
     </div>
   );

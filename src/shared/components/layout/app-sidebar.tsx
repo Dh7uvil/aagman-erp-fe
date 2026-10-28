@@ -417,7 +417,10 @@ export function AppSidebar({
         <SidebarChrome collapsed={collapsed} onToggle={onToggle} brand={brand?.(collapsed)} />
       </aside>
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-        <SheetContent side="left" className="bg-sidebar w-64 p-0 sm:max-w-64">
+        <SheetContent
+          side="left"
+          className="bg-sidebar w-64 p-0 sm:max-w-64 [&>button.absolute]:hidden"
+        >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SidebarChrome
             collapsed={false}

@@ -306,14 +306,14 @@ export function MaterialFormFields({
         }
       >
         <div className="overflow-hidden rounded-md border">
-          <div className="hidden border-b bg-muted/40 sm:grid sm:grid-cols-[minmax(0,1fr)_8.5rem_minmax(0,1fr)_minmax(0,1fr)_8.5rem] sm:items-center">
+          <div className="hidden border-b bg-muted/40 sm:grid sm:grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)_minmax(0,1fr)_11rem] sm:items-center">
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Size</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Size unit</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">No. of rolls</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Qty available</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Qty unit</div>
           </div>
-          <div className="grid grid-cols-1 gap-4 p-4 sm:grid sm:grid-cols-[minmax(0,1fr)_8.5rem_minmax(0,1fr)_minmax(0,1fr)_8.5rem] sm:items-center sm:gap-0 sm:p-0">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid sm:grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)_minmax(0,1fr)_11rem] sm:items-center sm:gap-0 sm:p-0">
             <FormField
               control={control}
               name="size"

@@ -55,11 +55,11 @@ export function RecordPageHeader({
             </Button>
           ) : null}
           {mode === "edit" ? (
-            <Button type="button" variant="outline" size="sm" asChild>
+            <Button type="button" variant="outline" size="sm" asChild data-page-header-persist>
               <Link href={viewHref}>Cancel</Link>
             </Button>
           ) : (
-            <Button type="button" variant="outline" size="sm" asChild>
+            <Button type="button" variant="outline" size="sm" asChild data-page-header-persist>
               <Link href={listHref}>Back</Link>
             </Button>
           )}

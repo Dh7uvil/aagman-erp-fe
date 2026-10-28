@@ -43,7 +43,7 @@ export function AppHeader({
 
   return (
     <TooltipProvider>
-      <header className="bg-card border-border flex h-14 shrink-0 items-center gap-2 border-b px-3 md:gap-3 md:px-4">
+      <header className="bg-card border-border flex h-14 shrink-0 items-center gap-2 border-b px-3 pt-[env(safe-area-inset-top,0px)] md:gap-3 md:px-4">
         <Button
           type="button"
           variant="ghost"
@@ -83,7 +83,7 @@ export function AppHeader({
           <TooltipContent>{themeTooltip}</TooltipContent>
         </Tooltip>
         <HelpTrigger onOpen={onHelpOpen} />
-        <DropdownMenu>
+        <DropdownMenu modal>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"

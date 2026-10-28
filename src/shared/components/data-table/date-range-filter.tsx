@@ -41,7 +41,7 @@ export function DateRangeFilter({
           <Input
             id={fromId}
             type="date"
-            className="w-40"
+            className="w-full sm:w-40"
             value={from}
             disabled={disabled}
             aria-label={fromLabel}
@@ -55,7 +55,7 @@ export function DateRangeFilter({
           <Input
             id={toId}
             type="date"
-            className="w-40"
+            className="w-full sm:w-40"
             value={to}
             disabled={disabled}
             min={from || undefined}

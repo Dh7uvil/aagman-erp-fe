@@ -13,9 +13,10 @@ import { unitRoutes } from "@/modules/inventory/units/routes";
 import type { Unit } from "@/modules/inventory/units/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
+import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
@@ -30,8 +31,7 @@ import { ActiveBadge } from "@/shared/components/feedback/active-badge";
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import {
   LIST_ACTIVE_ALL,
@@ -112,6 +112,7 @@ export function UnitsScreen() {
         header: "Status",
         cell: (unit) => <ActiveBadge active={unit.is_active} />,
       },
+      ...auditTimestampColumns<Unit>(),
       ...actionsColumn<Unit>(showActions, (unit) => (
         <DataTableRowActions
           entityName={unit.name}
@@ -124,6 +125,7 @@ export function UnitsScreen() {
   }, [canDelete, canRead, canUpdate, router, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.units", columnDefs);
+  const listView = useListView("inventory.units");
 
   return (
     <ListPage>
@@ -149,7 +151,7 @@ export function UnitsScreen() {
         />
         <FilterSelect
           label="Status"
-          className="w-40"
+          className="w-full sm:w-40"
           placeholder="Status"
           value={listActiveFilterValue(filters.active)}
           onValueChange={(value) =>
@@ -164,7 +166,7 @@ export function UnitsScreen() {
           ]}
         />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -176,42 +178,26 @@ export function UnitsScreen() {
           </Button>
         ) : null}
       </DataTableToolbar>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads columns={columns} sortBy={sortBy} sortOrder={sort_order} onSort={setParams} />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {unitsQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : unitsQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError message={getErrorMessage(unitsQuery.error)} onRetry={() => unitsQuery.refetch()} />
-              </TableCell>
-            </TableRow>
-          ) : units.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty message="No units yet." />
-              </TableCell>
-            </TableRow>
-          ) : (
-            units.map((unit) => (
-              <TableRow key={unit.id}>
-                <DataTableCells columns={columns} row={unit} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={units}
+        getRowKey={(unit) => unit.id}
+        getRowLabel={(unit) => unit.name}
+        onRowClick={canRead ? (unit) => router.push(unitRoutes.view(unit.id)) : undefined}
+        isLoading={unitsQuery.isLoading}
+        isError={unitsQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(unitsQuery.error)}
+            onRetry={() => unitsQuery.refetch()}
+          />
+        }
+        empty={<DataTableEmpty message="No units yet." />}
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <ConfirmActionDialog
         open={Boolean(deleting)}
         title="Delete unit"

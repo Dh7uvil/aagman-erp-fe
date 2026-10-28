@@ -6,6 +6,8 @@ export type TableColumnPreference = {
   is_default: boolean;
 };
 
+export type CardColumnSlot = "title" | "subtitle" | "badge" | "field" | "hidden";
+
 export type DataTableColumn<T> = {
   id: string;
   header: string;
@@ -16,8 +18,95 @@ export type DataTableColumn<T> = {
   className?: string;
   headerClassName?: string;
   hideable?: boolean;
+  card?: {
+    slot?: CardColumnSlot;
+  };
   cell: (row: T) => ReactNode;
 };
+
+export type ResolvedCardSlot = CardColumnSlot | "actions";
+
+export type CardColumnLayout<T> = {
+  title?: DataTableColumn<T>;
+  subtitle?: DataTableColumn<T>;
+  badge?: DataTableColumn<T>;
+  fields: DataTableColumn<T>[];
+  actions?: DataTableColumn<T>;
+};
+
+export const LIST_OPEN_COLUMN_COUNT = 2;
+
+export function isActionsColumn<T>(column: DataTableColumn<T>): boolean {
+  return column.id === "actions" || (column.sticky === "right" && Boolean(column.locked));
+}
+
+/** Whether this visible column is among the first N data columns that open the record view. */
+export function isListOpenColumn<T>(
+  columns: readonly DataTableColumn<T>[],
+  columnIndex: number,
+): boolean {
+  if (columnIndex < 0 || columnIndex >= columns.length) {
+    return false;
+  }
+  let dataIndex = 0;
+  for (let index = 0; index <= columnIndex; index++) {
+    const column = columns[index];
+    if (isActionsColumn(column)) {
+      continue;
+    }
+    if (index === columnIndex) {
+      return dataIndex < LIST_OPEN_COLUMN_COUNT;
+    }
+    dataIndex += 1;
+  }
+  return false;
+}
+
+export function resolveCardSlots<T>(
+  columns: readonly DataTableColumn<T>[],
+): CardColumnLayout<T> {
+  const layout: CardColumnLayout<T> = { fields: [] };
+  let titleAssigned = false;
+
+  for (const column of columns) {
+    if (isActionsColumn(column)) {
+      layout.actions = column;
+      continue;
+    }
+
+    const explicit = column.card?.slot;
+    if (explicit === "hidden") {
+      continue;
+    }
+    if (explicit === "title") {
+      layout.title = column;
+      titleAssigned = true;
+      continue;
+    }
+    if (explicit === "subtitle") {
+      layout.subtitle = column;
+      continue;
+    }
+    if (explicit === "badge") {
+      layout.badge = column;
+      continue;
+    }
+    if (explicit === "field") {
+      layout.fields.push(column);
+      continue;
+    }
+
+    if (!titleAssigned) {
+      layout.title = column;
+      titleAssigned = true;
+      continue;
+    }
+
+    layout.fields.push(column);
+  }
+
+  return layout;
+}
 
 export type ColumnPreferencePatch = {
   visible_columns: string[];
@@ -32,6 +121,12 @@ export type ColumnPickerItem = {
   pinned: boolean;
 };
 
+/** Pin first identity column on horizontal scroll; `top-0` comes from TableHead. */
+export const stickyIdentityHeadClass =
+  "sticky left-0 z-30 bg-card shadow-[2px_0_6px_-2px_rgba(0,0,0,0.18)]";
+/** Pin first identity cell on horizontal scroll. */
+export const stickyIdentityCellClass =
+  "sticky left-0 z-10 max-w-[10rem] truncate bg-card group-hover:bg-muted group-data-[state=selected]:bg-muted shadow-[2px_0_6px_-2px_rgba(0,0,0,0.18)] sm:max-w-none";
 /** Pin actions header on horizontal scroll; `top-0` comes from TableHead. */
 export const stickyActionsHeadClass =
   "sticky right-0 z-30 bg-card shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.18)]";
@@ -97,6 +192,18 @@ export function pinnedColumnIds<T>(
   return defaultColumnPreference(defs).visible_columns.slice(0, pinnedCount);
 }
 
+/** Visible column ids from saved preference, or column defs when none apply yet. */
+export function preferenceVisibleColumnIds<T>(
+  defs: readonly DataTableColumn<T>[],
+  preference: TableColumnPreference | null | undefined,
+): string[] {
+  const customizable = customizableColumns(defs);
+  const known = new Set(customizable.map((column) => column.id));
+  const defaults = defaultColumnPreference(defs);
+  const saved = (preference?.visible_columns ?? []).filter((id) => known.has(id));
+  return saved.length > 0 ? saved : defaults.visible_columns;
+}
+
 function applyPinnedColumns(
   visible: string[],
   order: string[],
@@ -125,7 +232,7 @@ export function columnPickerDraft<T>(
     [...savedOrder, ...defaults.column_order.filter((id) => !savedOrder.includes(id))],
     pinned,
   ).order;
-  const visible = new Set(preference?.visible_columns ?? defaults.visible_columns);
+  const visible = new Set(preferenceVisibleColumnIds(defs, preference));
   for (const id of pinned) {
     visible.add(id);
   }
@@ -162,9 +269,7 @@ export function resolveTableColumns<T>(
   const missing = defaults.column_order.filter((id) => !savedOrder.includes(id));
   const rawOrder = preference ? [...savedOrder, ...missing] : defaults.column_order;
 
-  const savedVisible = (preference?.visible_columns ?? []).filter((id) => known.has(id));
-  const rawVisible =
-    preference && savedVisible.length > 0 ? savedVisible : defaults.visible_columns;
+  const rawVisible = preferenceVisibleColumnIds(defs, preference);
 
   const pinnedPreference = applyPinnedColumns(rawVisible, rawOrder, pinned);
   const visibleIds = new Set(pinnedPreference.visible);

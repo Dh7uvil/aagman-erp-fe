@@ -13,9 +13,9 @@ import type { Branch, BranchStatus } from "@/modules/users-management/branches/s
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
@@ -29,8 +29,7 @@ import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 
 const ALL = "all";
@@ -158,6 +157,7 @@ export function BranchesScreen() {
   }, [canDelete, canRead, canUpdate, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.branches", columnDefs);
+  const listView = useListView("identity.branches");
 
   return (
     <ListPage>
@@ -181,7 +181,7 @@ export function BranchesScreen() {
         />
         <FilterSelect
           label="Status"
-          className="w-40"
+          className="w-full sm:w-40"
           placeholder="Status"
           value={status ?? ALL}
           onValueChange={(value) =>
@@ -199,7 +199,7 @@ export function BranchesScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -218,53 +218,28 @@ export function BranchesScreen() {
           </Button>
         ) : null}
       </DataTableToolbar>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sortBy}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {branchesQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : branchesQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(branchesQuery.error)}
-                  onRetry={() => branchesQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : branches.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty
-                  title="No branches found"
-                  message="Try a different search or filter."
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
-            branches.map((branch) => (
-              <TableRow key={branch.id}>
-                <DataTableCells row={branch} columns={columns} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={branches}
+        getRowKey={(branch) => branch.id}
+        getRowLabel={(branch) => branch.name}
+        onRowClick={canRead ? (branch) => openView(branch) : undefined}
+        isLoading={branchesQuery.isLoading}
+        isError={branchesQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(branchesQuery.error)}
+            onRetry={() => branchesQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty title="No branches found" message="Try a different search or filter." />
+        }
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <BranchFormDialog
         open={formOpen}
         branch={selected}

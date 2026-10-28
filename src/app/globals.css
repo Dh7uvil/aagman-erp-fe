@@ -53,10 +53,16 @@
 }
 
 .list-table-scroll {
-  max-height: calc(100svh - 17rem);
+  max-height: calc(100dvh - var(--list-table-chrome-offset));
   min-height: 12rem;
   overflow: auto;
   overscroll-behavior: contain;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --list-table-chrome-offset: 14rem;
+  }
 }
 
 .list-table-panel .list-table-scroll {
@@ -71,6 +77,7 @@
 }
 
 :root {
+  --list-table-chrome-offset: 17rem;
   --document-view-table-header-height: 2.75rem;
   --document-view-table-row-height: 6.5rem;
   --font-size: 16px;
@@ -233,11 +240,19 @@
 
   html {
     font-size: var(--font-size);
-    overflow: hidden;
+    min-height: 100%;
   }
 
   body {
-    @apply bg-background text-foreground overflow-hidden font-sans;
+    @apply bg-background text-foreground min-h-svh font-sans;
+  }
+
+  html:has(.auth-page),
+  html:has(.auth-page) body {
+    overflow: auto;
+    height: auto;
+    min-height: 100%;
+    -webkit-overflow-scrolling: touch;
   }
 
   h1 {
@@ -281,5 +296,90 @@
     font-size: var(--text-sm);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset;
+    -webkit-text-fill-color: var(--foreground);
+    caret-color: var(--foreground);
+  }
+}
+
+/*
+  Phone keyboard: follow the visual viewport so iOS cannot pan the page,
+  hide the header, or leave a grey band above the keyboard.
+  Unlayered so these beat Tailwind viewport utilities on small screens.
+*/
+@media (max-width: 767px) {
+  html:not(:has(.auth-page)),
+  html:not(:has(.auth-page)) body {
+    width: 100%;
+    height: var(--app-vv-height, 100svh);
+    min-height: 0;
+    max-height: var(--app-vv-height, 100svh);
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* 16px stops iOS from zooming the page when a field is focused. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  [data-app-shell] {
+    position: fixed;
+    top: var(--app-vv-top, 0px);
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: var(--app-vv-height, 100svh);
+    max-height: var(--app-vv-height, 100svh);
+    overflow: hidden;
+  }
+
+  #main-content {
+    overflow-anchor: none;
+  }
+
+  [data-vv-fill],
+  [data-slot="dialog-overlay"],
+  [data-slot="alert-dialog-overlay"],
+  [data-slot="sheet-overlay"] {
+    top: var(--app-vv-top, 0px);
+    bottom: auto;
+    height: var(--app-vv-height, 100svh);
+  }
+
+  [data-slot="sheet-content"] {
+    top: var(--app-vv-top, 0px);
+    bottom: auto;
+    height: var(--app-vv-height, 100svh);
+    max-height: var(--app-vv-height, 100svh);
+  }
+
+  [data-slot="dialog-content"]:not([data-mobile-sheet]),
+  [data-slot="alert-dialog-content"] {
+    top: calc(var(--app-vv-top, 0px) + (var(--app-vv-height, 100svh) * 0.5));
+    max-height: calc(var(--app-vv-height, 100svh) - 2rem);
+  }
+}
+
+@media (max-width: 639px) {
+  [data-slot="dialog-content"][data-mobile-sheet] {
+    top: auto;
+    bottom: var(--app-vv-bottom, 0px);
+    max-height: calc(var(--app-vv-height, 85dvh) - 1rem);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  [data-slot="dialog-content"][data-mobile-sheet] {
+    top: calc(var(--app-vv-top, 0px) + (var(--app-vv-height, 100svh) * 0.5));
+    bottom: auto;
+    max-height: calc(var(--app-vv-height, 100svh) - 2rem);
   }
 }

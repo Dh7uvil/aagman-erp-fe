@@ -20,43 +20,58 @@ export function AppBreadcrumb() {
     recordLabel: isClient ? recordLabel : null,
   });
 
+  const lastCrumb = crumbs[crumbs.length - 1];
+
   return (
-    <nav
-      className="hidden min-w-0 items-center gap-1.5 text-xs sm:flex"
-      aria-label="Breadcrumb"
-      suppressHydrationWarning
-    >
-      <ol className="flex min-w-0 items-center gap-1.5" suppressHydrationWarning>
-        {crumbs.map((crumb, index) => {
-          const isLast = index === crumbs.length - 1;
-          return (
-            <li key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
-              {index > 0 ? (
-                <ChevronRight size={11} className="text-muted-foreground/40 shrink-0" />
-              ) : null}
-              {crumb.href && !isLast ? (
-                <Link
-                  href={crumb.href}
-                  className="text-muted-foreground/70 hover:text-foreground truncate transition-colors"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span
-                  className={
-                    isLast
-                      ? "text-foreground truncate font-medium"
-                      : "text-muted-foreground/60 truncate"
-                  }
-                  aria-current={isLast ? "page" : undefined}
-                >
-                  {crumb.label}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
+    <>
+      {lastCrumb ? (
+        <nav
+          className="flex min-w-0 max-w-[45vw] items-center text-xs sm:hidden"
+          aria-label="Breadcrumb"
+          suppressHydrationWarning
+        >
+          <span className="text-foreground truncate font-medium" aria-current="page">
+            {lastCrumb.label}
+          </span>
+        </nav>
+      ) : null}
+      <nav
+        className="hidden min-w-0 items-center gap-1.5 text-xs sm:flex"
+        aria-label="Breadcrumb"
+        suppressHydrationWarning
+      >
+        <ol className="flex min-w-0 items-center gap-1.5" suppressHydrationWarning>
+          {crumbs.map((crumb, index) => {
+            const isLast = index === crumbs.length - 1;
+            return (
+              <li key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
+                {index > 0 ? (
+                  <ChevronRight size={11} className="text-muted-foreground/40 shrink-0" />
+                ) : null}
+                {crumb.href && !isLast ? (
+                  <Link
+                    href={crumb.href}
+                    className="text-muted-foreground/70 hover:text-foreground truncate transition-colors"
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span
+                    className={
+                      isLast
+                        ? "text-foreground truncate font-medium"
+                        : "text-muted-foreground/60 truncate"
+                    }
+                    aria-current={isLast ? "page" : undefined}
+                  >
+                    {crumb.label}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+    </>
   );
 }

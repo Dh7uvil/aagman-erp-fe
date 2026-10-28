@@ -101,7 +101,11 @@ export function AppKeyboardShortcuts({
 
       if (key === "/" && !event.shiftKey) {
         event.preventDefault();
-        focusSidebarSearch();
+        if (window.matchMedia("(max-width: 767px)").matches) {
+          onSearchOpenChange(true);
+        } else {
+          focusSidebarSearch();
+        }
         return;
       }
 

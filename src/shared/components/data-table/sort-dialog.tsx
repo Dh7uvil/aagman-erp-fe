@@ -80,12 +80,12 @@ export function SortDialog({
         </Button>
       </ToolbarControl>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent mobileSheet className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Sort</DialogTitle>
             <DialogDescription>Choose a column and sort order.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FilterField label="Sort by" htmlFor="list-sort-field">
               <FilterSelect
                 id="list-sort-field"

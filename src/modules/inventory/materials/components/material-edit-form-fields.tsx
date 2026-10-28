@@ -55,11 +55,11 @@ function unitIdForCode(units: { id: string; code: string }[], code: string): str
   return units.find((item) => item.code === code)?.id ?? "";
 }
 
-/** Size | unit | rolls | qty | unit | active | delete — three equal numeric cols, two equal unit cols. */
+/** Size | unit | rolls | qty | unit | active | delete — balanced fr cols so numerics do not collapse on tablet. */
 const SIZE_LINE_GRID =
-  "sm:grid sm:grid-cols-[minmax(0,1fr)_8.5rem_minmax(0,1fr)_minmax(0,1fr)_8.5rem_4.5rem_2.75rem] sm:items-center";
+  "sm:grid sm:grid-cols-[minmax(5.5rem,1.15fr)_minmax(7.5rem,1.35fr)_minmax(5rem,1fr)_minmax(5rem,1fr)_minmax(7.5rem,1.35fr)_4.25rem_2.5rem] sm:items-center";
 
-const SIZE_LINE_CELL = "min-w-0 sm:px-4 sm:py-3";
+const SIZE_LINE_CELL = "min-w-0 w-full sm:px-3 sm:py-3 lg:px-4";
 
 function MaterialFormSection({
   title,
@@ -176,19 +176,37 @@ export function MaterialEditFormFields({
   }, [productId, microns, micronsLoading, form]);
 
   useEffect(() => {
-    if (!defaultQuantityUnitId) {
+    if (!defaultSizeUnitId && !defaultQuantityUnitId) {
       return;
     }
     const lines = form.getValues("size_lines");
     lines.forEach((line, index) => {
-      if (!line.unit_id) {
+      if (!line.size_unit_id && defaultSizeUnitId) {
+        setFormValueWhenDefaulting(form, `size_lines.${index}.size_unit_id`, defaultSizeUnitId);
+      }
+      if (!line.unit_id && defaultQuantityUnitId) {
         setFormValueWhenDefaulting(form, `size_lines.${index}.unit_id`, defaultQuantityUnitId);
       }
     });
-  }, [defaultQuantityUnitId, form, fields.length]);
+  }, [defaultSizeUnitId, defaultQuantityUnitId, form, fields.length]);
 
   function addSizeLine() {
     append(emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId));
+  }
+
+  function renderAddSizeButton() {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={addSizeLine}
+        className="w-full sm:w-auto"
+      >
+        <Plus className="size-4" />
+        Add size
+      </Button>
+    );
   }
 
   function removeSizeRow(index: number) {
@@ -353,37 +371,36 @@ export function MaterialEditFormFields({
         </FormGrid>
       </MaterialFormSection>
 
-      <MaterialFormSection
-        title="Sizes"
-        actions={
-          !readOnly ? (
-            <Button type="button" variant="outline" size="sm" onClick={addSizeLine}>
-              <Plus className="size-4" />
-              Add size
-            </Button>
-          ) : null
-        }
-      >
-        <div className="overflow-hidden rounded-md border">
-          <div className={`hidden border-b bg-muted/40 ${SIZE_LINE_GRID}`}>
-            <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Size</div>
-            <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Size unit</div>
-            <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">No. of rolls</div>
-            <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Qty available</div>
-            <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Qty unit</div>
-            <div className="px-2 py-2.5 text-center text-xs font-medium text-muted-foreground">
+      <MaterialFormSection title="Sizes">
+        <div className="flex flex-col gap-3">
+          <div
+            className={`hidden overflow-hidden rounded-md border bg-muted/50 shadow-sm sm:grid ${SIZE_LINE_GRID}`}
+          >
+            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">Size</div>
+            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
+              Size unit
+            </div>
+            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
+              No. of rolls
+            </div>
+            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
+              Qty available
+            </div>
+            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
+              Qty unit
+            </div>
+            <div className="px-1 py-2.5 text-center text-xs font-medium text-muted-foreground">
               Active
             </div>
             <div className="px-1 py-2.5" aria-hidden />
           </div>
-          <div className="flex flex-col divide-y">
-            {fields.map((fieldItem, index) => {
-              const line = form.watch(`size_lines.${index}`);
-              const showRemove = canRemoveSizeLine(line);
-              return (
+          {fields.map((fieldItem, index) => {
+            const line = form.watch(`size_lines.${index}`);
+            const showRemove = canRemoveSizeLine(line);
+            return (
               <div
                 key={fieldItem.id}
-                className={`grid grid-cols-1 gap-4 p-4 ${SIZE_LINE_GRID} sm:gap-0 sm:p-0`}
+                className={`grid grid-cols-1 gap-4 overflow-hidden rounded-md border bg-card p-4 shadow-sm ${SIZE_LINE_GRID} sm:gap-0 sm:p-0`}
               >
                 <FormField
                   control={control}
@@ -502,41 +519,44 @@ export function MaterialEditFormFields({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={control}
-                  name={`size_lines.${index}.is_active`}
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-2 sm:justify-center sm:px-2 sm:py-3">
-                      <FormLabel className="sm:sr-only">Active</FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={readOnly}
-                        />
-                      </FormControl>
-                      <span className="text-muted-foreground text-sm sm:hidden">Active</span>
-                    </FormItem>
-                  )}
-                />
-                <div className="flex items-start justify-end sm:justify-center sm:px-1 sm:py-3">
-                  {showRemove ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => requestRemoveSizeLine(index)}
-                      aria-label="Remove size"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  ) : null}
+                <div className="flex items-center justify-between gap-2 sm:contents">
+                  <FormField
+                    control={control}
+                    name={`size_lines.${index}.is_active`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center gap-2 space-y-0 sm:justify-center sm:px-2 sm:py-3">
+                        <FormLabel className="text-sm font-normal sm:sr-only">Active</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={readOnly}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex shrink-0 items-center sm:justify-center sm:px-1 sm:py-3">
+                    {showRemove ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => requestRemoveSizeLine(index)}
+                        aria-label="Remove size"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             );
-            })}
-          </div>
+          })}
+          {!readOnly ? (
+            <div className="flex w-full sm:justify-end">{renderAddSizeButton()}</div>
+          ) : null}
         </div>
       </MaterialFormSection>
 

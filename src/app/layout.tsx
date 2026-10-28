@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
@@ -26,6 +26,13 @@ export const metadata: Metadata = {
   description: APP_NAME,
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,9 +42,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full overflow-hidden antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} min-h-svh antialiased`}
     >
-      <body className="h-full overflow-hidden font-sans">
+      <body className="min-h-svh font-sans">
         <Script
           id="theme-bootstrap"
           strategy="beforeInteractive"

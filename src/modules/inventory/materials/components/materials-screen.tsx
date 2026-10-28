@@ -28,9 +28,9 @@ import {
 } from "@/modules/inventory/permissions";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
@@ -45,8 +45,7 @@ import { ActiveBadge } from "@/shared/components/feedback/active-badge";
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatDecimal } from "@/shared/lib/format";
 import {
@@ -238,12 +237,14 @@ export function MaterialsScreen() {
       cols.push({
         id: "price_per_unit",
         header: "Price",
+        defaultVisible: false,
         cell: (row) => formatPricePerUnit(row.price_per_unit, row.price_unit_code),
       });
     }
     cols.push({
       id: "active",
       header: "Status",
+      defaultVisible: false,
       cell: (row) => <ActiveBadge active={row.is_active} />,
     });
     cols.push(
@@ -269,6 +270,7 @@ export function MaterialsScreen() {
   ]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.materials", columnDefs);
+  const listView = useListView("inventory.materials");
 
   const emptyMessage = !productId
     ? "Select a product to view width variants."
@@ -331,7 +333,7 @@ export function MaterialsScreen() {
         />
         <FilterSelect
           label="Product"
-          className="w-52"
+          className="w-full sm:w-52"
           placeholder="All products"
           value={productId ?? ALL}
           onValueChange={(value) =>
@@ -349,7 +351,7 @@ export function MaterialsScreen() {
         />
         <FilterSelect
           label="Micron"
-          className="w-44"
+          className="w-full sm:w-44"
           placeholder="Micron"
           disabled={!productId}
           value={micronId ?? ALL}
@@ -372,7 +374,11 @@ export function MaterialsScreen() {
         />
         <MaterialsTableMoreFilters />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        {columnsDialog}
+        <ListViewToolbarControls
+          listView={listView}
+          columnsDialog={columnsDialog}
+          mobileFullRow
+        />
       </DataTableToolbar>
         <MaterialsActiveFilterPills
           productName={selectedProduct?.name}
@@ -381,50 +387,26 @@ export function MaterialsScreen() {
           onClearAll={hasActiveFilters ? clearMaterialsFilters : undefined}
         />
       </div>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={effectiveSortBy}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {materialsQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : materialsQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(materialsQuery.error)}
-                  onRetry={() => materialsQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : materials.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty message={emptyMessage} />
-              </TableCell>
-            </TableRow>
-          ) : (
-            materials.map((material) => (
-              <TableRow key={material.id}>
-                <DataTableCells columns={columns} row={material} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={materials}
+        getRowKey={(material) => material.id}
+        getRowLabel={(material) => material.size_label}
+        onRowClick={canRead ? (material) => router.push(materialRoutes.view(material.id)) : undefined}
+        isLoading={materialsQuery.isLoading}
+        isError={materialsQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(materialsQuery.error)}
+            onRetry={() => materialsQuery.refetch()}
+          />
+        }
+        empty={<DataTableEmpty message={emptyMessage} />}
+        sort={{ sortBy: effectiveSortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <CategoryQuickCreateDialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen} />
       <MicronQuickCreateDialog
         open={micronDialogOpen}

@@ -215,14 +215,20 @@ export function WarehouseForm({
           </div>
         </div>
         {showCancel || !disabled ? (
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {showCancel ? (
-              <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={onCancel}
+                disabled={pending}
+              >
                 {disabled ? "Close" : "Cancel"}
               </Button>
             ) : null}
             {!disabled ? (
-              <Button type="submit" disabled={pending}>
+              <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {isEdit ? "Save Changes" : "Create Warehouse"}
               </Button>

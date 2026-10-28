@@ -120,7 +120,11 @@ function CommandPaletteDialog({ onOpenChange }: { onOpenChange: (open: boolean) 
   }, [activeIndex, flat, goTo, onOpenChange]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-16">
+    <div
+      data-vv-fill
+      data-vv-scroll
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 pt-16"
+    >
       <button
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -159,7 +163,7 @@ function CommandPaletteDialog({ onOpenChange }: { onOpenChange: (open: boolean) 
               <X size={14} />
             </button>
           ) : null}
-          <kbd className="bg-muted text-muted-foreground border-border rounded border px-1.5 py-0.5 text-xs">
+          <kbd className="bg-muted text-muted-foreground border-border hidden rounded border px-1.5 py-0.5 text-xs sm:inline">
             ESC
           </kbd>
         </div>
