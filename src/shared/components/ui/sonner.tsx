@@ -13,6 +13,7 @@ function Toaster(props: ToasterProps) {
       theme={theme}
       className="toaster group"
       closeButton
+      mobileOffset={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
       style={
         {
           "--normal-bg": "var(--popover)",

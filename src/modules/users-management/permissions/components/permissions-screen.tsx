@@ -35,6 +35,7 @@ import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
+import { Card } from "@/shared/components/ui/card";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
@@ -286,7 +287,7 @@ export function PermissionsScreen() {
         <FilterSelect
           id="permissions-filter-role"
           label="Role"
-          className="w-56"
+          className="w-full sm:w-56"
           placeholder="Select a role"
           value={selectedRoleId ?? ""}
           onValueChange={selectRole}
@@ -296,7 +297,7 @@ export function PermissionsScreen() {
         <FilterSelect
           id="permissions-filter-module"
           label="Module"
-          className="w-56"
+          className="w-full sm:w-56"
           placeholder="All modules"
           value={moduleFilter}
           onValueChange={selectModule}
@@ -309,7 +310,7 @@ export function PermissionsScreen() {
         <FilterSelect
           id="permissions-filter-resource"
           label="Resource"
-          className="w-56"
+          className="w-full sm:w-56"
           placeholder="All resources"
           value={resourceFilter}
           onValueChange={selectResource}
@@ -358,6 +359,69 @@ export function PermissionsScreen() {
         />
       ) : null}
       {!matrixQuery.isLoading && filteredRows.length > 0 && selectedRoleId ? (
+        <ul className="flex flex-col gap-2.5 md:hidden">
+          {filteredRows.map((row) => (
+            <li key={`${row.module}-${row.resource}`}>
+              <Card className="overflow-hidden py-0">
+                <div className="flex flex-col gap-3 p-3">
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-xs font-medium">Resource</p>
+                    <p className="truncate font-semibold">
+                      <span className="text-muted-foreground font-normal">{row.module}</span>
+                      <span className="mx-1.5">·</span>
+                      {row.resourceLabel}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
+                    {visibleActions.map((action) => {
+                      const permission = row.actions[action];
+                      if (!permission) {
+                        return null;
+                      }
+                      return (
+                        <label
+                          key={action}
+                          className="flex min-h-11 items-center gap-2 text-sm"
+                          htmlFor={`perm-mobile-${permission.id}`}
+                        >
+                          <Checkbox
+                            id={`perm-mobile-${permission.id}`}
+                            checked={selectedIds.has(permission.id)}
+                            disabled={!canSave}
+                            onCheckedChange={(value) => toggle(permission.id, Boolean(value))}
+                          />
+                          <span>{matrixActionLabel(action)}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+            </li>
+          ))}
+          {canSave ? (
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {canResetSuperadmin ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => setResetOpen(true)}
+                  disabled={pending}
+                >
+                  Reset to Default
+                </Button>
+              ) : null}
+              <Button type="button" className="w-full sm:w-auto" onClick={onSave} disabled={pending}>
+                {savePermissions.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                Save Permissions
+              </Button>
+            </div>
+          ) : null}
+        </ul>
+      ) : null}
+      {!matrixQuery.isLoading && filteredRows.length > 0 && selectedRoleId ? (
+        <div className="hidden md:block">
         <DataTable
           tableClassName="min-w-full w-max table-fixed border-separate border-spacing-0 [&_th]:border-b [&_td]:border-b [&_th:not(:last-child)]:border-r [&_td:not(:last-child)]:border-r"
           footer={
@@ -447,6 +511,7 @@ export function PermissionsScreen() {
             ))}
           </TableBody>
         </DataTable>
+        </div>
       ) : null}
       <ConfirmActionDialog
         open={Boolean(pendingRoleId)}

@@ -13,10 +13,10 @@ import { useRoles } from "@/modules/users-management/roles/queries";
 import type { Role } from "@/modules/users-management/roles/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
 import { DataTableRowActions, hasRowActions } from "@/shared/components/data-table/row-actions";
@@ -37,9 +37,8 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { formatDate } from "@/shared/lib/format";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { useCan } from "@/shared/providers/session-provider";
 
@@ -158,6 +157,7 @@ export function RolesScreen() {
   }, [canAssign, canDelete, canRead, canUpdate, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.roles", columnDefs);
+  const listView = useListView("identity.roles");
 
   return (
     <ListPage>
@@ -185,7 +185,7 @@ export function RolesScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
         {search || sort_by ? (
           <Button
             type="button"
@@ -197,50 +197,26 @@ export function RolesScreen() {
           </Button>
         ) : null}
       </DataTableToolbar>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sort_by}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rolesQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : rolesQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(rolesQuery.error)}
-                  onRetry={() => rolesQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : roles.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty title="No roles" message="No roles are available yet." />
-              </TableCell>
-            </TableRow>
-          ) : (
-            roles.map((role) => (
-              <TableRow key={role.id}>
-                <DataTableCells columns={columns} row={role} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={roles}
+        getRowKey={(role) => role.id}
+        getRowLabel={(role) => role.name}
+        onRowClick={canRead ? (role) => openView(role) : undefined}
+        isLoading={rolesQuery.isLoading}
+        isError={rolesQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(rolesQuery.error)}
+            onRetry={() => rolesQuery.refetch()}
+          />
+        }
+        empty={<DataTableEmpty title="No roles" message="No roles are available yet." />}
+        sort={{ sortBy: sort_by, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <RoleFormDialog
         open={formOpen}
         role={selected}

@@ -61,13 +61,16 @@ function PaginationControls({
     onPageSizeChange(next);
   }
 
+  const rangeLabel = `${from}–${to} of ${meta.total}${rangeItemLabel ? ` ${rangeItemLabel}` : ""}`;
+
   return (
-    <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-2.5">
+    <div className="px-3 py-2.5">
+      {/* Mobile: page size, range, and prev/next on one row */}
+      <div className="flex items-center gap-2 sm:hidden">
         <FilterSelect
           id={pageSizeId}
           hideLabel
-          className="h-9 min-w-[3.25rem] w-20 shrink-0 px-2 text-sm tabular-nums"
+          className="h-9 w-[4.25rem] shrink-0 px-2 text-sm tabular-nums"
           placeholder="10"
           aria-label="Rows per page"
           value={pageSize}
@@ -79,67 +82,125 @@ function PaginationControls({
           }))}
         />
         {meta.total > 0 ? (
-          <p className="text-muted-foreground text-sm">
-            {`${from}–${to} of ${meta.total}${rangeItemLabel ? ` ${rangeItemLabel}` : ""}`}
-          </p>
+          <>
+            <p
+              className="text-muted-foreground min-w-0 flex-1 truncate text-center text-xs tabular-nums"
+              aria-live="polite"
+            >
+              {rangeLabel}
+            </p>
+            <nav className="flex shrink-0 items-center gap-0.5" aria-label="Pagination">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-9 shrink-0"
+                aria-label={`Previous page, page ${meta.page} of ${totalPages}`}
+                disabled={meta.page <= 1}
+                onClick={() => onPageChange(meta.page - 1)}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span
+                className="text-muted-foreground w-9 shrink-0 text-center text-xs tabular-nums"
+                aria-hidden="true"
+              >
+                {meta.page}/{totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-9 shrink-0"
+                aria-label={`Next page, page ${meta.page} of ${totalPages}`}
+                disabled={meta.page >= totalPages}
+                onClick={() => onPageChange(meta.page + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </nav>
+          </>
         ) : null}
       </div>
-      {meta.total > 0 ? (
-        <nav className="flex min-w-0 items-center gap-1" aria-label="Pagination">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label="Previous"
-            disabled={meta.page <= 1}
-            onClick={() => onPageChange(meta.page - 1)}
-          >
-            <ChevronLeft className="size-3.5" />
-            <span className="hidden sm:inline">Previous</span>
-          </Button>
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {pages.map((item, index) =>
-              item === "ellipsis" ? (
-                <span
-                  key={`ellipsis-${index}`}
-                  className="text-muted-foreground px-1 text-xs"
-                  aria-hidden="true"
-                >
-                  …
-                </span>
-              ) : (
-                <Button
-                  key={item}
-                  type="button"
-                  variant={item === meta.page ? "default" : "outline"}
-                  size="sm"
-                  aria-current={item === meta.page ? "page" : undefined}
-                  aria-label={`Page ${item}`}
-                  className="min-w-8 px-2"
-                  onClick={() => {
-                    if (item !== meta.page) {
-                      onPageChange(item);
-                    }
-                  }}
-                >
-                  {item}
-                </Button>
-              ),
-            )}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label="Next"
-            disabled={meta.page >= totalPages}
-            onClick={() => onPageChange(meta.page + 1)}
-          >
-            <span className="hidden sm:inline">Next</span>
-            <ChevronRight className="size-3.5" />
-          </Button>
-        </nav>
-      ) : null}
+
+      {/* sm+: page size + range on the left, numbered pages on the right */}
+      <div className="hidden items-center justify-between gap-2 sm:flex">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <FilterSelect
+            id={`${pageSizeId}-desktop`}
+            hideLabel
+            className="h-9 min-w-[3.25rem] w-20 shrink-0 px-2 text-sm tabular-nums"
+            placeholder="10"
+            aria-label="Rows per page"
+            value={pageSize}
+            onValueChange={handlePageSizeChange}
+            options={pageSizeOptions.map((option) => ({
+              value: String(option),
+              label: `${option}${pageSizeOptionSuffix}`,
+              ...(pageSizeOptionSuffix ? { triggerLabel: String(option) } : {}),
+            }))}
+          />
+          {meta.total > 0 ? (
+            <p className="text-muted-foreground text-sm">{rangeLabel}</p>
+          ) : null}
+        </div>
+        {meta.total > 0 ? (
+          <nav className="flex min-w-0 items-center gap-1" aria-label="Pagination">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Previous"
+              disabled={meta.page <= 1}
+              onClick={() => onPageChange(meta.page - 1)}
+            >
+              <ChevronLeft className="size-3.5" />
+              <span className="hidden sm:inline">Previous</span>
+            </Button>
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {pages.map((item, index) =>
+                item === "ellipsis" ? (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="text-muted-foreground px-1 text-xs"
+                    aria-hidden="true"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <Button
+                    key={item}
+                    type="button"
+                    variant={item === meta.page ? "default" : "outline"}
+                    size="sm"
+                    aria-current={item === meta.page ? "page" : undefined}
+                    aria-label={`Page ${item}`}
+                    className="min-w-8 px-2"
+                    onClick={() => {
+                      if (item !== meta.page) {
+                        onPageChange(item);
+                      }
+                    }}
+                  >
+                    {item}
+                  </Button>
+                ),
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Next"
+              disabled={meta.page >= totalPages}
+              onClick={() => onPageChange(meta.page + 1)}
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="size-3.5" />
+            </Button>
+          </nav>
+        ) : null}
+      </div>
     </div>
   );
 }

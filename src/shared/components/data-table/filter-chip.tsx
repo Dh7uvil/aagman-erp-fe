@@ -38,7 +38,7 @@ export function ActiveFilterBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
       {children}
       {onClear ? (
         <Button type="button" variant="ghost" size="xs" onClick={onClear}>

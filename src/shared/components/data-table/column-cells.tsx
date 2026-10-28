@@ -1,10 +1,14 @@
 "use client";
 
 import {
+  isListOpenColumn,
   stickyActionsCellClass,
   stickyActionsHeadClass,
+  stickyIdentityCellClass,
+  stickyIdentityHeadClass,
   type DataTableColumn,
 } from "@/shared/components/data-table/columns";
+import { ViewCellContent } from "@/shared/components/data-table/view-cell";
 import { SortableTableHead } from "@/shared/components/data-table/sortable-head";
 import type { SortPatch } from "@/shared/components/data-table/sort";
 import { TableCell, TableHead } from "@/shared/components/ui/table";
@@ -24,9 +28,11 @@ export function DataTableColumnHeads<T>({
 }) {
   return (
     <>
-      {columns.map((column) => {
+      {columns.map((column, index) => {
+        const isFirstIdentity = index === 0 && column.id !== "actions";
         const className = cn(
           column.headerClassName,
+          isFirstIdentity && stickyIdentityHeadClass,
           column.sticky === "right" && stickyActionsHeadClass,
         );
         if (!column.sortableField || !onSort) {
@@ -56,20 +62,35 @@ export function DataTableColumnHeads<T>({
 export function DataTableCells<T>({
   columns,
   row,
+  onRowClick,
 }: {
   columns: readonly DataTableColumn<T>[];
   row: T;
+  onRowClick?: (row: T) => void;
 }) {
   return (
     <>
-      {columns.map((column) => (
-        <TableCell
-          key={column.id}
-          className={cn(column.className, column.sticky === "right" && stickyActionsCellClass)}
-        >
-          {column.cell(row)}
-        </TableCell>
-      ))}
+      {columns.map((column, index) => {
+        const isFirstIdentity = index === 0 && column.id !== "actions";
+        const opensView = Boolean(onRowClick && isListOpenColumn(columns, index));
+        return (
+          <TableCell
+            key={column.id}
+            className={cn(
+              column.className,
+              isFirstIdentity && stickyIdentityCellClass,
+              column.sticky === "right" && stickyActionsCellClass,
+            )}
+          >
+            <ViewCellContent
+              enabled={opensView}
+              onActivate={() => onRowClick?.(row)}
+            >
+              {column.cell(row)}
+            </ViewCellContent>
+          </TableCell>
+        );
+      })}
     </>
   );
 }

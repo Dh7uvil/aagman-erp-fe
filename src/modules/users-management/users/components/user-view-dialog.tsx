@@ -24,7 +24,7 @@ import { useCan } from "@/shared/providers/session-provider";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[7.5rem_1fr] gap-3 text-sm">
+    <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-[7.5rem_1fr] sm:gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium break-all">{value}</span>
     </div>

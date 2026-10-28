@@ -99,7 +99,7 @@ export function MoreFiltersDialog({
         </Button>
       </ToolbarControl>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className={contentClassName}>
+        <DialogContent mobileSheet className={contentClassName}>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>

@@ -13,9 +13,9 @@ import type { Department } from "@/modules/users-management/departments/schemas"
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
@@ -29,8 +29,7 @@ import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 
 const ALL = "all";
@@ -135,6 +134,7 @@ export function DepartmentsScreen() {
   }, [canDelete, canRead, canUpdate, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.departments", columnDefs);
+  const listView = useListView("identity.departments");
 
   return (
     <ListPage>
@@ -158,7 +158,7 @@ export function DepartmentsScreen() {
         />
         <FilterSelect
           label="Branch"
-          className="w-52"
+          className="w-full sm:w-52"
           placeholder="All branches"
           value={branchId ?? ALL}
           onValueChange={(value) =>
@@ -176,7 +176,7 @@ export function DepartmentsScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -195,53 +195,31 @@ export function DepartmentsScreen() {
           </Button>
         ) : null}
       </DataTableToolbar>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sortBy}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {departmentsQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : departmentsQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(departmentsQuery.error)}
-                  onRetry={() => departmentsQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : departments.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty
-                  title="No departments found"
-                  message="Try a different search or filter."
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
-            departments.map((department) => (
-              <TableRow key={department.id}>
-                <DataTableCells row={department} columns={columns} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={departments}
+        getRowKey={(department) => department.id}
+        getRowLabel={(department) => department.name}
+        onRowClick={canRead ? (department) => openView(department) : undefined}
+        isLoading={departmentsQuery.isLoading}
+        isError={departmentsQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(departmentsQuery.error)}
+            onRetry={() => departmentsQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty
+            title="No departments found"
+            message="Try a different search or filter."
+          />
+        }
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <DepartmentFormDialog
         open={formOpen}
         department={selected}

@@ -17,14 +17,16 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
 
 function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
-      className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
-        className,
-      )}
-      {...props}
-    />
+    <div className="max-w-full overflow-x-auto">
+      <TabsPrimitive.List
+        data-slot="tabs-list"
+        className={cn(
+          "bg-muted text-muted-foreground inline-flex h-9 w-fit min-w-0 items-center justify-center rounded-lg p-[3px]",
+          className,
+        )}
+        {...props}
+      />
+    </div>
   );
 }
 

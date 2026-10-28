@@ -48,7 +48,12 @@ export function ListSearch({
   }, [input]);
 
   return (
-    <div className={cn("flex max-w-md min-w-48 flex-1 flex-col gap-1", className)}>
+    <div
+      className={cn(
+        "col-span-2 flex min-w-0 w-full flex-1 flex-col gap-1 sm:col-span-1 sm:min-w-48 sm:max-w-md",
+        className,
+      )}
+    >
       <Label htmlFor={searchId} className={toolbarLabelClass}>
         {label}
       </Label>

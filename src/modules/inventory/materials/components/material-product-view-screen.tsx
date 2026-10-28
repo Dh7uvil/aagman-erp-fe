@@ -96,7 +96,7 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
   }
 
   return (
-    <div className="flex h-[calc(100dvh-7.25rem)] min-h-[28rem] flex-col gap-4 overflow-hidden md:h-[calc(100dvh-8rem)] md:gap-5">
+    <div className="flex min-h-0 flex-col gap-4 md:h-[calc(100dvh-8rem)] md:min-h-[28rem] md:gap-5 md:overflow-hidden">
       <div className="shrink-0 space-y-4 md:space-y-5">
         <RecordPageHeader
           title={material.product_name}
@@ -130,8 +130,8 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
         ) : null}
       </div>
 
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      <section className="flex flex-col rounded-lg border bg-card shadow-sm md:min-h-0 md:flex-1 md:overflow-hidden">
+        <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-y-contain">
           <MaterialVariantTable
             materials={variants}
             sizeUnitCode={sizeUnitCode}

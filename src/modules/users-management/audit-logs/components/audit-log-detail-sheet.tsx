@@ -52,7 +52,7 @@ function statusVariant(status: string): "success" | "destructive" | "muted" {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[7.5rem_1fr] gap-3 text-sm">
+    <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-[7.5rem_1fr] sm:gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium break-all">{value}</span>
     </div>
@@ -116,7 +116,7 @@ export function AuditLogDetailSheet({
                 <InfoRow label="Module" value={titleCase(log.module)} />
                 <InfoRow label="Entity ID" value={log.entity_id ?? "—"} />
                 <InfoRow label="IP address" value={log.ip_address ?? "—"} />
-                <div className="grid grid-cols-[7.5rem_1fr] items-center gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-[7.5rem_1fr] sm:items-center sm:gap-3">
                   <span className="text-muted-foreground">Status</span>
                   <Badge variant={statusVariant(log.status)}>{titleCase(log.status)}</Badge>
                 </div>

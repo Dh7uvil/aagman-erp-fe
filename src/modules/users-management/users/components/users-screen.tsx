@@ -18,23 +18,20 @@ import { useUsers } from "@/modules/users-management/users/queries";
 import type { User } from "@/modules/users-management/users/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
 import { DataTableRowActions, hasRowActions } from "@/shared/components/data-table/row-actions";
 import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
 import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { ActiveBadge } from "@/shared/components/feedback/active-badge";
-import { formatDate, formatDateTime, initials } from "@/shared/lib/format";
+import { formatDateTime, initials } from "@/shared/lib/format";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { useCan } from "@/shared/providers/session-provider";
 
@@ -92,12 +89,14 @@ export function UsersScreen() {
         header: "Email",
         sortableField: "email",
         className: "text-muted-foreground text-xs",
+        card: { slot: "subtitle" },
         cell: (user) => user.email,
       },
       {
         id: "user",
         header: "User",
         sortableField: "name",
+        card: { slot: "title" },
         cell: (user) => (
           <div className="flex items-center gap-2">
             <Avatar className="size-7">
@@ -120,6 +119,7 @@ export function UsersScreen() {
       {
         id: "designation",
         header: "Designation",
+        card: { slot: "hidden" },
         cell: (user) => user.designation ?? "—",
       },
       {
@@ -142,6 +142,7 @@ export function UsersScreen() {
         id: "status",
         header: "Status",
         sortableField: "status",
+        card: { slot: "badge" },
         cell: (user) => <UserStatusBadge status={user.status} />,
       },
       {
@@ -228,6 +229,7 @@ export function UsersScreen() {
   ]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.users", columnDefs);
+  const listView = useListView("identity.users");
 
   return (
     <ListPage>
@@ -243,54 +245,29 @@ export function UsersScreen() {
           ) : undefined
         }
       />
-      <UsersTableFilters columnsDialog={columnsDialog} />
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sort_by}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {usersQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : usersQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(usersQuery.error)}
-                  onRetry={() => usersQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty
-                  title="No users found"
-                  message="Try a different search or filter."
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((user) => (
-              <TableRow key={user.id}>
-                <DataTableCells columns={columns} row={user} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <UsersTableFilters columnsDialog={columnsDialog} listView={listView} />
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={rows}
+        getRowKey={(user) => user.id}
+        getRowLabel={(user) => user.name}
+        onRowClick={canRead ? (user) => setViewingId(user.id) : undefined}
+        isLoading={usersQuery.isLoading}
+        isError={usersQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(usersQuery.error)}
+            onRetry={() => usersQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty title="No users found" message="Try a different search or filter." />
+        }
+        sort={{ sortBy: sort_by, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <UserFormDialog
         open={formOpen}
         userId={editingId}

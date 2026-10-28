@@ -11,7 +11,7 @@ export function FormDialogHeader({
   code?: string | null;
 }) {
   return (
-    <DialogHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pr-8 text-left">
+    <DialogHeader className="flex flex-col items-start gap-2 space-y-0 pr-8 text-left sm:flex-row sm:items-center sm:justify-between">
       <DialogTitle>{title}</DialogTitle>
       <RecordCode entity={entity} code={code} />
     </DialogHeader>

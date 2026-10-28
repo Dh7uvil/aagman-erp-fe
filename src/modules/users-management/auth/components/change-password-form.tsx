@@ -119,7 +119,7 @@ export function ChangePasswordForm() {
           )}
         />
         <div className="flex justify-end">
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
             {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
             Update Password
           </Button>

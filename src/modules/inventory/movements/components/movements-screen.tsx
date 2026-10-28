@@ -8,9 +8,9 @@ import { inventoryPricePermissions } from "@/modules/inventory/permissions";
 import { formatPricePerUnit } from "@/modules/inventory/format";
 import { getErrorMessage } from "@/shared/api/errors";
 import { formatDecimal } from "@/shared/lib/format";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
 import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
 import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
@@ -18,8 +18,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useCan } from "@/shared/providers/session-provider";
 
 function todayIsoDate(): string {
@@ -76,6 +75,7 @@ export function MovementsScreen() {
     columnDefs,
     { pinnedCount: 0 },
   );
+  const listView = useListView("inventory.materials_report");
 
   return (
     <ListPage>
@@ -84,7 +84,7 @@ export function MovementsScreen() {
         subtitle="Daily in, out, and closing balances for every active material."
       />
       <DataTableToolbar>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
           <Label htmlFor="report-date" className="text-sm text-muted-foreground">
             Date
           </Label>
@@ -93,50 +93,28 @@ export function MovementsScreen() {
             type="date"
             value={reportDate}
             onChange={(event) => setReportDate(event.target.value)}
-            className="w-auto"
+            className="w-full sm:w-auto"
           />
         </div>
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
       </DataTableToolbar>
-      <DataTable>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads columns={columns} />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {reportQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : reportQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(reportQuery.error)}
-                  onRetry={() => reportQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : reportRows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty message="No active materials to report." />
-              </TableCell>
-            </TableRow>
-          ) : (
-            reportRows.map((row) => (
-              <TableRow key={row.category_id}>
-                <DataTableCells columns={columns} row={row} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={reportRows}
+        getRowKey={(row) => `${row.category_id}-${row.product_name}-${row.micron_name}`}
+        getRowLabel={(row) => row.product_name}
+        isLoading={reportQuery.isLoading}
+        isError={reportQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(reportQuery.error)}
+            onRetry={() => reportQuery.refetch()}
+          />
+        }
+        empty={<DataTableEmpty message="No active materials to report." />}
+        listView={listView}
+      />
     </ListPage>
   );
 }

@@ -2,14 +2,14 @@
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { toCreatePayload, toMicronPricePayload } from "@/modules/inventory/materials/api";
-import { useUpdateMicron } from "@/modules/inventory/microns/mutations";
-import { MaterialFormFields } from "@/modules/inventory/materials/components/material-form-fields";
+import { sizeLineToCreatePayload, toMicronPricePayload } from "@/modules/inventory/materials/api";
+import { MaterialEditFormFields } from "@/modules/inventory/materials/components/material-edit-form-fields";
 import { useCreateMaterial } from "@/modules/inventory/materials/mutations";
+import { useUpdateMicron } from "@/modules/inventory/microns/mutations";
 import {
   categoryPermissions,
   inventoryPricePermissions,
@@ -17,10 +17,12 @@ import {
 } from "@/modules/inventory/permissions";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import {
-  MaterialFormSchema,
-  materialToFormValues,
-  type MaterialFormValues,
+  MaterialEditFormSchema,
+  emptyMaterialSizeLine,
+  materialsToEditFormValues,
+  type MaterialEditFormValues,
 } from "@/modules/inventory/materials/schemas";
+import { useAllUnits } from "@/modules/inventory/units/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { SubmitButton } from "@/shared/components/form/submit-button";
@@ -30,6 +32,21 @@ import { Form } from "@/shared/components/ui/form";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useCan } from "@/shared/providers/session-provider";
+
+function micronPriceFromEditValues(values: MaterialEditFormValues) {
+  return toMicronPricePayload({
+    product_id: values.product_id,
+    parent_id: values.parent_id,
+    size: "",
+    size_unit_id: values.size_lines[0]?.size_unit_id ?? "",
+    quantity_available: "0",
+    unit_id: values.size_lines[0]?.unit_id ?? "",
+    opening_rolls: "0",
+    price_per_unit: values.price_per_unit,
+    price_unit_id: values.price_unit_id,
+    is_active: true,
+  });
+}
 
 export function MaterialRecordScreen() {
   const router = useRouter();
@@ -41,33 +58,74 @@ export function MaterialRecordScreen() {
   const updateMicron = useUpdateMicron();
   const [formError, setFormError] = useState<string | null>(null);
 
+  const unitsQuery = useAllUnits();
+  const units = unitsQuery.data ?? [];
+  const defaultSizeUnitId = units.find((item) => item.code === "mm")?.id ?? "";
+  const defaultQuantityUnitId = units.find((item) => item.code === "kg")?.id ?? "";
+
   const readOnly = !canCreate;
   const canSubmit = canCreate;
 
-  const form = useForm<MaterialFormValues>({
-    resolver: zodResolver(MaterialFormSchema),
-    defaultValues: materialToFormValues(null),
+  const form = useForm<MaterialEditFormValues>({
+    resolver: zodResolver(MaterialEditFormSchema),
+    defaultValues: materialsToEditFormValues([], null),
     mode: "onSubmit",
     reValidateMode: "onSubmit",
   });
 
+  useEffect(() => {
+    if (!defaultSizeUnitId && !defaultQuantityUnitId) {
+      return;
+    }
+    const lines = form.getValues("size_lines");
+    if (lines.length === 0) {
+      form.setValue(
+        "size_lines",
+        [emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId)],
+        { shouldValidate: false },
+      );
+      return;
+    }
+    lines.forEach((line, index) => {
+      if (!line.size_unit_id && defaultSizeUnitId) {
+        form.setValue(`size_lines.${index}.size_unit_id`, defaultSizeUnitId, {
+          shouldValidate: false,
+          shouldDirty: false,
+        });
+      }
+      if (!line.unit_id && defaultQuantityUnitId) {
+        form.setValue(`size_lines.${index}.unit_id`, defaultQuantityUnitId, {
+          shouldValidate: false,
+          shouldDirty: false,
+        });
+      }
+    });
+  }, [defaultSizeUnitId, defaultQuantityUnitId, form]);
+
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
-  async function onSubmit(values: MaterialFormValues) {
+  async function onSubmit(values: MaterialEditFormValues) {
     if (!canSubmit) {
       return;
     }
     setFormError(null);
     try {
       const micronPrice =
-        canViewPrice && canUpdateCategory ? toMicronPricePayload(values) : null;
+        canViewPrice && canUpdateCategory ? micronPriceFromEditValues(values) : null;
 
-      const created = await createMaterial.mutateAsync(toCreatePayload(values));
+      let lastId = "";
+      for (const line of values.size_lines) {
+        const created = await createMaterial.mutateAsync(
+          sizeLineToCreatePayload(values.parent_id, line),
+        );
+        lastId = created.id;
+      }
+
       if (micronPrice && values.parent_id) {
         await updateMicron.mutateAsync({ id: values.parent_id, values: micronPrice });
       }
       toast.success("Material created");
-      router.push(`${materialRoutes.view(created.id)}?micron=${values.parent_id}`);
+      router.push(`${materialRoutes.view(lastId)}?micron=${values.parent_id}`);
     } catch (error) {
       if (applyFieldErrors(error, form.setError)) {
         return;
@@ -95,7 +153,7 @@ export function MaterialRecordScreen() {
               className="flex w-full flex-col gap-4"
             >
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
-              <MaterialFormFields control={form.control} readOnly={readOnly} isCreate />
+              <MaterialEditFormFields control={form.control} readOnly={readOnly} />
               {canSubmit ? (
                 <div className="flex justify-end">
                   <SubmitButton isPending={pending}>Create material</SubmitButton>

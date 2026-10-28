@@ -9,12 +9,13 @@ import { useDeleteWarehouse } from "@/modules/users-management/warehouses/mutati
 import { warehousePermissions } from "@/modules/users-management/warehouses/permissions";
 import { useWarehouses } from "@/modules/users-management/warehouses/queries";
 import type { Warehouse } from "@/modules/users-management/warehouses/schemas";
+import type { AddressPayload } from "@/modules/users-management/organization/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
@@ -30,8 +31,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import {
   LIST_ACTIVE_ALL,
@@ -41,6 +41,21 @@ import {
   listActiveFilterValue,
   parseListActiveFilter,
 } from "@/shared/lib/list-filters";
+
+function warehouseAddressLabel(address?: AddressPayload | null): string {
+  if (!address) {
+    return "—";
+  }
+  const parts = [
+    address.address_line_1,
+    address.city,
+    address.state,
+    address.country,
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "—";
+}
 
 const SORT_FIELDS: SortFieldOption[] = [
   { value: "name", label: "Name" },
@@ -119,6 +134,12 @@ export function WarehousesScreen() {
         header: "Status",
         cell: (warehouse) => <ActiveBadge active={warehouse.is_active} />,
       },
+      {
+        id: "address",
+        header: "Address",
+        defaultVisible: false,
+        cell: (warehouse) => warehouseAddressLabel(warehouse.address),
+      },
       ...auditTimestampColumns<Warehouse>(),
       ...actionsColumn<Warehouse>(showActions, (warehouse) => (
         <DataTableRowActions
@@ -130,6 +151,7 @@ export function WarehousesScreen() {
   }, [canDelete, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.warehouses", columnDefs);
+  const listView = useListView("identity.warehouses");
 
   return (
     <ListPage>
@@ -153,7 +175,7 @@ export function WarehousesScreen() {
         />
         <FilterSelect
           label="Status"
-          className="w-40"
+          className="w-full sm:w-40"
           placeholder="Status"
           value={listActiveFilterValue(filters.active)}
           onValueChange={(value) =>
@@ -173,7 +195,7 @@ export function WarehousesScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -192,53 +214,30 @@ export function WarehousesScreen() {
           </Button>
         ) : null}
       </DataTableToolbar>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sortBy}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {warehousesQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : warehousesQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(warehousesQuery.error)}
-                  onRetry={() => warehousesQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : warehouses.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty
-                  title="No warehouses found"
-                  message="Try a different search or filter."
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
-            warehouses.map((warehouse) => (
-              <TableRow key={warehouse.id}>
-                <DataTableCells row={warehouse} columns={columns} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={warehouses}
+        getRowKey={(warehouse) => warehouse.id}
+        getRowLabel={(warehouse) => warehouse.name}
+        isLoading={warehousesQuery.isLoading}
+        isError={warehousesQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(warehousesQuery.error)}
+            onRetry={() => warehousesQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty
+            title="No warehouses found"
+            message="Try a different search or filter."
+          />
+        }
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <WarehouseFormDialog open={formOpen} onOpenChange={setFormOpen} />
       <ConfirmActionDialog
         open={Boolean(deleting)}

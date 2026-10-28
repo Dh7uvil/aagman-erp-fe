@@ -14,9 +14,9 @@ import type { Company } from "@/modules/users-management/companies/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { auditTimestampColumns } from "@/shared/components/data-table/audit-columns";
-import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
 import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
-import { DataTable } from "@/shared/components/data-table/data-table";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
 import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
 import { DataTableRowActions, hasRowActions } from "@/shared/components/data-table/row-actions";
@@ -29,8 +29,7 @@ import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { TableBody, TableCell, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 
 const SORT_FIELDS: SortFieldOption[] = [
@@ -128,6 +127,7 @@ export function CompaniesScreen() {
   }, [canDelete, canRead, canUpdate, router, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.companies", columnDefs);
+  const listView = useListView("identity.companies");
 
   return (
     <ListPage>
@@ -157,7 +157,7 @@ export function CompaniesScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        {columnsDialog}
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -175,53 +175,31 @@ export function CompaniesScreen() {
           </Button>
         ) : null}
       </DataTableToolbar>
-      <DataTable footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}>
-        <TableHeader>
-          <TableRow>
-            <DataTableColumnHeads
-              columns={columns}
-              sortBy={sortBy}
-              sortOrder={sort_order}
-              onSort={setParams}
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {companiesQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell colSpan={colSpan}>
-                  <Skeleton className="h-6 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : companiesQuery.isError ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableError
-                  message={getErrorMessage(companiesQuery.error)}
-                  onRetry={() => companiesQuery.refetch()}
-                />
-              </TableCell>
-            </TableRow>
-          ) : companies.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colSpan}>
-                <DataTableEmpty
-                  title="No companies found"
-                  message="Try a different search or create a company."
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
-            companies.map((company) => (
-              <TableRow key={company.id}>
-                <DataTableCells row={company} columns={columns} />
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </DataTable>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={companies}
+        getRowKey={(company) => company.id}
+        getRowLabel={(company) => company.name}
+        onRowClick={canRead ? (company) => router.push(companyRoutes.view(company.id)) : undefined}
+        isLoading={companiesQuery.isLoading}
+        isError={companiesQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(companiesQuery.error)}
+            onRetry={() => companiesQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty
+            title="No companies found"
+            message="Try a different search or create a company."
+          />
+        }
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
       <ConfirmActionDialog
         open={Boolean(deleting)}
         title="Delete company"

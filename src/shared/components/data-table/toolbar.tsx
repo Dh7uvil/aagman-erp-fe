@@ -12,7 +12,16 @@ export function DataTableToolbar({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={cn("flex w-full flex-wrap items-end gap-2", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "grid w-full grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function ToolbarControl({
@@ -27,7 +36,7 @@ export function ToolbarControl({
   className?: string;
 }) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-1 sm:w-auto", className)}>
       <Label htmlFor={htmlFor} className={toolbarLabelClass}>
         {label}
       </Label>

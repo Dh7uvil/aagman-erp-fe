@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Columns3, GripVertical, Lock } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -14,7 +14,6 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import { Switch } from "@/shared/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/cn";
 
 function patchFrom(items: ColumnPickerItem[]): ColumnPreferencePatch {
@@ -80,6 +79,14 @@ export function ColumnsDialog<T>({
     setOpen(next);
   }
 
+  // Keep picker toggles/order aligned with saved preferences after each successful save.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setDraft(columnPickerDraft(columns, preference, pinnedCount));
+  }, [columns, open, pinnedCount, preference]);
+
   async function persist(next: ColumnPickerItem[]) {
     if (next.every((item) => !item.visible)) {
       toast.error("Keep at least one column visible.");
@@ -104,29 +111,24 @@ export function ColumnsDialog<T>({
   }
 
   return (
-    <div className="order-last ml-auto shrink-0">
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                id={triggerId}
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                aria-label="Customize columns"
-                aria-pressed={open}
-                className={cn(
-                  "bg-background",
-                  (open || customized) && "border-primary text-primary",
-                )}
-              >
-                <Columns3 className="size-3.5" />
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Customize columns</TooltipContent>
-        </Tooltip>
+    <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            id={triggerId}
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="Customize columns"
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            className={cn(
+              "bg-background size-9 shrink-0",
+              (open || customized) && "border-primary text-primary",
+            )}
+          >
+            <Columns3 className="size-3.5" />
+          </Button>
+        </PopoverTrigger>
         <PopoverContent
           align="end"
           className="w-80 p-0"
@@ -243,6 +245,5 @@ export function ColumnsDialog<T>({
           ) : null}
         </PopoverContent>
       </Popover>
-    </div>
   );
 }

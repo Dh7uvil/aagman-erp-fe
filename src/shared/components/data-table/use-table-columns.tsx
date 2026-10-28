@@ -25,15 +25,17 @@ export function useTableColumns<T>(
   const query = useTableColumnPreferences(tableKey);
   const save = useSaveTableColumnPreferences(tableKey);
   const reset = useResetTableColumnPreferences(tableKey);
+  const preference = query.data ?? null;
+
   const columns = useMemo(
-    () => resolveTableColumns(defs, query.data ?? null, pinnedCount),
-    [defs, query.data, pinnedCount],
+    () => resolveTableColumns(defs, preference, pinnedCount),
+    [defs, preference, pinnedCount],
   );
 
   const columnsDialog = (
     <ColumnsDialog
       columns={defs}
-      preference={query.data ?? null}
+      preference={preference}
       pinnedCount={pinnedCount}
       pending={save.isPending || reset.isPending}
       onApply={async (next) => {

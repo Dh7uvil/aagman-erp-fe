@@ -81,6 +81,7 @@ function DialogContent({
   className,
   children,
   nested = false,
+  mobileSheet = false,
   onEscapeKeyDown,
   onPointerDownOutside,
   onFocusOutside,
@@ -88,6 +89,8 @@ function DialogContent({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   nested?: boolean;
+  /** Bottom-anchored sheet layout on small viewports. */
+  mobileSheet?: boolean;
 }) {
   const overlayRef = React.useRef<HTMLDivElement>(null);
 
@@ -109,9 +112,13 @@ function DialogContent({
       />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        data-mobile-sheet={mobileSheet ? "" : undefined}
         data-nested={nested ? true : undefined}
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed z-50 grid w-full gap-4 overflow-y-auto border shadow-lg duration-200",
+          mobileSheet
+            ? "top-auto bottom-0 left-0 max-h-[85dvh] translate-x-0 translate-y-0 rounded-t-xl rounded-b-none border-b-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom max-sm:max-w-none sm:top-[50%] sm:left-[50%] sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-6 sm:pb-6"
+            : "top-[50%] left-[50%] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-1.5rem)] translate-x-[-50%] translate-y-[-50%] rounded-lg p-6 sm:max-w-lg",
           nested && "z-[60]",
           className,
         )}
