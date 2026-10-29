@@ -1,13 +1,16 @@
 "use client";
 
-import { Copy, Pause, Play, Plus } from "lucide-react";
-import Link from "next/link";
+import { Pause, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type MouseEvent } from "react";
 import { toast } from "sonner";
 
 import { jobPermissions, jobPricePermissions } from "@/modules/inventory/permissions";
 import { JobCloneDialog } from "@/modules/inventory/jobs/components/job-clone-dialog";
+import {
+  JobHeaderCreateActions,
+  jobHeaderActionsClassName,
+} from "@/modules/inventory/jobs/components/job-header-create-actions";
 import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
 import { useDeleteJob, useResumeJob } from "@/modules/inventory/jobs/mutations";
 import { useJobs } from "@/modules/inventory/jobs/queries";
@@ -218,19 +221,12 @@ export function JobsScreen() {
         subtitle="Track printing jobs and cylinder details"
         actions={
           canCreate ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className={jobHeaderActionsClassName()}>
               {canRead ? (
-                <Button type="button" variant="secondary" onClick={() => setCloneOpen(true)}>
-                  <Copy className="size-4" />
-                  Clone job
-                </Button>
-              ) : null}
-              <Button asChild>
-                <Link href={jobRoutes.new}>
-                  <Plus className="size-4" />
-                  New job
-                </Link>
-              </Button>
+                <JobHeaderCreateActions onCloneClick={() => setCloneOpen(true)} />
+              ) : (
+                <JobHeaderCreateActions showNewJob />
+              )}
             </div>
           ) : null
         }

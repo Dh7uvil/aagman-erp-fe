@@ -12,6 +12,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import {
+  CancelLabel,
+  ConfirmLabel,
+  DeleteLabel,
+} from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 
 export function ConfirmActionDialog({
@@ -46,7 +51,9 @@ export function ConfirmActionDialog({
         </AlertDialogHeader>
         {extra}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>
+            <CancelLabel />
+          </AlertDialogCancel>
           <Button
             type="button"
             variant={variant}
@@ -54,7 +61,13 @@ export function ConfirmActionDialog({
             onClick={() => onConfirm()}
           >
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            {confirmLabel}
+            {pending ? (
+              confirmLabel
+            ) : variant === "destructive" ? (
+              <DeleteLabel>{confirmLabel}</DeleteLabel>
+            ) : (
+              <ConfirmLabel>{confirmLabel}</ConfirmLabel>
+            )}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

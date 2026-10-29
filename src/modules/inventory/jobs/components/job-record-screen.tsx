@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -9,8 +8,11 @@ import { toast } from "sonner";
 
 import { jobPermissions } from "@/modules/inventory/permissions";
 import { JobFormFields } from "@/modules/inventory/jobs/components/job-form-fields";
+import {
+  JobHeaderCreateActions,
+  jobSecondaryHeaderActionClass,
+} from "@/modules/inventory/jobs/components/job-header-create-actions";
 import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
-import { JobPauseHistoryCard } from "@/modules/inventory/jobs/components/job-pause-history-card";
 import { useCreateJob, useResumeJob, useUpdateJob } from "@/modules/inventory/jobs/mutations";
 import { useJob } from "@/modules/inventory/jobs/queries";
 import { jobRoutes } from "@/modules/inventory/jobs/routes";
@@ -26,6 +28,7 @@ import { useCan } from "@/shared/providers/session-provider";
 import { DataTableError } from "@/shared/components/data-table/states";
 import { HistoryHeaderButton } from "@/shared/components/document/history-header-button";
 import { RelatedDocumentsCard } from "@/shared/components/document/related-documents-card";
+import { PauseLabel, ResumeLabel } from "@/shared/components/ui/action-button-labels";
 import { SubmitButton } from "@/shared/components/form/submit-button";
 import { RecordPageHeader } from "@/shared/components/layout/record-page-header";
 import { Button } from "@/shared/components/ui/button";
@@ -177,26 +180,31 @@ export function JobRecordScreen({
         editHref={jobId ? jobRoutes.edit(jobId) : undefined}
         canUpdate={canUpdate && job?.status !== "RETURNED"}
         mode={mode === "edit" ? "edit" : "view"}
+        splitSecondaryActionsOnMobile={mode === "view"}
         extraActions={
           mode === "view" && job ? (
             <>
               {canCreate && canRead ? (
-                <Button type="button" variant="secondary" asChild>
-                  <Link href={jobRoutes.clone(job.id)}>Clone</Link>
-                </Button>
+                <JobHeaderCreateActions cloneHref={jobRoutes.clone(job.id)} showNewJob={false} />
               ) : null}
               {canUpdate ? (
                 <>
                   {job.status !== "PAUSED" &&
                   job.status !== "RETURNED" &&
                   job.status !== "COMPLETED" ? (
-                    <Button type="button" variant="secondary" onClick={() => setPauseOpen(true)}>
-                      Pause
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className={jobSecondaryHeaderActionClass}
+                      onClick={() => setPauseOpen(true)}
+                    >
+                      <PauseLabel />
                     </Button>
                   ) : null}
                   {job.status === "PAUSED" ? (
-                    <Button type="button" onClick={() => void onResume()}>
-                      Resume
+                    <Button type="button" size="sm" onClick={() => void onResume()}>
+                      <ResumeLabel />
                     </Button>
                   ) : null}
                 </>
@@ -243,7 +251,6 @@ export function JobRecordScreen({
       {mode === "view" && job ? (
         <>
           <RelatedDocumentsCard documents={job.related_documents ?? []} />
-          <JobPauseHistoryCard job={job} />
           {jobId ? (
             <JobPauseDialog
               jobId={jobId}

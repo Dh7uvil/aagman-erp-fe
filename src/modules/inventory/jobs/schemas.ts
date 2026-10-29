@@ -156,6 +156,7 @@ export const EntityHistoryEntrySchema = z.object({
   entity_id: z.string().uuid().nullable(),
   module: z.string(),
   kind: z.enum(["edit", "attachment"]),
+  event: z.enum(["pause", "resume"]).nullable().optional(),
   summary: z.string().nullable().optional(),
   attachment_slot: z.string().nullable().optional(),
   storage_key: z.string().nullable().optional(),

@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { CancelLabel, DeactivateLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 
 export function DeactivateUserDialog({
@@ -50,7 +51,9 @@ export function DeactivateUserDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deactivate.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={deactivate.isPending}>
+            <CancelLabel />
+          </AlertDialogCancel>
           <Button
             type="button"
             variant="destructive"
@@ -58,7 +61,7 @@ export function DeactivateUserDialog({
             onClick={onConfirm}
           >
             {deactivate.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Deactivate
+            {deactivate.isPending ? "Deactivate" : <DeactivateLabel />}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

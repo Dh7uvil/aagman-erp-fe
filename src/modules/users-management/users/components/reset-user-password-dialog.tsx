@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { CancelLabel, ResetPasswordLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 
@@ -69,14 +70,16 @@ export function ResetUserPasswordDialog({
           onChange={(event) => setNewPassword(event.target.value)}
         />
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={resetPassword.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={resetPassword.isPending}>
+            <CancelLabel />
+          </AlertDialogCancel>
           <Button
             type="button"
             disabled={resetPassword.isPending || newPassword.length < 8}
             onClick={onConfirm}
           >
             {resetPassword.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Reset Password
+            {resetPassword.isPending ? "Reset Password" : <ResetPasswordLabel />}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

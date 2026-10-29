@@ -9,6 +9,7 @@ import {
   SearchableSelect,
   type SearchableSelectOption,
 } from "@/shared/components/form/searchable-select";
+import { CancelLabel, ContinueLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -113,10 +114,10 @@ export function JobCloneDialog({
         />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            <CancelLabel />
           </Button>
           <Button type="button" disabled={!jobId} onClick={continueClone}>
-            Continue
+            <ContinueLabel />
           </Button>
         </DialogFooter>
       </DialogContent>

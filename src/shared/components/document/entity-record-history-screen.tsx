@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -9,6 +8,7 @@ import { useJob, useJobHistory } from "@/modules/inventory/jobs/queries";
 import { EntityHistoryCard } from "@/shared/components/document/entity-history-card";
 import { useSetBreadcrumbRecord } from "@/shared/components/layout/breadcrumb-record";
 import { PageHeader } from "@/shared/components/layout/page-header";
+import { BackLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import {
   getHistoryResource,
@@ -43,6 +43,7 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
         code={code}
         pageTitle={pageTitle}
         recordLabel="Job"
+        supportsAttachments={spec.supportsAttachments}
       />
     );
   }
@@ -55,6 +56,7 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
         code={code}
         pageTitle={pageTitle}
         recordLabel="Cylinder return"
+        supportsAttachments={spec.supportsAttachments}
       />
     );
   }
@@ -75,6 +77,7 @@ function RecordHistoryLayout({
   onRetry,
   jobId,
   job,
+  supportsAttachments,
 }: {
   viewHref: string;
   code: string | null;
@@ -86,6 +89,7 @@ function RecordHistoryLayout({
   onRetry?: () => void;
   jobId?: string;
   job?: ReturnType<typeof useJob>["data"];
+  supportsAttachments: boolean;
 }) {
   const subtitle = code ? (recordLabel ? `${recordLabel} · ${code}` : code) : recordLabel;
 
@@ -95,10 +99,12 @@ function RecordHistoryLayout({
         title={pageTitle}
         subtitle={subtitle}
         actions={
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="outline" size="sm" asChild data-page-header-persist>
             <Link href={viewHref}>
-              <ChevronLeft />
-              Back to record
+              <BackLabel>
+                <span className="sm:hidden">Back</span>
+                <span className="hidden sm:inline">Back to record</span>
+              </BackLabel>
             </Link>
           </Button>
         }
@@ -111,6 +117,7 @@ function RecordHistoryLayout({
         onRetry={onRetry}
         jobId={jobId}
         job={job}
+        supportsAttachments={supportsAttachments}
       />
     </div>
   );
@@ -122,12 +129,14 @@ function JobRecordHistory({
   code,
   pageTitle,
   recordLabel,
+  supportsAttachments,
 }: {
   id: string;
   viewHref: string;
   code: string | null;
   pageTitle: string;
   recordLabel: string;
+  supportsAttachments: boolean;
 }) {
   const historyQuery = useJobHistory(id);
   const jobQuery = useJob(id);
@@ -143,6 +152,7 @@ function JobRecordHistory({
       onRetry={() => void historyQuery.refetch()}
       jobId={id}
       job={jobQuery.data}
+      supportsAttachments={supportsAttachments}
     />
   );
 }
@@ -153,12 +163,14 @@ function CylinderReturnRecordHistory({
   code,
   pageTitle,
   recordLabel,
+  supportsAttachments,
 }: {
   id: string;
   viewHref: string;
   code: string | null;
   pageTitle: string;
   recordLabel: string;
+  supportsAttachments: boolean;
 }) {
   const historyQuery = useCylinderReturnHistory(id);
   return (
@@ -171,6 +183,7 @@ function CylinderReturnRecordHistory({
       isLoading={historyQuery.isLoading}
       isError={historyQuery.isError}
       onRetry={() => void historyQuery.refetch()}
+      supportsAttachments={supportsAttachments}
     />
   );
 }

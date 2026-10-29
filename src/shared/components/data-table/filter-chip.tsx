@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/shared/components/ui/badge";
+import { ClearFiltersLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 
 export function FilterChip({ label, onRemove }: { label: ReactNode; onRemove?: () => void }) {
@@ -42,7 +43,7 @@ export function ActiveFilterBar({
       {children}
       {onClear ? (
         <Button type="button" variant="ghost" size="xs" onClick={onClear}>
-          Clear
+          <ClearFiltersLabel />
         </Button>
       ) : null}
     </div>

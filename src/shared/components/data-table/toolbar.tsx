@@ -47,7 +47,7 @@ export function ToolbarControl({
 
 export function toolbarFilterButtonClass(active = false) {
   return cn(
-    "border-transparent bg-info text-white hover:bg-info/90 hover:text-white",
+    "border-transparent bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
     active && "shadow-sm",
   );
 }

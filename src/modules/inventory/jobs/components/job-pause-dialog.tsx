@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { usePauseJob } from "@/modules/inventory/jobs/mutations";
 import { getErrorMessage } from "@/shared/api/errors";
+import { CancelLabel, PauseLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -55,10 +56,10 @@ export function JobPauseDialog({
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            <CancelLabel />
           </Button>
           <Button onClick={() => void submit()} disabled={pauseJob.isPending}>
-            Pause
+            <PauseLabel />
           </Button>
         </DialogFooter>
       </DialogContent>

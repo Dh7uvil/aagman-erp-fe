@@ -9,6 +9,11 @@ import {
   toolbarFilterButtonClass,
   toolbarLabelClass,
 } from "@/shared/components/data-table/toolbar";
+import {
+  ApplyLabel,
+  CancelLabel,
+  ClearFiltersLabel,
+} from "@/shared/components/ui/action-button-labels";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -92,7 +97,7 @@ export function MoreFiltersDialog({
           <ListFilter className="size-3.5" />
           More filters
           {extraCount > 0 ? (
-            <Badge className="text-info h-5 min-w-5 border-transparent bg-white px-1">
+            <Badge className="text-primary h-5 min-w-5 border-transparent bg-white px-1">
               {extraCount}
             </Badge>
           ) : null}
@@ -110,17 +115,17 @@ export function MoreFiltersDialog({
           <DialogFooter className="gap-2 sm:justify-between">
             {draftCount > 0 ? (
               <Button type="button" variant="ghost" onClick={onClearDraft}>
-                Clear extra filters
+                <ClearFiltersLabel>Clear extra filters</ClearFiltersLabel>
               </Button>
             ) : (
               <span />
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
+                <CancelLabel />
               </Button>
               <Button type="button" onClick={apply}>
-                Apply
+                <ApplyLabel />
               </Button>
             </div>
           </DialogFooter>

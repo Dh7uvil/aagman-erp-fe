@@ -7,6 +7,8 @@ export type HistoryResourceSpec = {
   slug: string;
   listHref: string;
   label: string;
+  /** Records of this resource can carry file uploads, so history shows an Attachments tab. */
+  supportsAttachments: boolean;
 };
 
 const HISTORY_RESOURCES = [
@@ -14,11 +16,13 @@ const HISTORY_RESOURCES = [
     slug: "jobs",
     listHref: jobRoutes.list,
     label: "Jobs",
+    supportsAttachments: true,
   },
   {
     slug: "cylinder-returns",
     listHref: cylinderReturnRoutes.list,
     label: "Cylinder returns",
+    supportsAttachments: false,
   },
 ] as const satisfies readonly HistoryResourceSpec[];
 

@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import type { ComponentProps } from "react";
 
+import { SubmitFormLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/cn";
 
@@ -25,7 +26,7 @@ export function SubmitButton({
       {...props}
     >
       {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-      {children}
+      {isPending ? children : children ? <SubmitFormLabel>{children}</SubmitFormLabel> : null}
     </Button>
   );
 }

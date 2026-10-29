@@ -7,6 +7,11 @@ import { FilterField } from "@/shared/components/data-table/more-filters-dialog"
 import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import type { SortFieldOption, SortPatch } from "@/shared/components/data-table/sort";
 import { ToolbarControl, toolbarSortButtonClass } from "@/shared/components/data-table/toolbar";
+import {
+  ApplyLabel,
+  CancelLabel,
+  ClearSortLabel,
+} from "@/shared/components/ui/action-button-labels";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -116,17 +121,17 @@ export function SortDialog({
           <DialogFooter className="gap-2 sm:justify-between">
             {active ? (
               <Button type="button" variant="ghost" onClick={clearSort}>
-                Clear sort
+                <ClearSortLabel />
               </Button>
             ) : (
               <span />
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
+                <CancelLabel />
               </Button>
               <Button type="button" onClick={apply}>
-                Apply
+                <ApplyLabel />
               </Button>
             </div>
           </DialogFooter>

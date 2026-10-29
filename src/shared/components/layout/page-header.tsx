@@ -76,7 +76,7 @@ function isPersistHeaderAction(element: ReactElement): boolean {
     return true;
   }
   const label = buttonLabel(element);
-  return label === "Back" || label === "Cancel";
+  return label === "Back" || label === "Cancel" || label === "Back to record";
 }
 
 function collectActionButtons(node: ReactNode): ReactElement[] {
@@ -101,10 +101,6 @@ function collectActionButtons(node: ReactNode): ReactElement[] {
   return buttons;
 }
 
-function countActionButtons(node: ReactNode): number {
-  return collectActionButtons(node).length;
-}
-
 function renderHeaderButtons(buttons: readonly ReactElement[]): ReactNode {
   return buttons.map((button, index) =>
     cloneElement(button, { key: button.key ?? `page-header-action-${index}` }),
@@ -117,7 +113,7 @@ function PageHeaderActions({ actions }: { actions: ReactNode }) {
   const buttons = collectActionButtons(actions);
   const persistActions = buttons.filter(isPersistHeaderAction);
   const menuActions = buttons.filter((button) => !isPersistHeaderAction(button));
-  const collapse = isMobile && menuActions.length >= 2;
+  const collapse = isMobile && menuActions.length >= 3;
 
   if (!collapse) {
     return (
@@ -168,6 +164,8 @@ export function PageHeader({
   codeTooltip,
   badges,
   actions,
+  mobileHeaderActions,
+  mobileSecondaryActions,
 }: {
   title: string;
   subtitle?: string;
@@ -176,10 +174,14 @@ export function PageHeader({
   codeTooltip?: string;
   badges?: ReactNode;
   actions?: ReactNode;
+  /** On mobile, show only these in the title row (e.g. Back). Desktop uses `actions`. */
+  mobileHeaderActions?: ReactNode;
+  /** On mobile, full-width row below the subtitle (e.g. Clone, New, Edit). */
+  mobileSecondaryActions?: ReactNode;
 }) {
   const isMobile = useIsMobile();
-  const actionCount = actions ? countActionButtons(actions) : 0;
-  const stackActionsOnMobile = Boolean(isMobile && actions && actionCount > 0 && actionCount < 3);
+  const splitMobileActions = Boolean(isMobile && mobileHeaderActions != null);
+  const headerActions = splitMobileActions ? mobileHeaderActions : actions;
 
   return (
     <div className="flex flex-col gap-1.5 sm:gap-2">
@@ -193,17 +195,19 @@ export function PageHeader({
             {badges ? <div className="flex flex-wrap items-center gap-2">{badges}</div> : null}
           </div>
         </div>
-        {actions && !stackActionsOnMobile ? (
+        {headerActions ? (
           <div className="flex shrink-0 justify-end">
-            <PageHeaderActions actions={actions} />
+            <PageHeaderActions actions={headerActions} />
           </div>
         ) : null}
       </div>
       {subtitle ? (
         <p className="text-muted-foreground min-w-0 text-sm leading-snug">{subtitle}</p>
       ) : null}
-      {stackActionsOnMobile ? (
-        <div className="flex w-full flex-col gap-2 [&_a]:w-full [&_button]:w-full">{actions}</div>
+      {splitMobileActions && mobileSecondaryActions ? (
+        <div className="flex w-full gap-2 sm:hidden [&_[data-slot=button]]:min-w-0 [&_[data-slot=button]]:flex-1 [&_a]:min-w-0">
+          {mobileSecondaryActions}
+        </div>
       ) : null}
     </div>
   );

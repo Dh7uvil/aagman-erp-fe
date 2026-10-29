@@ -15,6 +15,9 @@ import {
 } from "@/shared/components/ui/table";
 import { cn } from "@/shared/lib/cn";
 
+/** Keeps the Field column visually distinct from the Before values beside it. */
+const FIELD_COLUMN_CLASS = "bg-muted/60";
+
 function AuditValue({ value, className }: { value: unknown; className?: string }) {
   const formatted = formatAuditValue(value);
 
@@ -43,31 +46,24 @@ function AuditValue({ value, className }: { value: unknown; className?: string }
   return <span className={cn("text-sm break-all", className)}>{formatted.text}</span>;
 }
 
-function AuditChangeCard({
-  change,
-}: {
-  change: AuditLogChange;
-}) {
+function AuditChangeCard({ change }: { change: AuditLogChange }) {
   const afterChanged = change.new_value !== null && change.new_value !== undefined;
 
   return (
-    <div className="rounded-md border p-3">
-      <p className="text-sm font-medium">{humanizeAuditField(change.field)}</p>
-      <div className="mt-2 space-y-2 text-sm">
+    <div className="overflow-hidden rounded-md border">
+      <p className={cn("border-b px-3 py-2 text-sm font-medium", FIELD_COLUMN_CLASS)}>
+        {humanizeAuditField(change.field)}
+      </p>
+      <div className="space-y-2 p-3 text-sm">
         <div>
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">Before</p>
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">Before</p>
           <AuditValue value={change.old_value} className="text-muted-foreground mt-0.5" />
         </div>
-        <div
-          className={cn(
-            "rounded-sm p-2",
-            afterChanged && "bg-emerald-50 dark:bg-emerald-950/40",
-          )}
-        >
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">After</p>
+        <div className={cn("rounded-sm p-2", afterChanged && "bg-success-muted")}>
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">After</p>
           <AuditValue
             value={change.new_value}
-            className={cn("mt-0.5", afterChanged && "text-emerald-800 dark:text-emerald-300")}
+            className={cn("mt-0.5", afterChanged && "text-success-foreground")}
           />
         </div>
       </div>
@@ -91,7 +87,7 @@ export function AuditLogChanges({ changes }: { changes: AuditLogChange[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Field</TableHead>
+              <TableHead className={FIELD_COLUMN_CLASS}>Field</TableHead>
               <TableHead>Before</TableHead>
               <TableHead>After</TableHead>
             </TableRow>
@@ -101,7 +97,13 @@ export function AuditLogChanges({ changes }: { changes: AuditLogChange[] }) {
               const afterChanged = change.new_value !== null && change.new_value !== undefined;
               return (
                 <TableRow key={change.field}>
-                  <TableCell className="align-top text-sm whitespace-normal" title={change.field}>
+                  <TableCell
+                    className={cn(
+                      "align-top text-sm font-medium whitespace-normal",
+                      FIELD_COLUMN_CLASS,
+                    )}
+                    title={change.field}
+                  >
                     {humanizeAuditField(change.field)}
                   </TableCell>
                   <TableCell className="text-muted-foreground align-top whitespace-normal">
@@ -110,12 +112,12 @@ export function AuditLogChanges({ changes }: { changes: AuditLogChange[] }) {
                   <TableCell
                     className={cn(
                       "align-top whitespace-normal",
-                      afterChanged && "bg-emerald-50 dark:bg-emerald-950/40",
+                      afterChanged && "bg-success-muted",
                     )}
                   >
                     <AuditValue
                       value={change.new_value}
-                      className={afterChanged ? "text-emerald-800 dark:text-emerald-300" : undefined}
+                      className={afterChanged ? "text-success-foreground" : undefined}
                     />
                   </TableCell>
                 </TableRow>

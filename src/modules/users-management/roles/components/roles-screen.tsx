@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { Badge } from "@/shared/components/ui/badge";
+import { CancelLabel, DeleteLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import { formatDate } from "@/shared/lib/format";
 import { useListView } from "@/shared/hooks/use-list-view";
@@ -238,7 +239,9 @@ export function RolesScreen() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteRole.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteRole.isPending}>
+              <CancelLabel />
+            </AlertDialogCancel>
             <Button
               type="button"
               variant="destructive"
@@ -246,7 +249,7 @@ export function RolesScreen() {
               onClick={confirmDelete}
             >
               {deleteRole.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Delete
+              {deleteRole.isPending ? "Delete" : <DeleteLabel>Delete</DeleteLabel>}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

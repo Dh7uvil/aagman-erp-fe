@@ -34,6 +34,9 @@ const DETAIL_CARD_CLASS =
 const HISTORY_TAB_TRIGGER_CLASS =
   "data-[state=active]:border-primary rounded-none border-0 border-b-2 border-transparent px-3 py-2 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none";
 
+/** Keeps the Field column visually distinct from the Before values beside it. */
+const FIELD_COLUMN_CLASS = "bg-muted/60";
+
 function historyDaySummary(count: number, noun: string): string {
   return count === 1 ? `1 ${noun}` : `${count} ${noun}s`;
 }
@@ -112,6 +115,8 @@ function ChangeValue({ value, className }: { value: unknown; className?: string 
   return <span className={cn("text-sm break-all", className)}>{formatted.text}</span>;
 }
 
+type BadgeVariant = "success" | "info" | "destructive" | "secondary" | "warning";
+
 function historyActionVerb(action: string): string {
   switch (action.toUpperCase()) {
     case "CREATE":
@@ -125,7 +130,7 @@ function historyActionVerb(action: string): string {
   }
 }
 
-function actionBadgeVariant(action: string): "success" | "info" | "destructive" | "secondary" {
+function actionBadgeVariant(action: string): BadgeVariant {
   switch (action.toUpperCase()) {
     case "CREATE":
       return "success";
@@ -136,6 +141,29 @@ function actionBadgeVariant(action: string): "success" | "info" | "destructive" 
     default:
       return "secondary";
   }
+}
+
+function historyEventVerb(entry: EntityHistoryEntry): string {
+  if (entry.event === "pause") {
+    return "paused this record";
+  }
+  if (entry.event === "resume") {
+    return "resumed this record";
+  }
+  return historyActionVerb(entry.action);
+}
+
+function historyEventBadge(entry: EntityHistoryEntry): { label: string; variant: BadgeVariant } {
+  if (entry.event === "pause") {
+    return { label: "Paused", variant: "warning" };
+  }
+  if (entry.event === "resume") {
+    return { label: "Resumed", variant: "success" };
+  }
+  return {
+    label: titleCase(entry.action.toLowerCase()),
+    variant: actionBadgeVariant(entry.action),
+  };
 }
 
 function actorLabel(entry: EntityHistoryEntry): string {
@@ -171,75 +199,121 @@ function groupHistoryByDay(entries: EntityHistoryEntry[]): Array<{
     }));
 }
 
+function FieldChangeCard({ change }: { change: EntityHistoryEntry["changes"][number] }) {
+  const afterChanged = change.new_value !== null && change.new_value !== undefined;
+
+  return (
+    <div className="bg-background overflow-hidden rounded-md border">
+      <p className={cn("border-b px-3 py-2 text-sm font-medium", FIELD_COLUMN_CLASS)}>
+        {humanizeAuditField(change.field)}
+      </p>
+      <div className="space-y-2 p-3 text-sm">
+        <div>
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">Before</p>
+          <ChangeValue value={change.old_value} className="text-muted-foreground mt-0.5" />
+        </div>
+        <div className={cn("rounded-sm p-2", afterChanged && "bg-success-muted")}>
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">After</p>
+          <ChangeValue
+            value={change.new_value}
+            className={cn("mt-0.5", afterChanged && "text-success-foreground")}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FieldChanges({ changes }: { changes: EntityHistoryEntry["changes"] }) {
   if (changes.length === 0) {
     return null;
   }
   return (
-    <div className={cn(DETAIL_CARD_CLASS, "overflow-x-auto p-0")}>
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[min(220px,22%)]">Field</TableHead>
-            <TableHead className="w-[39%]">Before</TableHead>
-            <TableHead className="w-[39%]">After</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {changes.map((change) => {
-            const afterChanged = change.new_value !== null && change.new_value !== undefined;
-            return (
-              <TableRow key={change.field}>
-                <TableCell className="align-top text-sm font-medium whitespace-normal">
-                  {humanizeAuditField(change.field)}
-                </TableCell>
-                <TableCell className="text-muted-foreground align-top whitespace-normal">
-                  <ChangeValue value={change.old_value} />
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "align-top whitespace-normal",
-                    afterChanged && "bg-emerald-50/80 dark:bg-emerald-950/40",
-                  )}
-                >
-                  <ChangeValue
-                    value={change.new_value}
-                    className={afterChanged ? "text-emerald-900 dark:text-emerald-300" : undefined}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <div className={cn(DETAIL_CARD_CLASS, "overflow-hidden p-0")}>
+      <div className="flex flex-col gap-2 p-2 sm:hidden">
+        {changes.map((change) => (
+          <FieldChangeCard key={change.field} change={change} />
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className={cn("w-[min(220px,22%)]", FIELD_COLUMN_CLASS)}>Field</TableHead>
+              <TableHead className="w-[39%]">Before</TableHead>
+              <TableHead className="w-[39%]">After</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {changes.map((change) => {
+              const afterChanged = change.new_value !== null && change.new_value !== undefined;
+              return (
+                <TableRow key={change.field}>
+                  <TableCell
+                    className={cn(
+                      "align-top text-sm font-medium whitespace-normal",
+                      FIELD_COLUMN_CLASS,
+                    )}
+                  >
+                    {humanizeAuditField(change.field)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground align-top whitespace-normal">
+                    <ChangeValue value={change.old_value} />
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "align-top whitespace-normal",
+                      afterChanged && "bg-success-muted",
+                    )}
+                  >
+                    <ChangeValue
+                      value={change.new_value}
+                      className={afterChanged ? "text-success-foreground" : undefined}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
 
 function HistoryTimelineItem({ entry }: { entry: EntityHistoryEntry }) {
+  const badge = historyEventBadge(entry);
+  const pauseRemarks = entry.event === "pause" ? entry.summary?.trim() : null;
+
   return (
-    <li className="relative flex gap-3 pb-1">
-      <Avatar className="size-8 shrink-0">
+    <li className="relative flex gap-2 pb-1 sm:gap-3">
+      <Avatar className="size-7 shrink-0 sm:size-8">
         <AvatarFallback className="text-xs">{actorInitials(entry)}</AvatarFallback>
       </Avatar>
-      <div className="min-w-0 flex-1 pb-5">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <p className="text-sm">
+      <div className="min-w-0 flex-1 pb-4 sm:pb-5">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-2">
+          <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+            <p className="text-sm leading-snug">
               <span className="font-medium">{actorLabel(entry)}</span>{" "}
-              <span className="text-muted-foreground">{historyActionVerb(entry.action)}</span>
+              <span className="text-muted-foreground">{historyEventVerb(entry)}</span>
             </p>
-            <Badge variant={actionBadgeVariant(entry.action)} className="shrink-0">
-              {titleCase(entry.action.toLowerCase())}
+            <Badge variant={badge.variant} className="w-fit shrink-0">
+              {badge.label}
             </Badge>
           </div>
           <time
             dateTime={entry.timestamp}
-            className="text-muted-foreground shrink-0 text-xs tabular-nums"
+            className="text-muted-foreground text-xs tabular-nums sm:shrink-0"
           >
             {formatDateTime(entry.timestamp)}
           </time>
         </div>
+        {pauseRemarks ? (
+          <div className={DETAIL_CARD_CLASS}>
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">Remarks</p>
+            <p className="mt-0.5 break-all">{pauseRemarks}</p>
+          </div>
+        ) : null}
         <FieldChanges changes={entry.changes} />
       </div>
     </li>
@@ -260,7 +334,7 @@ function HistoryTimeline({ entries }: { entries: EntityHistoryEntry[] }) {
               {historyDaySummary(group.rows.length, "event")}
             </p>
           </div>
-          <ol className="border-border relative ml-1 border-l pl-5">
+          <ol className="border-border relative ml-0.5 border-l pl-3 sm:ml-1 sm:pl-5">
             {group.rows.map((entry) => (
               <HistoryTimelineItem key={entry.id} entry={entry} />
             ))}
@@ -288,7 +362,9 @@ function AttachmentFilePreview({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[96dvh] w-[96vw] max-w-[96vw] flex-col items-center justify-center gap-0 border-0 bg-black/95 p-2 shadow-2xl sm:max-w-[96vw] sm:p-4 [&>button]:text-white [&>button]:hover:bg-white/10">
         <DialogTitle className="sr-only">{filename} preview</DialogTitle>
-        <p className="mb-3 max-w-full truncate px-2 text-center text-xs text-white/70">{filename}</p>
+        <p className="mb-3 max-w-full truncate px-2 text-center text-xs text-white/70">
+          {filename}
+        </p>
         {isImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={fileUrl} alt={filename} className="max-h-[85dvh] w-full object-contain" />
@@ -328,7 +404,7 @@ function AttachmentHistoryCard({
         <div
           className={cn(
             "relative aspect-[5/3] w-full overflow-hidden",
-            removed ? "bg-muted/40" : "bg-linear-to-b from-muted/60 to-muted/25",
+            removed ? "bg-muted/40" : "from-muted/60 to-muted/25 bg-linear-to-b",
           )}
         >
           {showImageThumb ? (
@@ -475,14 +551,16 @@ function AttachmentsTimelineGrid({
   );
 }
 
-function HistoryLoadingSkeleton() {
+function HistoryLoadingSkeleton({ showTabs = true }: { showTabs?: boolean }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-4 border-b pb-3">
-        <Skeleton className="h-8 w-20" />
-        <Skeleton className="h-8 w-24" />
-      </div>
-      <div className="ml-1 flex flex-col gap-5 border-l pl-5 pt-2">
+      {showTabs ? (
+        <div className="flex gap-4 border-b pb-3">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      ) : null}
+      <div className="ml-1 flex flex-col gap-5 border-l pt-2 pl-5">
         {[0, 1].map((key) => (
           <div key={key} className="flex gap-3">
             <Skeleton className="size-8 shrink-0 rounded-full" />
@@ -507,6 +585,7 @@ export function EntityHistoryCard({
   className,
   jobId,
   job,
+  supportsAttachments = true,
 }: {
   title?: string;
   showTitle?: boolean;
@@ -518,16 +597,20 @@ export function EntityHistoryCard({
   /** When set, attachment previews resolve via job history file URLs. */
   jobId?: string;
   job?: Job | null;
+  /** Records without file uploads hide the Attachments tab entirely. */
+  supportsAttachments?: boolean;
 }) {
   const activityEntries = useMemo(
     () => (entries ?? []).filter((entry) => entry.kind === "edit"),
     [entries],
   );
   const attachmentEntries = useMemo(
-    () => (entries ?? []).filter((entry) => entry.kind === "attachment"),
-    [entries],
+    () =>
+      supportsAttachments ? (entries ?? []).filter((entry) => entry.kind === "attachment") : [],
+    [entries, supportsAttachments],
   );
-  const hasEntries = (entries?.length ?? 0) > 0;
+  const hasEntries = activityEntries.length > 0 || attachmentEntries.length > 0;
+  const showEntries = !isLoading && !isError && hasEntries;
   const [tab, setTab] = useState<"activity" | "attachments">("activity");
 
   return (
@@ -537,22 +620,22 @@ export function EntityHistoryCard({
           <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
       ) : null}
-      <CardContent className={cn("flex flex-col gap-4", !showTitle && "pt-6")}>
-        {isLoading ? <HistoryLoadingSkeleton /> : null}
-        {isError ? (
-          <DataTableError message="Could not load history." onRetry={onRetry} />
-        ) : null}
+      <CardContent className={cn("flex flex-col gap-4 px-3 sm:px-6", !showTitle && "pt-4 sm:pt-6")}>
+        {isLoading ? <HistoryLoadingSkeleton showTabs={supportsAttachments} /> : null}
+        {isError ? <DataTableError message="Could not load history." onRetry={onRetry} /> : null}
         {!isLoading && !isError && !hasEntries ? (
           <DataTableEmpty
             title="No history yet"
-            message="Changes and file uploads for this record will appear here."
+            message={
+              supportsAttachments
+                ? "Changes and file uploads for this record will appear here."
+                : "Changes to this record will appear here."
+            }
           />
         ) : null}
-        {!isLoading && !isError && hasEntries && entries ? (
-          <Tabs
-            value={tab}
-            onValueChange={(value) => setTab(value as "activity" | "attachments")}
-          >
+        {showEntries && !supportsAttachments ? <HistoryTimeline entries={activityEntries} /> : null}
+        {showEntries && supportsAttachments ? (
+          <Tabs value={tab} onValueChange={(value) => setTab(value as "activity" | "attachments")}>
             <div className="border-b">
               <TabsList className="h-auto w-full justify-start rounded-none border-0 bg-transparent p-0 sm:w-auto">
                 <TabsTrigger value="activity" className={HISTORY_TAB_TRIGGER_CLASS}>
@@ -575,11 +658,7 @@ export function EntityHistoryCard({
             </TabsContent>
             <TabsContent value="attachments" className="pt-4">
               {attachmentEntries.length > 0 ? (
-                <AttachmentsTimelineGrid
-                  entries={attachmentEntries}
-                  jobId={jobId}
-                  job={job}
-                />
+                <AttachmentsTimelineGrid entries={attachmentEntries} jobId={jobId} job={job} />
               ) : (
                 <DataTableEmpty
                   title="No attachments yet"
