@@ -16,7 +16,7 @@ export function DashboardGreeting({ name }: { name: string }) {
   return (
     <h1
       suppressHydrationWarning
-      className="text-foreground text-2xl font-semibold tracking-tight"
+      className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl"
     >
       Good {part}, {name}
     </h1>

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ClipboardList, Download, Shield, Users, type LucideIcon } from "lucide-react";
+import { AlertCircle, ClipboardList, Download, Shield, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AuditLogDetailSheet } from "@/modules/users-management/audit-logs/components/audit-log-detail-sheet";
@@ -38,8 +38,7 @@ import { PageHeader } from "@/shared/components/layout/page-header";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent } from "@/shared/components/ui/card";
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import { KpiCard } from "@/modules/dashboard/components/kpi-card";
 import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatDate, formatDateTime, initials, titleCase } from "@/shared/lib/format";
@@ -116,40 +115,6 @@ function statusVariant(status: string): "success" | "destructive" | "muted" {
     default:
       return "muted";
   }
-}
-
-function KpiCard({
-  label,
-  icon: Icon,
-  value,
-  isLoading,
-}: {
-  label: string;
-  icon: LucideIcon;
-  value: number | undefined;
-  isLoading: boolean;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start justify-between pt-4 pb-4">
-        <div>
-          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            {label}
-          </p>
-          {isLoading ? (
-            <Skeleton className="mt-1 h-8 w-16" />
-          ) : (
-            <p className="mt-1 font-mono text-2xl font-semibold">
-              {value === undefined ? "—" : value.toLocaleString()}
-            </p>
-          )}
-        </div>
-        <div className="bg-primary/10 flex size-9 items-center justify-center rounded-lg">
-          <Icon className="text-primary size-4" />
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 export function AuditLogsScreen() {
