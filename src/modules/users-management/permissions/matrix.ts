@@ -4,7 +4,7 @@ import type {
 } from "@/modules/users-management/permissions/schemas";
 import { humanizeEnum } from "@/shared/lib/format";
 
-const PREFERRED_ACTIONS = ["create", "read", "update", "delete", "view_price"];
+const PREFERRED_ACTIONS = ["create", "read", "update", "delete", "view_price", "history"];
 
 const ACTION_LABELS: Record<string, string> = {
   create: "Create",
@@ -12,6 +12,7 @@ const ACTION_LABELS: Record<string, string> = {
   update: "Update",
   delete: "Delete",
   view_price: "View price",
+  history: "View history",
 };
 
 type MatrixResourceRef = {
@@ -62,6 +63,10 @@ export const PERMISSION_MATRIX_LAYOUT: MatrixDisplayModule[] = [
     resources: [
       { module: "inventory", resource: "material", label: "Materials" },
       { module: "inventory", resource: "materials_report", label: "Materials report" },
+      { module: "inventory", resource: "job", label: "Jobs" },
+      { module: "inventory", resource: "job_image", label: "Job image" },
+      { module: "inventory", resource: "job_challan", label: "Challan" },
+      { module: "inventory", resource: "cylinder_return", label: "Cylinder returns" },
     ],
   },
 ];

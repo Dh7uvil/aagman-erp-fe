@@ -18,7 +18,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "generate:permissions": "node scripts/generate-fe-permissions.mjs",
-    "generate:permissions:check": "node scripts/generate-fe-permissions.mjs --check"
+    "generate:permissions:check": "node scripts/generate-fe-permissions.mjs --check",
+    "sync:permissions": "node scripts/sync-permissions.mjs",
+    "predev": "node scripts/sync-permissions.mjs --optional",
+    "prebuild": "node scripts/sync-permissions.mjs --optional"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

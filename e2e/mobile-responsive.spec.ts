@@ -123,6 +123,20 @@ test.describe("mobile list views", () => {
       expect(box.y + box.height).toBeGreaterThanOrEqual(812 - 4);
     }
   });
+
+  test("jobs list uses cards without horizontal page overflow", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/jobs");
+    await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Card view" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const fitsViewport = await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    );
+    expect(fitsViewport).toBe(true);
+  });
 });
 
 test.describe("tablet viewport", () => {
@@ -131,5 +145,16 @@ test.describe("tablet viewport", () => {
   test("login marketing panel stays hidden below lg", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByText("Secure access management")).toBeHidden();
+  });
+
+  test("jobs list table fits default columns at tablet width", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/jobs");
+    await page.getByRole("button", { name: "Table view" }).click();
+    await expect(page.locator('[data-slot="table"]')).toBeVisible();
+    const fitsViewport = await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    );
+    expect(fitsViewport).toBe(true);
   });
 });

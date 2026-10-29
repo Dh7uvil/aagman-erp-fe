@@ -31,3 +31,37 @@ export const materialsReportPermissions = {
 export const inventoryPricePermissions = {
   read: permissionsByModule.inventory.material.view_price,
 } as const satisfies Record<string, CatalogPermission>;
+
+export const jobPermissions = {
+  read: permissionsByModule.inventory.job.read,
+  create: permissionsByModule.inventory.job.create,
+  update: permissionsByModule.inventory.job.update,
+  delete: permissionsByModule.inventory.job.delete,
+  viewPrice: permissionsByModule.inventory.job.view_price,
+  history: permissionsByModule.inventory.job.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const jobPricePermissions = {
+  read: permissionsByModule.inventory.job.view_price,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const jobImagePermissions = {
+  read: permissionsByModule.inventory.job_image.read,
+  create: permissionsByModule.inventory.job_image.create,
+  update: permissionsByModule.inventory.job_image.update,
+  delete: permissionsByModule.inventory.job_image.delete,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const jobChallanPermissions = {
+  read: permissionsByModule.inventory.job_challan.read,
+  create: permissionsByModule.inventory.job_challan.create,
+  update: permissionsByModule.inventory.job_challan.update,
+  delete: permissionsByModule.inventory.job_challan.delete,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const cylinderReturnPermissions = {
+  read: permissionsByModule.inventory.cylinder_return.read,
+  create: permissionsByModule.inventory.cylinder_return.create,
+  update: permissionsByModule.inventory.cylinder_return.update,
+  delete: permissionsByModule.inventory.cylinder_return.delete,
+} as const satisfies Record<string, CatalogPermission>;
