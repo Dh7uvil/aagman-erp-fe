@@ -283,7 +283,8 @@ function FieldChanges({ changes }: { changes: EntityHistoryEntry["changes"] }) {
 
 function HistoryTimelineItem({ entry }: { entry: EntityHistoryEntry }) {
   const badge = historyEventBadge(entry);
-  const pauseRemarks = entry.event === "pause" ? entry.summary?.trim() : null;
+  const lifecycleRemarks =
+    entry.event === "pause" || entry.event === "resume" ? entry.summary?.trim() : null;
 
   return (
     <li className="relative flex gap-2 pb-1 sm:gap-3">
@@ -308,10 +309,10 @@ function HistoryTimelineItem({ entry }: { entry: EntityHistoryEntry }) {
             {formatDateTime(entry.timestamp)}
           </time>
         </div>
-        {pauseRemarks ? (
+        {lifecycleRemarks ? (
           <div className={DETAIL_CARD_CLASS}>
             <p className="text-muted-foreground text-xs tracking-wide uppercase">Remarks</p>
-            <p className="mt-0.5 break-all">{pauseRemarks}</p>
+            <p className="mt-0.5 break-all">{lifecycleRemarks}</p>
           </div>
         ) : null}
         <FieldChanges changes={entry.changes} />

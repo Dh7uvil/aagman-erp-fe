@@ -1,5 +1,6 @@
 "use client";
 
+import { Copy } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Control, UseFormSetValue } from "react-hook-form";
 import { useFieldArray, useWatch } from "react-hook-form";
@@ -9,7 +10,11 @@ import {
   JobFileSlots,
   JobFileSlotsPlaceholder,
 } from "@/modules/inventory/jobs/components/job-file-slots";
-import { JOB_STATUSES, type Job, type JobFormValues } from "@/modules/inventory/jobs/schemas";
+import {
+  jobFormStatusOptions,
+  type Job,
+  type JobFormValues,
+} from "@/modules/inventory/jobs/schemas";
 import { CompanyQuickCreateDialog } from "@/modules/users-management/companies/components/company-quick-create-dialog";
 import { companyPermissions } from "@/modules/users-management/companies/permissions";
 import { useCompanies } from "@/modules/users-management/companies/queries";
@@ -23,6 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/components/ui/form";
+import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
   Select,
@@ -79,6 +85,24 @@ export function JobFormFields({
   const cylinderCost = useWatch({ control, name: "cylinder_cost" });
   const sizeLines = useFieldArray({ control, name: "size_lines" });
   const colorLines = useFieldArray({ control, name: "color_lines" });
+  const sizeLinesValues = useWatch({ control, name: "size_lines" });
+  const statusValue = useWatch({ control, name: "status" });
+  const statusOptions = jobFormStatusOptions(job?.status ?? statusValue);
+
+  function copyFirstCylinderDimensionsToAll() {
+    const lines = sizeLinesValues ?? [];
+    const first = lines[0];
+    if (!first || lines.length <= 1) {
+      return;
+    }
+    setValue(
+      "size_lines",
+      lines.map((line, index) =>
+        index === 0 ? line : { width: first.width, circumference: first.circumference },
+      ),
+      { shouldDirty: true, shouldValidate: true },
+    );
+  }
 
   const totalCylinderCost = useMemo(() => {
     if (!canViewPrice) {
@@ -166,16 +190,16 @@ export function JobFormFields({
                 <FormLabel>Status</FormLabel>
                 <Select
                   disabled={readOnly}
-                  value={field.value ?? ""}
+                  value={field.value}
                   onValueChange={field.onChange}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {JOB_STATUSES.filter((s) => s !== "RETURNED" && s !== "PAUSED").map((status) => (
+                    {statusOptions.map((status) => (
                       <SelectItem key={status} value={status}>
                         {status}
                       </SelectItem>
@@ -270,7 +294,21 @@ export function JobFormFields({
         ) : null}
 
         <div className="flex flex-col gap-3 pt-1">
-          <p className="text-sm font-medium">Cylinder dimensions</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium">Cylinder dimensions</p>
+            {!readOnly && sizeLines.fields.length > 1 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={copyFirstCylinderDimensionsToAll}
+              >
+                <Copy className="size-3.5" />
+                Copy to all rows
+              </Button>
+            ) : null}
+          </div>
           <div className="hidden sm:grid sm:grid-cols-[auto_1fr_auto_1fr] sm:gap-3 sm:px-1">
             <span className="text-muted-foreground text-xs">#</span>
             <span className="text-muted-foreground text-xs">Width</span>

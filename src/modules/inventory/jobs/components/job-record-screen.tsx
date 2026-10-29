@@ -13,13 +13,15 @@ import {
   jobSecondaryHeaderActionClass,
 } from "@/modules/inventory/jobs/components/job-header-create-actions";
 import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
-import { useCreateJob, useResumeJob, useUpdateJob } from "@/modules/inventory/jobs/mutations";
+import { JobResumeDialog } from "@/modules/inventory/jobs/components/job-resume-dialog";
+import { useCreateJob, useUpdateJob } from "@/modules/inventory/jobs/mutations";
 import { useJob } from "@/modules/inventory/jobs/queries";
 import { jobRoutes } from "@/modules/inventory/jobs/routes";
 import {
   JobFormSchema,
   jobToCloneFormValues,
   jobToFormValues,
+  type Job,
   type JobFormValues,
 } from "@/modules/inventory/jobs/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
@@ -41,42 +43,43 @@ import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 
 export type JobRecordMode = "create" | "view" | "edit";
 
-export function JobRecordScreen({
+function JobRecordForm({
   mode,
   jobId,
-  cloneFromId,
+  job,
+  formValues,
+  readOnly,
+  canSubmit,
+  canViewHistory,
+  pauseOpen,
+  onPauseOpenChange,
+  resumeOpen,
+  onResumeOpenChange,
+  onJobPaused,
+  onJobResumed,
 }: {
   mode: JobRecordMode;
   jobId?: string;
-  cloneFromId?: string;
+  job: Job | null;
+  formValues: JobFormValues;
+  readOnly: boolean;
+  canSubmit: boolean;
+  canViewHistory: boolean;
+  pauseOpen: boolean;
+  onPauseOpenChange: (open: boolean) => void;
+  resumeOpen: boolean;
+  onResumeOpenChange: (open: boolean) => void;
+  onJobPaused?: () => void;
+  onJobResumed?: () => void;
 }) {
   const router = useRouter();
-  const can = useCan();
-  const { canCreate, canRead, canUpdate } = useCrudPermissions(jobPermissions);
-  const canViewHistory = can(jobPermissions.history);
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
-  const resumeJob = useResumeJob();
   const [formError, setFormError] = useState<string | null>(null);
-  const [pauseOpen, setPauseOpen] = useState(false);
-
-  const jobQuery = useJob(mode === "create" ? null : (jobId ?? null));
-  const cloneSourceQuery = useJob(mode === "create" && cloneFromId ? cloneFromId : null);
-  const job = jobQuery.data;
-  const cloneSource = cloneSourceQuery.data;
-  const readOnly = mode === "view" || (mode === "create" ? !canCreate : !canUpdate);
-  const canSubmit = mode === "create" ? canCreate : mode === "edit" && canUpdate;
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(JobFormSchema),
-    values:
-      mode === "create"
-        ? cloneFromId && cloneSource
-          ? jobToCloneFormValues(cloneSource)
-          : jobToFormValues(null)
-        : job
-          ? jobToFormValues(job)
-          : undefined,
+    values: formValues,
   });
 
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
@@ -107,18 +110,87 @@ export function JobRecordScreen({
     }
   }
 
-  async function onResume() {
-    if (!jobId) {
-      return;
-    }
-    try {
-      await resumeJob.mutateAsync(jobId);
-      toast.success("Job resumed");
-      await jobQuery.refetch();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    }
-  }
+  return (
+    <>
+      <Card>
+        {mode === "view" && jobId ? (
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <CardTitle className="text-base">Job</CardTitle>
+            {canViewHistory ? (
+              <HistoryHeaderButton href={historyHref("jobs", jobId, job?.job_number ?? null)} />
+            ) : null}
+          </CardHeader>
+        ) : null}
+        <CardContent className={mode === "view" && jobId ? undefined : "pt-6"}>
+          <Form {...form}>
+            <form
+              onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
+              className="flex w-full flex-col gap-4"
+            >
+              {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
+              <JobFormFields
+                control={form.control}
+                readOnly={readOnly}
+                setValue={form.setValue}
+                job={mode === "create" ? null : job}
+              />
+              {canSubmit ? (
+                <div className="flex justify-end">
+                  <SubmitButton isPending={createJob.isPending || updateJob.isPending}>
+                    {mode === "create" ? "Create job" : "Save changes"}
+                  </SubmitButton>
+                </div>
+              ) : null}
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+      {mode === "view" && job ? (
+        <>
+          <RelatedDocumentsCard documents={job.related_documents ?? []} />
+          {jobId ? (
+            <>
+              <JobPauseDialog
+                jobId={jobId}
+                open={pauseOpen}
+                onOpenChange={onPauseOpenChange}
+                onPaused={onJobPaused}
+              />
+              <JobResumeDialog
+                jobId={jobId}
+                open={resumeOpen}
+                onOpenChange={onResumeOpenChange}
+                onResumed={onJobResumed}
+              />
+            </>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+export function JobRecordScreen({
+  mode,
+  jobId,
+  cloneFromId,
+}: {
+  mode: JobRecordMode;
+  jobId?: string;
+  cloneFromId?: string;
+}) {
+  const can = useCan();
+  const { canCreate, canRead, canUpdate } = useCrudPermissions(jobPermissions);
+  const canViewHistory = can(jobPermissions.history);
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [resumeOpen, setResumeOpen] = useState(false);
+
+  const jobQuery = useJob(mode === "create" ? null : (jobId ?? null));
+  const cloneSourceQuery = useJob(mode === "create" && cloneFromId ? cloneFromId : null);
+  const job = jobQuery.data;
+  const cloneSource = cloneSourceQuery.data;
+  const readOnly = mode === "view" || (mode === "create" ? !canCreate : !canUpdate);
+  const canSubmit = mode === "create" ? canCreate : mode === "edit" && canUpdate;
 
   if (mode === "create" && cloneFromId && cloneSourceQuery.isLoading) {
     return (
@@ -156,6 +228,16 @@ export function JobRecordScreen({
   if (mode !== "create" && !job) {
     return <p className="text-muted-foreground text-sm">Job not found.</p>;
   }
+
+  const formValues =
+    mode === "create"
+      ? cloneFromId && cloneSource
+        ? jobToCloneFormValues(cloneSource)
+        : jobToFormValues(null)
+      : jobToFormValues(job!);
+
+  const formKey =
+    mode === "create" ? `create-${cloneFromId ?? "new"}` : `${job!.id}-${job!.updated_at}`;
 
   const title =
     mode === "create"
@@ -203,7 +285,7 @@ export function JobRecordScreen({
                     </Button>
                   ) : null}
                   {job.status === "PAUSED" ? (
-                    <Button type="button" size="sm" onClick={() => void onResume()}>
+                    <Button type="button" size="sm" onClick={() => setResumeOpen(true)}>
                       <ResumeLabel />
                     </Button>
                   ) : null}
@@ -213,54 +295,22 @@ export function JobRecordScreen({
           ) : null
         }
       />
-      <Card>
-        {mode === "view" && jobId ? (
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Job</CardTitle>
-            {canViewHistory ? (
-              <HistoryHeaderButton
-                href={historyHref("jobs", jobId, job?.job_number ?? null)}
-              />
-            ) : null}
-          </CardHeader>
-        ) : null}
-        <CardContent className={mode === "view" && jobId ? undefined : "pt-6"}>
-          <Form {...form}>
-            <form
-              onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
-              className="flex w-full flex-col gap-4"
-            >
-              {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
-              <JobFormFields
-                control={form.control}
-                readOnly={readOnly}
-                setValue={form.setValue}
-                job={mode === "create" ? null : job}
-              />
-              {canSubmit ? (
-                <div className="flex justify-end">
-                  <SubmitButton isPending={createJob.isPending || updateJob.isPending}>
-                    {mode === "create" ? "Create job" : "Save changes"}
-                  </SubmitButton>
-                </div>
-              ) : null}
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      {mode === "view" && job ? (
-        <>
-          <RelatedDocumentsCard documents={job.related_documents ?? []} />
-          {jobId ? (
-            <JobPauseDialog
-              jobId={jobId}
-              open={pauseOpen}
-              onOpenChange={setPauseOpen}
-              onPaused={() => void jobQuery.refetch()}
-            />
-          ) : null}
-        </>
-      ) : null}
+      <JobRecordForm
+        key={formKey}
+        mode={mode}
+        jobId={jobId}
+        job={mode === "create" ? null : job!}
+        formValues={formValues}
+        readOnly={readOnly}
+        canSubmit={Boolean(canSubmit)}
+        canViewHistory={canViewHistory}
+        pauseOpen={pauseOpen}
+        onPauseOpenChange={setPauseOpen}
+        resumeOpen={resumeOpen}
+        onResumeOpenChange={setResumeOpen}
+        onJobPaused={() => void jobQuery.refetch()}
+        onJobResumed={() => void jobQuery.refetch()}
+      />
     </div>
   );
 }

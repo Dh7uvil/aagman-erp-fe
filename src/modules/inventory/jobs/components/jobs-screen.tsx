@@ -2,7 +2,7 @@
 
 import { Pause, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type MouseEvent } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { jobPermissions, jobPricePermissions } from "@/modules/inventory/permissions";
@@ -12,7 +12,8 @@ import {
   jobHeaderActionsClassName,
 } from "@/modules/inventory/jobs/components/job-header-create-actions";
 import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
-import { useDeleteJob, useResumeJob } from "@/modules/inventory/jobs/mutations";
+import { JobResumeDialog } from "@/modules/inventory/jobs/components/job-resume-dialog";
+import { useDeleteJob } from "@/modules/inventory/jobs/mutations";
 import { useJobs } from "@/modules/inventory/jobs/queries";
 import { jobRoutes } from "@/modules/inventory/jobs/routes";
 import type { JobListItem } from "@/modules/inventory/jobs/schemas";
@@ -70,9 +71,9 @@ export function JobsScreen() {
   const canViewPrice = can(jobPricePermissions.read);
   const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(jobPermissions);
   const deleteJob = useDeleteJob();
-  const resumeJob = useResumeJob();
   const [deleting, setDeleting] = useState<JobListItem | null>(null);
   const [pausing, setPausing] = useState<JobListItem | null>(null);
+  const [resuming, setResuming] = useState<JobListItem | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
   const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
     useTableParams();
@@ -163,8 +164,10 @@ export function JobsScreen() {
                       size="icon-sm"
                       aria-label={`Resume ${row.job_number}`}
                       title={`Resume ${row.job_number}`}
-                      disabled={resumeJob.isPending && resumeJob.variables === row.id}
-                      onClick={(event) => void onResumeJob(row, event)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setResuming(row);
+                      }}
                     >
                       <Play className="size-3.5" />
                     </Button>
@@ -182,8 +185,6 @@ export function JobsScreen() {
     canRead,
     canUpdate,
     canViewPrice,
-    resumeJob.isPending,
-    resumeJob.variables,
     router,
     showActions,
   ]);
@@ -199,16 +200,6 @@ export function JobsScreen() {
       await deleteJob.mutateAsync(deleting.id);
       toast.success("Job deleted");
       setDeleting(null);
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    }
-  }
-
-  async function onResumeJob(row: JobListItem, event: MouseEvent) {
-    event.stopPropagation();
-    try {
-      await resumeJob.mutateAsync(row.id);
-      toast.success("Job resumed");
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -299,6 +290,17 @@ export function JobsScreen() {
           onOpenChange={(open) => !open && setPausing(null)}
           onPaused={() => {
             setPausing(null);
+            void jobsQuery.refetch();
+          }}
+        />
+      ) : null}
+      {resuming ? (
+        <JobResumeDialog
+          jobId={resuming.id}
+          open={Boolean(resuming)}
+          onOpenChange={(open) => !open && setResuming(null)}
+          onResumed={() => {
+            setResuming(null);
             void jobsQuery.refetch();
           }}
         />

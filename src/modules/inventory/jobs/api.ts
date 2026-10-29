@@ -59,7 +59,8 @@ export const jobsApi = {
   delete: async (id: string) => JobSchema.parse(await apiClient.delete(`/inventory/jobs/${id}`)),
   pause: async (id: string, pause_remarks: string | null) =>
     JobSchema.parse(await apiClient.post(`/inventory/jobs/${id}/pause`, { pause_remarks })),
-  resume: async (id: string) => JobSchema.parse(await apiClient.post(`/inventory/jobs/${id}/resume`, {})),
+  resume: async (id: string, resume_remarks: string | null) =>
+    JobSchema.parse(await apiClient.post(`/inventory/jobs/${id}/resume`, { resume_remarks })),
   history: async (id: string, page = 1) => {
     const result = await apiClient.getList<unknown>(`/inventory/jobs/${id}/history`, {
       params: { page, page_size: 50 },

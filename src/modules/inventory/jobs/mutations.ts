@@ -43,7 +43,8 @@ export function usePauseJob() {
 export function useResumeJob() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => jobsApi.resume(id),
+    mutationFn: ({ id, resume_remarks }: { id: string; resume_remarks: string | null }) =>
+      jobsApi.resume(id, resume_remarks),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: jobKeys.all }),
   });
 }

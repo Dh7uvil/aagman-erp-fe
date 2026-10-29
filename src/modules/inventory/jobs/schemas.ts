@@ -12,6 +12,17 @@ export const JOB_STATUSES = [
 
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+/** Status values shown in the job form; includes read-only lifecycle states when current. */
+export function jobFormStatusOptions(current?: JobStatus | null): JobStatus[] {
+  const editable = JOB_STATUSES.filter(
+    (status) => status !== "RETURNED" && status !== "PAUSED",
+  );
+  if (current && (current === "PAUSED" || current === "RETURNED")) {
+    return [current, ...editable];
+  }
+  return [...editable];
+}
+
 export const JobCylinderSchema = z.object({
   position: z.number().int(),
   width: z.union([z.string(), z.number()]).transform(String),
@@ -38,6 +49,7 @@ export const JobPauseSchema = z.object({
   resumed_at: z.string().nullable(),
   resumed_by: z.string().uuid().nullable(),
   resumed_by_name: z.string().nullable().optional(),
+  resume_remarks: z.string().nullable(),
 });
 
 export const JobListItemSchema = z.object({
