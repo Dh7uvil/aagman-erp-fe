@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit2, Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import { Copy, Edit2, Eye, MoreHorizontal, Trash2 } from "lucide-react";
 import Link from "next/link";
 import {
   Children,
@@ -88,6 +88,8 @@ export function DataTableRowActions({
   viewHref,
   onEdit,
   editHref,
+  onClone,
+  cloneHref,
   onDelete,
   extra,
 }: {
@@ -96,18 +98,30 @@ export function DataTableRowActions({
   viewHref?: string;
   onEdit?: () => void;
   editHref?: string;
+  onClone?: () => void;
+  cloneHref?: string;
   onDelete?: () => void;
   extra?: ReactNode;
 }) {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useDropdownMenuNavigationSync();
 
-  if (!onView && !viewHref && !onEdit && !editHref && !onDelete && !extra) {
+  if (
+    !onView &&
+    !viewHref &&
+    !onEdit &&
+    !editHref &&
+    !onClone &&
+    !cloneHref &&
+    !onDelete &&
+    !extra
+  ) {
     return null;
   }
 
   const viewLabel = actionLabel("View", entityName);
   const editLabel = actionLabel("Edit", entityName);
+  const cloneLabel = actionLabel("Clone", entityName);
   const deleteLabel = actionLabel("Delete", entityName);
 
   const menuItems: RowActionMenuItem[] = [];
@@ -127,6 +141,14 @@ export function DataTableRowActions({
       onSelect: onEdit,
     });
   }
+  if (cloneHref || onClone) {
+    menuItems.push({
+      key: "clone",
+      label: cloneLabel,
+      href: cloneHref,
+      onSelect: onClone,
+    });
+  }
   if (onDelete) {
     menuItems.push({
       key: "delete",
@@ -136,7 +158,7 @@ export function DataTableRowActions({
     });
   }
 
-  if (isMobile && menuItems.length > 0) {
+  if (isMobile && (menuItems.length > 0 || extra)) {
     return (
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
@@ -187,6 +209,28 @@ export function DataTableRowActions({
     </TableActionTooltip>
   ) : null;
 
+  const cloneButton = cloneHref ? (
+    <TableActionTooltip label={cloneLabel}>
+      <Button type="button" variant="ghost" size="icon-sm" aria-label={cloneLabel} asChild>
+        <Link href={cloneHref}>
+          <Copy className="size-3.5" />
+        </Link>
+      </Button>
+    </TableActionTooltip>
+  ) : onClone ? (
+    <TableActionTooltip label={cloneLabel}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={cloneLabel}
+        onClick={onClone}
+      >
+        <Copy className="size-3.5" />
+      </Button>
+    </TableActionTooltip>
+  ) : null;
+
   const editButton = editHref ? (
     <TableActionTooltip label={editLabel}>
       <Button type="button" variant="ghost" size="icon-sm" aria-label={editLabel} asChild>
@@ -204,9 +248,10 @@ export function DataTableRowActions({
   ) : null;
 
   return (
-    <div className="flex gap-0.5">
+    <div className="flex w-max max-w-full gap-0.5">
       {viewButton}
       {editButton}
+      {cloneButton}
       {wrapLabeledActions(extra)}
       {onDelete ? (
         <TableActionTooltip label={deleteLabel}>

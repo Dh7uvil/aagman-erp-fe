@@ -134,6 +134,12 @@ export const stickyActionsHeadClass =
 export const stickyActionsCellClass =
   "sticky right-0 z-10 bg-card group-hover:bg-muted group-data-[state=selected]:bg-muted shadow-[-2px_0_6px_-2px_rgba(0,0,0,0.18)]";
 
+/** Shrink actions column to icon row width (overrides default th min-width). */
+export const actionsColumnHeadClass =
+  "w-0 max-w-[1%] min-w-0 whitespace-nowrap px-2 sm:min-w-0 sm:px-3";
+
+export const actionsColumnCellClass = "w-0 max-w-[1%] whitespace-nowrap px-2 sm:px-3";
+
 export function actionsColumn<T>(
   show: boolean,
   cell: (row: T) => ReactNode,
@@ -148,6 +154,8 @@ export function actionsColumn<T>(
       locked: true,
       sticky: "right",
       hideable: false,
+      headerClassName: actionsColumnHeadClass,
+      className: actionsColumnCellClass,
       cell,
     },
   ];
