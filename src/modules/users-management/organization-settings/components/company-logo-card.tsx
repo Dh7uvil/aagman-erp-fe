@@ -1,7 +1,7 @@
 "use client";
 
 import { ImageIcon, Loader2, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ALLOWED_LOGO_MIME_TYPES, MAX_LOGO_BYTES } from "@/config/constants";
@@ -35,8 +35,14 @@ export function CompanyLogoCard() {
   const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
 
   const logoUrl = tenantQuery.data?.logo_url ?? null;
-  const showLogo = Boolean(logoUrl) && logoUrl !== brokenSrc;
+  const logoRevision = tenantQuery.data?.updated_at ?? null;
+  const displaySrc = toDisplayLogoUrl(logoUrl, logoRevision);
+  const showLogo = Boolean(displaySrc) && logoUrl !== brokenSrc;
   const pending = uploadLogo.isPending || deleteLogo.isPending;
+
+  useEffect(() => {
+    setBrokenSrc(null);
+  }, [displaySrc]);
 
   async function onUpload(file: File) {
     if (file.size > MAX_LOGO_BYTES) {
@@ -113,7 +119,8 @@ export function CompanyLogoCard() {
               // Presigned URLs expire in 1 hour; native img avoids caching an expired query string.
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={toDisplayLogoUrl(logoUrl)}
+                key={displaySrc}
+                src={displaySrc}
                 alt="Company logo"
                 referrerPolicy="no-referrer"
                 className="size-full object-contain"

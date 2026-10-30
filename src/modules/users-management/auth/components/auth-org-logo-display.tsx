@@ -68,6 +68,7 @@ export function AuthOrganizationLogo({
         <div className="inline-flex rounded-2xl bg-white px-4 py-3 shadow-[0_8px_24px_rgb(0_0_0/0.12)] ring-1 ring-white/40">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            key={logoUrl}
             src={logoUrl}
             alt={name}
             className={cn("w-auto shrink-0 object-contain", LOGO_SIZE[size], className)}
@@ -80,6 +81,7 @@ export function AuthOrganizationLogo({
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        key={logoUrl}
         src={logoUrl}
         alt={name}
         className={cn("w-auto shrink-0 object-contain", LOGO_SIZE[size], className)}

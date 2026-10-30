@@ -312,27 +312,29 @@ function SidebarChrome({
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div
         className={cn(
-          "border-sidebar-border relative flex h-14 shrink-0 items-center border-b",
-          collapsed ? "justify-center px-1" : "gap-2.5 px-3",
+          "border-sidebar-border relative flex h-14 shrink-0 items-center justify-center border-b",
+          collapsed ? "px-1" : "px-8",
         )}
       >
-        {brand ?? (
-          <>
-            <div
-              className={cn(
-                "bg-primary flex shrink-0 items-center justify-center overflow-hidden rounded-lg",
-                collapsed ? "size-8" : "size-7",
-              )}
-            >
-              <Zap size={collapsed ? 16 : 14} className="text-white" />
-            </div>
-            {!collapsed ? (
-              <span className="text-foreground truncate text-sm font-semibold tracking-tight">
-                {APP_NAME}
-              </span>
-            ) : null}
-          </>
-        )}
+        <div className="flex min-w-0 flex-1 items-center justify-center">
+          {brand ?? (
+            <>
+              <div
+                className={cn(
+                  "bg-primary flex shrink-0 items-center justify-center overflow-hidden rounded-lg",
+                  collapsed ? "size-8" : "size-7",
+                )}
+              >
+                <Zap size={collapsed ? 16 : 14} className="text-white" />
+              </div>
+              {!collapsed ? (
+                <span className="text-foreground truncate text-sm font-semibold tracking-tight">
+                  {APP_NAME}
+                </span>
+              ) : null}
+            </>
+          )}
+        </div>
         {onToggle ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -340,10 +342,10 @@ function SidebarChrome({
                 type="button"
                 onClick={onToggle}
                 className={cn(
-                  "text-muted-foreground hover:bg-muted cursor-pointer rounded p-1 transition-colors",
+                  "text-muted-foreground hover:bg-muted absolute top-1/2 z-10 -translate-y-1/2 cursor-pointer rounded p-1 transition-colors",
                   collapsed
-                    ? "bg-sidebar hover:text-foreground absolute top-1/2 right-0.5 z-10 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border shadow-xs"
-                    : "ml-auto",
+                    ? "bg-sidebar hover:text-foreground right-0.5 flex size-5 items-center justify-center rounded-full border shadow-xs"
+                    : "right-1",
                 )}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -359,7 +361,7 @@ function SidebarChrome({
           <button
             type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:bg-muted ml-auto cursor-pointer rounded p-1"
+            className="text-muted-foreground hover:bg-muted absolute top-1/2 right-1 z-10 -translate-y-1/2 cursor-pointer rounded p-1"
             aria-label="Close menu"
           >
             <X size={14} />

@@ -1,57 +1,100 @@
-"use client";
+import { APP_NAME } from "@/config/constants";
+import { Box, ChartColumn, Truck } from "lucide-react";
 
-import { APP_NAME, ORGANIZATION_NAME } from "@/config/constants";
-import { AuthBrandMark } from "@/modules/users-management/auth/components/auth-brand";
-import { useAuthBrandingLogo } from "@/modules/users-management/auth/components/auth-org-logo-display";
-import { Building2, Lock, ShieldCheck } from "lucide-react";
-
-const TRUST_ITEMS = [
-  { icon: ShieldCheck, label: "Authorized access" },
-  { icon: Lock, label: "Encrypted sessions" },
-  { icon: Building2, label: "Enterprise workspace" },
+const PILLARS = [
+  { icon: ChartColumn, label: "Production" },
+  { icon: Box, label: "Inventory" },
+  { icon: Truck, label: "Dispatch" },
 ] as const;
 
-function GradientBackdrop() {
+const [brandLead, ...brandRest] = APP_NAME.split(" ");
+const brandAccent = brandRest.join(" ");
+
+function PanelBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-      <div className="absolute inset-0 bg-[linear-gradient(155deg,#04594c_0%,var(--primary)_48%,#023830_100%)]" />
-      <div className="auth-mesh-blob-a absolute -left-20 top-0 size-[420px] rounded-full bg-white/[0.07] blur-[80px]" />
-      <div className="auth-mesh-blob-b absolute -right-16 bottom-0 size-[380px] rounded-full bg-[rgb(139_191_60/0.2)] blur-[90px]" />
+      <div className="absolute inset-0 bg-[#064e3f]" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/auth/factory.jpg?v=2"
+        alt=""
+        className="absolute inset-0 size-full min-h-full min-w-full scale-[1.04] object-cover object-[32%_62%] brightness-[0.9] contrast-[1.06] saturate-[0.4]"
+      />
+      <div className="absolute inset-0 bg-[#117a64]/80 mix-blend-multiply" />
+      <div className="absolute inset-0 bg-[linear-gradient(168deg,rgb(5_74_60/0.7)_0%,rgb(11_120_98/0.2)_45%,rgb(3_54_44/0.65)_100%)]" />
+
+      <svg
+        className="absolute inset-0 size-full"
+        viewBox="0 0 1000 1100"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        <path
+          d="M-220 -80C 260 40 180 560 -120 1200"
+          fill="none"
+          stroke="white"
+          strokeOpacity="0.16"
+          strokeWidth="150"
+        />
+        <path
+          d="M-60 -40C 380 140 300 640 20 1180"
+          fill="none"
+          stroke="white"
+          strokeOpacity="0.2"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M620 1080C 860 860 1080 980 1200 1120"
+          fill="none"
+          stroke="white"
+          strokeOpacity="0.12"
+          strokeWidth="90"
+        />
+      </svg>
+
       <div
-        className="absolute inset-0 opacity-[0.08]"
+        className="absolute top-10 left-10 h-20 w-24 opacity-45"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.85) 1px, transparent 0)",
-          backgroundSize: "32px 32px",
+            "radial-gradient(circle, rgb(255 255 255 / 0.9) 1.05px, transparent 1.15px)",
+          backgroundSize: "9px 9px",
         }}
       />
     </div>
   );
 }
 
-function DesktopPanelHeroCopy() {
+function BrandCopy() {
   return (
-    <div className="w-full max-w-xl">
-      <p className="text-base font-medium uppercase tracking-[0.2em] text-white/65 xl:text-lg">
-        Welcome to
-      </p>
-      <h1 className="mt-3 text-5xl font-semibold leading-[1.08] tracking-tight text-white xl:text-6xl">
-        {APP_NAME}
+    <div className="max-w-xl">
+      <div className="mb-6 h-[3px] w-10 rounded-full bg-white" />
+      <h1 className="text-[3.15rem] leading-none font-bold tracking-tight text-white xl:text-[4.25rem]">
+        {brandLead}
+        {brandAccent ? (
+          <>
+            {" "}
+            <span className="font-semibold text-[#c8f3d8]">{brandAccent}</span>
+          </>
+        ) : null}
       </h1>
-      <p className="mt-4 max-w-lg text-xl leading-relaxed text-white/82 xl:text-2xl">
-        Everything your team needs to run {ORGANIZATION_NAME}.
+      <p className="mt-5 text-lg font-medium tracking-wide text-white/90 xl:text-xl">
+        Manage. Track. Grow.
       </p>
     </div>
   );
 }
 
-function TrustFooter() {
+function PillarFooter() {
   return (
-    <ul className="flex w-full flex-wrap items-center justify-evenly gap-x-4 gap-y-3 border-t border-white/15 pt-8 text-sm text-white/75">
-      {TRUST_ITEMS.map(({ icon: Icon, label }) => (
-        <li key={label} className="flex items-center gap-2">
-          <Icon className="size-4 shrink-0 text-white/90" aria-hidden="true" />
-          <span>{label}</span>
+    <ul className="mx-auto flex w-full max-w-xl flex-wrap items-center justify-between gap-y-3 text-sm text-white/90">
+      {PILLARS.map(({ icon: Icon, label }, index) => (
+        <li key={label} className="flex items-center">
+          {index > 0 ? (
+            <span className="mr-6 h-4 w-px bg-white/35 xl:mr-8" aria-hidden="true" />
+          ) : null}
+          <span className="flex items-center gap-2">
+            <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span>{label}</span>
+          </span>
         </li>
       ))}
     </ul>
@@ -59,36 +102,16 @@ function TrustFooter() {
 }
 
 export function AuthDesktopBrandPanel() {
-  const { logoUrl, name, onError } = useAuthBrandingLogo();
-  const hasLogo = Boolean(logoUrl);
-
   return (
-    <aside className="relative hidden min-h-svh flex-1 flex-col justify-between overflow-hidden px-10 py-12 xl:px-16 xl:py-14 lg:flex">
-      <GradientBackdrop />
+    <aside className="relative hidden min-h-svh w-[56%] shrink-0 flex-col overflow-hidden lg:flex xl:w-[58%]">
+      <PanelBackdrop />
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        {hasLogo ? (
-          <>
-            <div className="relative h-[30svh] min-h-[7.5rem] max-h-[17.5rem] w-full shrink-0 overflow-hidden rounded-2xl border border-white/20 bg-white/[0.96] shadow-[0_12px_40px_rgb(0_0_0/0.15)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={logoUrl}
-                alt={name}
-                className="absolute inset-0 block size-full max-h-none max-w-none object-fill object-center"
-                onError={onError}
-              />
-            </div>
-            <div className="flex min-h-0 flex-1 items-center py-6 xl:py-8">
-              <DesktopPanelHeroCopy />
-            </div>
-          </>
-        ) : (
-          <AuthBrandMark variant="hero" />
-        )}
+      <div className="relative z-10 flex min-h-0 flex-1 items-center px-12 pb-16 xl:px-20 xl:pb-24">
+        <BrandCopy />
       </div>
 
-      <div className="relative z-10 shrink-0">
-        <TrustFooter />
+      <div className="relative z-10 shrink-0 px-12 pb-9 xl:px-16 xl:pb-11">
+        <PillarFooter />
       </div>
     </aside>
   );
