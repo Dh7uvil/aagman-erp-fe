@@ -24,6 +24,10 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { getErrorMessage } from "@/shared/api/errors";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { cn } from "@/shared/lib/cn";
+
+const authFieldClass =
+  "h-11 rounded-xl border border-input bg-background shadow-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 sm:h-12";
 
 export function ForgotPasswordForm() {
   const forgotPassword = useForgotPassword();
@@ -56,17 +60,17 @@ export function ForgotPasswordForm() {
     <>
       <Link
         href="/login"
-        className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
+        className="text-muted-foreground hover:text-foreground mb-5 inline-flex min-h-11 items-center gap-1.5 text-sm transition-colors lg:mb-6 lg:min-h-0"
       >
         <ChevronLeft className="size-3.5" aria-hidden="true" />
         Back to sign in
       </Link>
-      <div className="mb-7">
-        <div className="bg-primary/10 mb-4 flex size-12 items-center justify-center rounded-full">
+      <div className="mb-8">
+        <div className="bg-primary/10 mb-4 flex size-12 items-center justify-center rounded-xl">
           <KeyRound className="text-primary size-5" aria-hidden="true" />
         </div>
-        <h2 className="text-xl font-semibold">Forgot your password?</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <h2 className="text-foreground text-2xl font-semibold tracking-tight">Forgot your password?</h2>
+        <p className="text-muted-foreground mt-2 text-sm">
           Enter your company email. If an account exists, we will send reset instructions.
         </p>
       </div>
@@ -83,7 +87,7 @@ export function ForgotPasswordForm() {
         </div>
       ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 sm:gap-5">
             {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
             <FormField
@@ -102,7 +106,7 @@ export function ForgotPasswordForm() {
                         type="email"
                         autoComplete="email"
                         placeholder={COMPANY_EMAIL_PLACEHOLDER}
-                        className="pl-9"
+                        className={cn(authFieldClass, "pl-10")}
                         {...field}
                       />
                     </FormControl>
@@ -112,7 +116,12 @@ export function ForgotPasswordForm() {
               )}
             />
 
-            <Button type="submit" size="lg" className="w-full" disabled={pending}>
+            <Button
+              type="submit"
+              size="lg"
+              className="mt-2 h-12 w-full rounded-xl shadow-lg shadow-primary/25"
+              disabled={pending}
+            >
               {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
               Send reset link
             </Button>

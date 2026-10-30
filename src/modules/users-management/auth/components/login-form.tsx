@@ -24,6 +24,10 @@ import { Input } from "@/shared/components/ui/input";
 import { getErrorMessage, isApiError } from "@/shared/api/errors";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { resolvePostLoginPath } from "@/shared/lib/redirect";
+import { cn } from "@/shared/lib/cn";
+
+const authFieldClass =
+  "h-11 rounded-xl border border-input bg-background shadow-none transition-[border-color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 sm:h-12";
 
 export function LoginForm() {
   const router = useRouter();
@@ -67,9 +71,11 @@ export function LoginForm() {
 
   return (
     <>
-      <div className="mb-7">
-        <h2 className="text-foreground text-xl font-semibold">Sign in to your account</h2>
-        <p className="text-muted-foreground mt-1 text-sm">Authorized employees only</p>
+      <div className="mb-4 space-y-0.5 lg:mb-7 lg:space-y-1">
+        <h2 className="text-foreground text-base font-semibold tracking-tight sm:text-lg lg:text-xl">
+          Sign in to your account
+        </h2>
+        <p className="text-muted-foreground text-xs sm:text-sm">Authorized employees only</p>
       </div>
       <Form {...form}>
         <div
@@ -84,7 +90,7 @@ export function LoginForm() {
           }}
         >
           {formError ? (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="rounded-xl">
               <AlertCircle />
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
@@ -98,7 +104,7 @@ export function LoginForm() {
                 <FormLabel>Company Email</FormLabel>
                 <div className="relative">
                   <AtSign
-                    className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2"
+                    className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
                     aria-hidden="true"
                   />
                   <FormControl>
@@ -106,7 +112,7 @@ export function LoginForm() {
                       type="email"
                       autoComplete="email"
                       placeholder={COMPANY_EMAIL_PLACEHOLDER}
-                      className="h-11 pl-9 md:h-9"
+                      className={cn(authFieldClass, "pl-10")}
                       {...field}
                     />
                   </FormControl>
@@ -129,13 +135,13 @@ export function LoginForm() {
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
                       placeholder="Enter your password"
-                      className="h-11 pr-12 md:h-9"
+                      className={cn(authFieldClass, "pr-12")}
                       {...field}
                     />
                   </FormControl>
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-0.5 z-10 flex size-11 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center rounded-md"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-0.5 z-10 flex size-11 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center rounded-lg"
                     onClick={() => toggleShowPassword()}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     aria-pressed={showPassword}
@@ -152,7 +158,7 @@ export function LoginForm() {
             )}
           />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <FormField
               control={form.control}
               name="remember_me"
@@ -160,7 +166,7 @@ export function LoginForm() {
                 <FormItem className="flex flex-row items-center gap-2 space-y-0">
                   <label
                     htmlFor={rememberMeId}
-                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 touch-manipulation"
+                    className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 touch-manipulation"
                   >
                     <input
                       type="checkbox"
@@ -176,7 +182,7 @@ export function LoginForm() {
             />
             <Link
               href="/forgot-password"
-              className="text-primary inline-flex min-h-11 items-center text-sm hover:underline sm:min-h-0"
+              className="text-primary inline-flex min-h-11 items-center self-start text-sm font-medium hover:underline sm:min-h-0 sm:self-auto"
             >
               Forgot password?
             </Link>
@@ -185,7 +191,7 @@ export function LoginForm() {
           <Button
             type="button"
             size="lg"
-            className="mt-1 h-12 w-full touch-manipulation"
+            className="mt-1 h-11 w-full touch-manipulation rounded-xl sm:h-12 sm:text-base"
             disabled={pending}
             onClick={() => void submit()}
           >

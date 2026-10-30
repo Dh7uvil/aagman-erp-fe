@@ -144,7 +144,7 @@ test.describe("tablet viewport", () => {
 
   test("login marketing panel stays hidden below lg", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByText("Secure access management")).toBeHidden();
+    await expect(page.getByText("Secure access management")).toHaveCount(0);
   });
 
   test("jobs list table fits default columns at tablet width", async ({ page }) => {

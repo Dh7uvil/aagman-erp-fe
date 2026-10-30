@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { authKeys } from "@/modules/users-management/auth/queries";
 import { organizationApi } from "@/modules/users-management/organization/api";
 import { organizationKeys } from "@/modules/users-management/organization/queries";
 
@@ -25,6 +26,7 @@ export function useUploadOrganizationLogo() {
     retry: false,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
+      await queryClient.invalidateQueries({ queryKey: authKeys.organizationBranding() });
     },
   });
 }
@@ -39,6 +41,7 @@ export function useDeleteOrganizationLogo() {
     retry: false,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
+      await queryClient.invalidateQueries({ queryKey: authKeys.organizationBranding() });
     },
   });
 }

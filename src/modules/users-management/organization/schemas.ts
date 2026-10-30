@@ -80,6 +80,12 @@ export function toAddressPayload(address: AddressFormValues): AddressPayload | n
   return Object.values(payload).some(Boolean) ? payload : null;
 }
 
+export const OrganizationBrandingSchema = z.object({
+  name: z.string(),
+  logo_url: z.string().nullable().optional(),
+});
+export type OrganizationBranding = z.infer<typeof OrganizationBrandingSchema>;
+
 export const OrganizationSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),

@@ -383,3 +383,41 @@
     max-height: calc(var(--app-vv-height, 100svh) - 2rem);
   }
 }
+
+.auth-page .auth-mesh-blob-a,
+.auth-page .auth-mesh-blob-b {
+  animation: auth-mesh-drift 28s ease-in-out infinite alternate;
+}
+
+.auth-page .auth-mesh-blob-b {
+  animation-delay: -10s;
+  animation-duration: 34s;
+}
+
+@keyframes auth-mesh-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(4%, -6%, 0) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-page .auth-mesh-blob-a,
+  .auth-page .auth-mesh-blob-b {
+    animation: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  html:has(.auth-page),
+  html:has(.auth-page) body {
+    overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overscroll-behavior: none;
+  }
+}
+

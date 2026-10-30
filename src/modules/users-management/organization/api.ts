@@ -1,7 +1,9 @@
 import { ALLOWED_LOGO_MIME_TYPES, MAX_LOGO_BYTES } from "@/config/constants";
 import {
+  OrganizationBrandingSchema,
   OrganizationSchema,
   type Organization,
+  type OrganizationBranding,
   type OrganizationUpdate,
 } from "@/modules/users-management/organization/schemas";
 import { apiClient } from "@/shared/api/client";
@@ -17,6 +19,8 @@ function assertLogoFile(file: File) {
 }
 
 export const organizationApi = {
+  getBranding: async (): Promise<OrganizationBranding> =>
+    OrganizationBrandingSchema.parse(await apiClient.get("/organization/branding")),
   get: async (): Promise<Organization> =>
     OrganizationSchema.parse(await apiClient.get("/organization")),
   update: async (values: OrganizationUpdate): Promise<Organization> =>

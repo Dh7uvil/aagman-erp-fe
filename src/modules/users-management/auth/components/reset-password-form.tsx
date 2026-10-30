@@ -25,6 +25,10 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { ApiError, getErrorMessage } from "@/shared/api/errors";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { cn } from "@/shared/lib/cn";
+
+const authFieldClass =
+  "h-11 rounded-xl border border-input bg-background shadow-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 sm:h-12";
 
 const missingTokenError = new ApiError("AUTH_RESET_TOKEN_INVALID", "Invalid reset token", 400);
 
@@ -64,17 +68,17 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
   return (
     <>
-      <div className="mb-7">
-        <div className="bg-primary/10 mb-4 flex size-12 items-center justify-center rounded-full">
+      <div className="mb-8">
+        <div className="bg-primary/10 mb-4 flex size-12 items-center justify-center rounded-xl">
           <Lock className="text-primary size-5" aria-hidden="true" />
         </div>
-        <h2 className="text-xl font-semibold">Set new password</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <h2 className="text-foreground text-2xl font-semibold tracking-tight">Set new password</h2>
+        <p className="text-muted-foreground mt-2 text-sm">
           Choose a strong password for your account.
         </p>
       </div>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 sm:gap-5">
           {formError ? (
             <Alert variant="destructive">
               <AlertCircle />
@@ -93,6 +97,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
                     type="password"
                     autoComplete="new-password"
                     placeholder="Enter new password"
+                    className={authFieldClass}
                     disabled={invalidToken}
                     {...field}
                   />
@@ -113,6 +118,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
                     type="password"
                     autoComplete="new-password"
                     placeholder="Confirm new password"
+                    className={authFieldClass}
                     disabled={invalidToken}
                     {...field}
                   />
@@ -122,7 +128,12 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
             )}
           />
 
-          <Button type="submit" size="lg" className="w-full" disabled={pending || invalidToken}>
+          <Button
+            type="submit"
+            size="lg"
+            className="mt-2 h-12 w-full rounded-xl shadow-lg shadow-primary/25"
+            disabled={pending || invalidToken}
+          >
             {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
             Reset Password
           </Button>
