@@ -42,6 +42,7 @@ export function useMaterial(id: string | null) {
     queryKey: materialKeys.detail(id ?? ""),
     queryFn: () => materialsApi.get(id!),
     enabled: Boolean(id),
+    placeholderData: keepPreviousData,
   });
 }
 

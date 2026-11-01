@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 import { useCylinderReturnHistory } from "@/modules/inventory/cylinder-returns/queries";
 import { useJob, useJobHistory } from "@/modules/inventory/jobs/queries";
 import { MaterialHistoryCard } from "@/modules/inventory/materials/components/material-history-card";
+import { materialHistoryBreadcrumbCrumbs } from "@/modules/inventory/materials/material-breadcrumb";
+import { useMaterial } from "@/modules/inventory/materials/queries";
 import {
   useMaterialHistory,
   useMaterialHistorySummary,
@@ -13,7 +16,10 @@ import {
 import { inventoryPricePermissions } from "@/modules/inventory/permissions";
 import { useCan } from "@/shared/providers/session-provider";
 import { EntityHistoryCard } from "@/shared/components/document/entity-history-card";
-import { useSetBreadcrumbRecord } from "@/shared/components/layout/breadcrumb-record";
+import {
+  useSetBreadcrumbRecord,
+  useSetBreadcrumbTrail,
+} from "@/shared/components/layout/breadcrumb-record";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { BackLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
@@ -31,7 +37,9 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
   const valid = isHistoryResource(resource);
   const spec = valid ? getHistoryResource(resource) : undefined;
 
-  useSetBreadcrumbRecord(code || spec?.label || "Details");
+  useSetBreadcrumbRecord(
+    resource === "materials" ? null : code || spec?.label || "Details",
+  );
 
   if (!valid || !spec) {
     return (
@@ -179,7 +187,6 @@ function JobRecordHistory({
 function MaterialRecordHistory({
   id,
   viewHref,
-  code,
   pageTitle,
   recordLabel,
 }: {
@@ -191,11 +198,17 @@ function MaterialRecordHistory({
 }) {
   const can = useCan();
   const canViewPrice = can(inventoryPricePermissions.read);
+  const materialQuery = useMaterial(id);
   const historyQuery = useMaterialHistory(id);
   const summaryQuery = useMaterialHistorySummary(id);
   const companyName = summaryQuery.data?.company_name?.trim();
-  const subtitle =
-    companyName || (code ? `${recordLabel} · ${code}` : recordLabel);
+  const subtitle = companyName || undefined;
+
+  const breadcrumbTrail = useMemo(
+    () => materialHistoryBreadcrumbCrumbs(id, summaryQuery.data, materialQuery.data),
+    [id, summaryQuery.data, materialQuery.data],
+  );
+  useSetBreadcrumbTrail(breadcrumbTrail);
 
   return (
     <div className="flex w-full flex-col gap-5">

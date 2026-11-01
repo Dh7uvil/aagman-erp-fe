@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { sizeLineToCreatePayload, sizeLineToUpdatePayload } from "@/modules/inventory/materials/api";
 import {
+  buildExistingMaterialKeyMap,
   consolidateMaterialSizeLines,
+  materialSizeLineDirectStockIncrease,
   materialSizeLineKey,
   materialSizeLineStockOmitFlags,
   micronPricePayloadsFromSizeLines,
   resolveMaterialEditSizeLines,
+  type Material,
   type MaterialEditFormValues,
   type MaterialSizeLineValues,
 } from "@/modules/inventory/materials/schemas";
@@ -81,6 +84,29 @@ describe("consolidateMaterialSizeLines", () => {
     expect(result[0]?.stock_in_rolls).toBe("3.00");
   });
 
+  it("uses the increment row price when merging stock into a saved row", () => {
+    const keepId = "55555555-5555-4555-8555-555555555555";
+    const { lines: result } = consolidateMaterialSizeLines([
+      line({
+        id: keepId,
+        parent_id: micronA,
+        size: "300",
+        opening_rolls: "10",
+        price_per_unit: "180",
+        price_unit_id: priceUnit,
+      }),
+      line({
+        parent_id: micronA,
+        size: "300",
+        opening_rolls: "2",
+        price_per_unit: "185",
+        price_unit_id: priceUnit,
+      }),
+    ]);
+    expect(result[0]?.stock_in_rolls).toBe("2.00");
+    expect(result[0]?.price_per_unit).toBe("185");
+  });
+
   it("sums kg from extra same-size rows into stock-in when a saved row exists", () => {
     const keepId = "55555555-5555-4555-8555-555555555555";
     const { lines: result } = consolidateMaterialSizeLines([
@@ -127,6 +153,72 @@ describe("consolidateMaterialSizeLines", () => {
     ]);
     expect(result).toHaveLength(1);
     expect(result[0]?.parent_id).toBe(micronA);
+  });
+
+  it("merges draft rows with a matching catalog SKU not on the form", () => {
+    const existingId = "88888888-8888-4888-8888-888888888888";
+    const productId = "99999999-9999-4999-8999-999999999999";
+    const catalogRow = {
+      id: existingId,
+      company_id: null,
+      company_name: "",
+      product_id: productId,
+      product_name: "",
+      micron_id: micronB,
+      micron_name: "",
+      size: "3",
+      size_unit_id: sizeUnit,
+      size_unit_code: "mm",
+      size_label: "3 mm",
+      unit_id: qtyUnit,
+      unit_code: "kg",
+      unit_name: "",
+      name: "",
+      rolls_on_hand: "5",
+      total_kg: "100",
+      price_per_unit: null,
+      price_unit_id: null,
+      price_unit_code: null,
+      is_active: true,
+      created_at: "",
+      updated_at: "",
+    } satisfies Material;
+    const existingByKey = buildExistingMaterialKeyMap([catalogRow], productId);
+    const { lines: result } = consolidateMaterialSizeLines(
+      [line({ parent_id: micronB, size: "3", opening_rolls: "2" })],
+      existingByKey,
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe(existingId);
+    expect(result[0]?.opening_rolls).toBe("5.00");
+    expect(result[0]?.stock_in_rolls).toBe("2.00");
+  });
+});
+
+describe("materialSizeLineDirectStockIncrease", () => {
+  it("detects roll increases on a saved row when stock_in fields are empty", () => {
+    const keepId = "55555555-5555-4555-8555-555555555555";
+    const increase = materialSizeLineDirectStockIncrease(
+      line({ id: keepId, parent_id: micronA, size: "300", opening_rolls: "15" }),
+      { rollsOnHand: "10", totalKg: "100" },
+    );
+    expect(increase.rolls).toBe("5");
+    expect(increase.kilograms).toBe("0");
+  });
+
+  it("returns zero when stock_in already carries the increment", () => {
+    const keepId = "55555555-5555-4555-8555-555555555555";
+    const increase = materialSizeLineDirectStockIncrease(
+      line({
+        id: keepId,
+        parent_id: micronA,
+        size: "300",
+        opening_rolls: "10",
+        stock_in_rolls: "2",
+      }),
+      { rollsOnHand: "10", totalKg: "0" },
+    );
+    expect(increase.rolls).toBe("0");
   });
 });
 

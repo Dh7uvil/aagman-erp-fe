@@ -1,6 +1,6 @@
 "use client";
 
-import { formatPricePerUnit } from "@/modules/inventory/format";
+import { formatMaterialHistorySkuTitle, formatPricePerUnit } from "@/modules/inventory/format";
 import type {
   MaterialHistoryEntry,
   MaterialHistorySummary,
@@ -86,6 +86,24 @@ function sumHistoryQty(...values: (string | number | null | undefined)[]) {
   return total === 0 ? null : String(total);
 }
 
+function mergedStockHistoryPrice(
+  a: MaterialHistoryEntry,
+  b: MaterialHistoryEntry,
+): Pick<MaterialHistoryEntry, "price_per_unit" | "price_unit_code"> {
+  const aNote = a.note?.trim() ?? "";
+  const bNote = b.note?.trim() ?? "";
+  if (aNote === "Stock received" && bNote !== "Stock received") {
+    return { price_per_unit: a.price_per_unit, price_unit_code: a.price_unit_code };
+  }
+  if (bNote === "Stock received" && aNote !== "Stock received") {
+    return { price_per_unit: b.price_per_unit, price_unit_code: b.price_unit_code };
+  }
+  if (a.price_per_unit == null && b.price_per_unit != null) {
+    return { price_per_unit: b.price_per_unit, price_unit_code: b.price_unit_code };
+  }
+  return { price_per_unit: a.price_per_unit, price_unit_code: a.price_unit_code };
+}
+
 function shouldMergeStockHistoryRows(a: MaterialHistoryEntry, b: MaterialHistoryEntry) {
   if (a.action !== b.action) {
     return false;
@@ -119,6 +137,7 @@ function mergeStockHistoryEntries(entries: MaterialHistoryEntry[]) {
         ...previous,
         rolls: sumHistoryQty(previous.rolls, entry.rolls),
         kilograms: sumHistoryQty(previous.kilograms, entry.kilograms),
+        ...mergedStockHistoryPrice(previous, entry),
         note:
           previous.note && entry.note && previous.note !== entry.note
             ? "Stock updated from material"
@@ -129,18 +148,6 @@ function mergeStockHistoryEntries(entries: MaterialHistoryEntry[]) {
     }
   }
   return merged;
-}
-
-function formatMicronLabel(micronName: string) {
-  const trimmed = micronName.trim();
-  if (!trimmed) {
-    return "—";
-  }
-  return /\bmic\b/i.test(trimmed) ? trimmed : `${trimmed} mic`;
-}
-
-export function formatMaterialHistorySkuTitle(summary: MaterialHistorySummary) {
-  return `${summary.product_name} · ${summary.size_label} x ${formatMicronLabel(summary.micron_name)}`;
 }
 
 function LastPurchaseSummary({
@@ -169,8 +176,8 @@ function LastPurchaseSummary({
       : null;
 
   return (
-    <CardContent className="pt-2 pb-3">
-      <div className="border-border/60 bg-muted/35 flex flex-col gap-3 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:gap-6">
+    <div className="px-6 py-3">
+      <div className="border-border/60 bg-muted/35 flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:gap-6">
         <p className="text-muted-foreground shrink-0 text-xs font-semibold tracking-wide uppercase">
           Last purchase
         </p>
@@ -181,7 +188,7 @@ function LastPurchaseSummary({
           </div>
           {priceLabel ? (
             <div className="min-w-0">
-              <dt className="text-muted-foreground text-xs">Price</dt>
+              <dt className="text-muted-foreground text-xs">Current price</dt>
               <dd className="text-foreground mt-0.5 font-semibold tabular-nums">{priceLabel}</dd>
             </div>
           ) : null}
@@ -197,7 +204,7 @@ function LastPurchaseSummary({
           </div>
         </dl>
       </div>
-    </CardContent>
+    </div>
   );
 }
 

@@ -6,18 +6,23 @@ import { usePathname } from "next/navigation";
 
 import { findActiveNav } from "@/config/navigation";
 import { buildBreadcrumbs } from "@/shared/components/layout/breadcrumb";
-import { useBreadcrumbRecordLabel } from "@/shared/components/layout/breadcrumb-record";
+import {
+  useBreadcrumbRecordLabel,
+  useBreadcrumbRecordTrail,
+} from "@/shared/components/layout/breadcrumb-record";
 import { useIsClient } from "@/shared/hooks/use-is-client";
 
 export function AppBreadcrumb() {
   const pathname = usePathname();
   const isClient = useIsClient();
   const recordLabel = useBreadcrumbRecordLabel();
+  const recordTrail = useBreadcrumbRecordTrail();
   const active = findActiveNav(pathname);
   const crumbs = buildBreadcrumbs({
     pathname,
     active,
     recordLabel: isClient ? recordLabel : null,
+    recordTrail: isClient ? recordTrail : null,
   });
 
   const lastCrumb = crumbs[crumbs.length - 1];

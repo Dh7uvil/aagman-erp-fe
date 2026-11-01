@@ -28,6 +28,7 @@ export function RecordPageHeader({
   mode,
   extraActions,
   splitSecondaryActionsOnMobile = false,
+  manageBreadcrumb = true,
 }: {
   title: string;
   subtitle?: string;
@@ -42,8 +43,10 @@ export function RecordPageHeader({
   mode: RecordPageMode;
   extraActions?: ReactNode;
   splitSecondaryActionsOnMobile?: boolean;
+  /** When false, the screen sets a custom breadcrumb trail. */
+  manageBreadcrumb?: boolean;
 }) {
-  useSetBreadcrumbRecord(code || title);
+  useSetBreadcrumbRecord(manageBreadcrumb ? code || title : null);
 
   const editAction =
     mode === "view" && canUpdate && editHref ? (

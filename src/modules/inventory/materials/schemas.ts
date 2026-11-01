@@ -175,9 +175,49 @@ export type ConsolidatedMaterialSizeLines = {
   removedIds: string[];
 };
 
+function catalogRowToSizeLine(row: Material): MaterialSizeLineValues {
+  return {
+    id: row.id,
+    parent_id: row.micron_id,
+    price_per_unit: row.price_per_unit != null ? String(row.price_per_unit) : "",
+    price_unit_id: row.price_unit_id ?? "",
+    size: formQuantityValue(row.size),
+    size_unit_id: row.size_unit_id,
+    quantity_available: formQuantityValue(row.total_kg),
+    unit_id: row.unit_id ?? "",
+    opening_rolls: formQuantityValue(row.rolls_on_hand),
+    stock_in_rolls: "0",
+    stock_in_kg: "0",
+    is_active: row.is_active,
+  };
+}
+
+/** Micron+size+unit → existing SKU for the product (first match wins). */
+export function buildExistingMaterialKeyMap(
+  materials: Material[],
+  productId: string,
+): Map<string, Material> {
+  const map = new Map<string, Material>();
+  for (const row of materials) {
+    if (row.product_id !== productId) {
+      continue;
+    }
+    const key = materialSizeLineKey({
+      parent_id: row.micron_id,
+      size: formQuantityValue(row.size),
+      size_unit_id: row.size_unit_id,
+    });
+    if (!map.has(key)) {
+      map.set(key, row);
+    }
+  }
+  return map;
+}
+
 /** Merge duplicate sizes (rolls/kg summed). Same micron+size+unit always becomes one line. */
 export function consolidateMaterialSizeLines(
   lines: MaterialSizeLineValues[],
+  existingByKey?: Map<string, Material>,
 ): ConsolidatedMaterialSizeLines {
   const byKey = new Map<string, MaterialSizeLineValues[]>();
   const removedIds: string[] = [];
@@ -194,8 +234,15 @@ export function consolidateMaterialSizeLines(
 
   const result: MaterialSizeLineValues[] = [];
   for (const group of byKey.values()) {
-    const savedRows = group.filter((line) => line.id);
+    let savedRows = group.filter((line) => line.id);
     const draftRows = group.filter((line) => !line.id);
+
+    if (savedRows.length === 0 && draftRows.length > 0 && existingByKey) {
+      const catalogRow = existingByKey.get(materialSizeLineKey(draftRows[0]!));
+      if (catalogRow) {
+        savedRows = [catalogRowToSizeLine(catalogRow)];
+      }
+    }
 
     if (savedRows.length > 0) {
       const [primary, ...extraSaved] = savedRows;
@@ -239,6 +286,50 @@ export function materialSizeLineStockOmitFlags(
   const rolls = Number(normalizeDecimalInput(line.stock_in_rolls.trim() || "0", DISPLAY_SCALE));
   const kg = Number(normalizeDecimalInput(line.stock_in_kg.trim() || "0", DISPLAY_SCALE));
   return { omitRolls: rolls > 0, omitKg: kg > 0 };
+}
+
+function parseFormQuantity(value: string): number {
+  return Number(normalizeDecimalInput(value.trim() || "0", DISPLAY_SCALE));
+}
+
+/** Saved-row roll/kg increases (not already in stock_in_* fields) need an explicit IN movement with line price. */
+export function materialSizeLineDirectStockIncrease(
+  line: MaterialSizeLineValues,
+  baseline: { rollsOnHand: string; totalKg: string },
+): { rolls: string; kilograms: string } {
+  if (!line.id) {
+    return { rolls: "0", kilograms: "0" };
+  }
+  if (materialSizeLineHasStockIn(line)) {
+    return { rolls: "0", kilograms: "0" };
+  }
+  const rollDelta = Math.max(
+    0,
+    parseFormQuantity(line.opening_rolls) - parseFormQuantity(formQuantityValue(baseline.rollsOnHand)),
+  );
+  const kgDelta = Math.max(
+    0,
+    parseFormQuantity(line.quantity_available) -
+      parseFormQuantity(formQuantityValue(baseline.totalKg)),
+  );
+  return {
+    rolls: rollDelta > 0 ? String(rollDelta) : "0",
+    kilograms: kgDelta > 0 ? String(kgDelta) : "0",
+  };
+}
+
+export function stockInMovementPriceFields(
+  line: Pick<MaterialSizeLineValues, "price_per_unit" | "price_unit_id">,
+  canViewPrice: boolean,
+): { price_per_unit?: string; price_unit_id?: string | null } {
+  const purchasePrice = line.price_per_unit.trim();
+  if (!canViewPrice || purchasePrice === "") {
+    return {};
+  }
+  return {
+    price_per_unit: purchasePrice,
+    price_unit_id: line.price_unit_id || null,
+  };
 }
 
 /** Saved-row receive rolls must be increments only, not a repeat of on-hand in the wrong field. */
@@ -346,15 +437,28 @@ function draftKgIncrement(line: MaterialSizeLineValues): string {
   return addQuantityStrings(line.stock_in_kg, line.quantity_available);
 }
 
+function draftLineHasStockIncrement(draft: MaterialSizeLineValues): boolean {
+  return parseFormQuantity(draftRollIncrement(draft)) > 0 || parseFormQuantity(draftKgIncrement(draft)) > 0;
+}
+
 function mergeDraftIncrementsIntoStockIn(
   base: MaterialSizeLineValues,
   drafts: MaterialSizeLineValues[],
 ): MaterialSizeLineValues {
   let stockInRolls = base.stock_in_rolls;
   let stockInKg = base.stock_in_kg;
+  let price_per_unit = base.price_per_unit;
+  let price_unit_id = base.price_unit_id;
   for (const draft of drafts) {
     stockInRolls = addQuantityStrings(stockInRolls, draftRollIncrement(draft));
     stockInKg = addQuantityStrings(stockInKg, draftKgIncrement(draft));
+    if (draftLineHasStockIncrement(draft)) {
+      const draftPrice = draft.price_per_unit.trim();
+      if (draftPrice !== "") {
+        price_per_unit = draftPrice;
+        price_unit_id = draft.price_unit_id.trim() || price_unit_id;
+      }
+    }
   }
   return {
     ...base,
@@ -362,6 +466,8 @@ function mergeDraftIncrementsIntoStockIn(
     quantity_available: base.quantity_available,
     stock_in_rolls: stockInRolls,
     stock_in_kg: stockInKg,
+    price_per_unit,
+    price_unit_id,
   };
 }
 
@@ -497,7 +603,7 @@ export function emptyMaterialSizeLine(
     parent_id: parentId,
     price_per_unit: pricePerUnit,
     price_unit_id: priceUnitId,
-    size: "",
+    size: "0",
     size_unit_id: sizeUnitId,
     quantity_available: "0",
     unit_id: quantityUnitId,

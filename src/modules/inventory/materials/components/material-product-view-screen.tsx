@@ -3,29 +3,46 @@
 import Link from "next/link";
 import { History, MinusCircle, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAllMicrons } from "@/modules/inventory/microns/queries";
 import {
   MaterialMicronSelector,
   MaterialVariantTable,
 } from "@/modules/inventory/materials/components/material-product-panel";
-import { stockOutButtonClassName } from "@/modules/inventory/materials/components/material-stock-out-button-styles";
+import {
+  stockOutButtonClassName,
+  stockOutIconButtonClassName,
+} from "@/modules/inventory/materials/components/material-stock-out-button-styles";
 import { MaterialStockOutDialog } from "@/modules/inventory/materials/components/material-stock-out-dialog";
 import type { Material } from "@/modules/inventory/materials/schemas";
 import { useMaterial, useMaterials } from "@/modules/inventory/materials/queries";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
+import { formatMaterialSizeMicronLabel } from "@/modules/inventory/format";
+import {
+  materialProductMicronBreadcrumbCrumbs,
+  materialViewBreadcrumbCrumbs,
+} from "@/modules/inventory/materials/material-breadcrumb";
 import { inventoryPricePermissions, materialPermissions } from "@/modules/inventory/permissions";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { DataTablePagination } from "@/shared/components/data-table/pagination";
+import { TableActionTooltip } from "@/shared/components/data-table/row-actions";
 import { DataTableError } from "@/shared/components/data-table/states";
 import { RecordPageHeader } from "@/shared/components/layout/record-page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { historyHref } from "@/shared/lib/history";
+import { useSetBreadcrumbTrail } from "@/shared/components/layout/breadcrumb-record";
 import { useCan } from "@/shared/providers/session-provider";
+
+function findVariant(variants: Material[], id: string | null | undefined) {
+  if (!id) {
+    return undefined;
+  }
+  return variants.find((row) => row.id === id);
+}
 
 export function MaterialProductViewScreen({ materialId }: { materialId: string }) {
   const router = useRouter();
@@ -37,6 +54,8 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
   const { page, page_size, setPage, setPageSize } = useTableParams();
   const [stockOutOpen, setStockOutOpen] = useState(false);
   const [stockOutMaterialId, setStockOutMaterialId] = useState<string | undefined>();
+  const [previewSkuId, setPreviewSkuId] = useState<string | null>(null);
+  const [selectedSkuId, setSelectedSkuId] = useState(materialId);
 
   const materialQuery = useMaterial(materialId);
   const material = materialQuery.data;
@@ -59,36 +78,103 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
     Boolean(selectedMicronId),
   );
 
-  const variantsLoading =
-    variantsQuery.isLoading ||
-    (variantsQuery.isFetching && variantsQuery.isPlaceholderData);
-  const variants = variantsLoading ? [] : (variantsQuery.data?.data ?? []);
-  const variantsMeta = variantsLoading ? undefined : variantsQuery.data?.meta;
-  const sizeUnitCode =
-    variantsQuery.data?.data?.[0]?.size_unit_code || material?.size_unit_code || "mm";
-  const editHref = materialRoutes.edit(materialId, selectedMicronId);
+  const variants = variantsQuery.data?.data ?? [];
+  const variantsLoading = variantsQuery.isLoading && variants.length === 0;
+  const variantsMeta = variantsQuery.data?.meta;
+  const sizeUnitCode = variants[0]?.size_unit_code || material?.size_unit_code || "mm";
+  const editHref = materialRoutes.edit(selectedSkuId, selectedMicronId);
   const addSizeHref = `${editHref}&addSize=1`;
+  const viewHref =
+    selectedMicronId != null && selectedMicronId !== ""
+      ? `${materialRoutes.view(selectedSkuId)}?micron=${encodeURIComponent(selectedMicronId)}`
+      : materialRoutes.view(selectedSkuId);
+
+  function syncSelectedSkuUrl(skuId: string, micronId?: string) {
+    const micron =
+      micronId || selectedMicronId || findVariant(variants, skuId)?.micron_id || "";
+    const path =
+      micron !== ""
+        ? `${materialRoutes.view(skuId)}?micron=${encodeURIComponent(micron)}`
+        : materialRoutes.view(skuId);
+    window.history.replaceState(window.history.state, "", path);
+  }
 
   const prevMicronRef = useRef(selectedMicronId);
   useEffect(() => {
     if (prevMicronRef.current !== selectedMicronId) {
       prevMicronRef.current = selectedMicronId;
+      setPreviewSkuId(null);
       if (page > 1) {
         setPage(1);
       }
     }
   }, [selectedMicronId, page, setPage]);
 
+  useEffect(() => {
+    setPreviewSkuId(null);
+    setSelectedSkuId(materialId);
+  }, [materialId]);
+
   function selectMicron(micronId: string) {
-    router.push(`${materialRoutes.view(materialId)}?micron=${micronId}`);
+    setPreviewSkuId(null);
+    router.push(`${materialRoutes.view(selectedSkuId)}?micron=${micronId}`);
+  }
+
+  function selectWidth(row: Material) {
+    if (row.id === selectedSkuId) {
+      setPreviewSkuId(null);
+      syncSelectedSkuUrl(row.id, row.micron_id);
+      return;
+    }
+    setSelectedSkuId(row.id);
+    setPreviewSkuId(null);
+    syncSelectedSkuUrl(row.id, row.micron_id);
   }
 
   function openStockOut(row?: Material) {
-    setStockOutMaterialId(row?.id ?? materialId);
+    setStockOutMaterialId(row?.id ?? selectedSkuId);
     setStockOutOpen(true);
   }
 
-  if (materialQuery.isLoading) {
+  const micronName = selectedMicron?.name ?? material?.micron_name ?? "";
+
+  const activeSku = useMemo(() => {
+    const preview = findVariant(variants, previewSkuId);
+    if (preview) {
+      return preview;
+    }
+    const selected = findVariant(variants, selectedSkuId);
+    if (selected) {
+      return selected;
+    }
+    if (material?.id === materialId && material.micron_id === selectedMicronId) {
+      return material;
+    }
+    return null;
+  }, [previewSkuId, selectedSkuId, variants, material, materialId, selectedMicronId]);
+
+  const tableFocusedSkuId = activeSku?.id ?? selectedSkuId;
+
+  const breadcrumbTrail = useMemo(() => {
+    const productName = material?.product_name ?? activeSku?.product_name;
+    if (!productName) {
+      return null;
+    }
+    if (activeSku) {
+      return materialViewBreadcrumbCrumbs(
+        { ...activeSku, product_name: productName },
+        selectedMicronId,
+        micronName,
+      );
+    }
+    if (material) {
+      return materialProductMicronBreadcrumbCrumbs(material, selectedMicronId, micronName);
+    }
+    return null;
+  }, [material, activeSku, selectedMicronId, micronName]);
+  useSetBreadcrumbTrail(breadcrumbTrail);
+
+  if (materialQuery.isPending && !material) {
     return (
       <div className="flex flex-col gap-5">
         <Skeleton className="h-8 w-64" />
@@ -116,13 +202,14 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
       <div className="shrink-0 space-y-4 md:space-y-5">
         <RecordPageHeader
           title={material.product_name}
+          manageBreadcrumb={false}
           subtitle={
             material.company_name
-              ? `${material.company_name} · Product stock by micron and width`
+              ? `${material.company_name}`
               : "Product stock by micron and width"
           }
           listHref={materialRoutes.list}
-          viewHref={materialRoutes.view(materialId)}
+          viewHref={viewHref}
           editHref={editHref}
           canUpdate={canUpdate}
           mode="view"
@@ -156,7 +243,7 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
           <MaterialMicronSelector
             microns={microns}
             selectedMicronId={selectedMicronId}
-            materialId={materialId}
+            materialId={selectedSkuId}
             selectedMicron={selectedMicron}
             canViewPrice={canViewPrice}
             onSelectMicron={selectMicron}
@@ -169,7 +256,23 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
           <MaterialVariantTable
             materials={variants}
             sizeUnitCode={sizeUnitCode}
-            highlightMaterialId={material.micron_id === selectedMicronId ? materialId : undefined}
+            highlightMaterialId={tableFocusedSkuId}
+            previewMaterialId={
+              previewSkuId && previewSkuId !== tableFocusedSkuId ? previewSkuId : undefined
+            }
+            selectableWidths
+            onWidthHover={(row) => {
+              if (!row) {
+                setPreviewSkuId(null);
+                return;
+              }
+              if (row.id === selectedSkuId) {
+                setPreviewSkuId(null);
+                return;
+              }
+              setPreviewSkuId(row.id);
+            }}
+            onWidthSelect={selectWidth}
             loading={variantsLoading}
             stickyHeader
             canViewPrice={canViewPrice}
@@ -188,32 +291,47 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
                 </Button>
               ) : undefined
             }
+            actionsColumn={canViewHistory || canUpdate}
             rowActions={
               canViewHistory || canUpdate
                 ? (row) => (
-                    <div className="flex items-center justify-end gap-0.5">
+                    <>
                       {canUpdate && row.is_active ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          aria-label="Stock out"
-                          onClick={() => openStockOut(row)}
-                        >
-                          <MinusCircle className="size-4" />
-                        </Button>
+                        <TableActionTooltip label="Stock out">
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            className={stockOutIconButtonClassName}
+                            aria-label="Stock out"
+                            onClick={() => openStockOut(row)}
+                          >
+                            <MinusCircle className="size-3.5" />
+                          </Button>
+                        </TableActionTooltip>
                       ) : null}
                       {canViewHistory ? (
-                        <Button type="button" size="sm" variant="ghost" asChild>
-                          <Link
-                            href={historyHref("materials", row.id, row.name)}
+                        <TableActionTooltip label="History">
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
                             aria-label="History"
+                            asChild
                           >
-                            <History className="size-4" />
-                          </Link>
-                        </Button>
+                            <Link
+                              href={historyHref(
+                                "materials",
+                                row.id,
+                                formatMaterialSizeMicronLabel(row),
+                              )}
+                            >
+                              <History className="size-3.5" />
+                            </Link>
+                          </Button>
+                        </TableActionTooltip>
                       ) : null}
-                    </div>
+                    </>
                   )
                 : undefined
             }

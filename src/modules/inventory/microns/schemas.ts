@@ -14,6 +14,7 @@ export const MicronSchema = z.object({
   price_per_unit: NullableDecimalStringSchema,
   price_unit_id: z.string().uuid().nullable(),
   price_unit_code: z.string(),
+  avg_price_per_unit: NullableDecimalStringSchema.optional(),
   is_active: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),

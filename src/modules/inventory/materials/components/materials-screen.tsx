@@ -54,6 +54,7 @@ import {
   parseListActiveFilter,
 } from "@/shared/lib/list-filters";
 import { useCompanies } from "@/modules/users-management/companies/queries";
+import { formatMaterialSizeMicronLabel } from "@/modules/inventory/format";
 import { historyHref } from "@/shared/lib/history";
 import { useCan } from "@/shared/providers/session-provider";
 
@@ -198,7 +199,7 @@ export function MaterialsScreen() {
     }
     return (
       <Button type="button" variant="ghost" size="icon-sm" aria-label="History" asChild>
-        <Link href={historyHref("materials", material.id, material.name)}>
+        <Link href={historyHref("materials", material.id, formatMaterialSizeMicronLabel(material))}>
           <History className="size-3.5" />
         </Link>
       </Button>

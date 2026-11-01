@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { formatPricePerUnit } from "@/modules/inventory/format";
+import { formatMicronLabel, formatPricePerUnit } from "@/modules/inventory/format";
 import type { Micron } from "@/modules/inventory/microns/schemas";
 import type { Material } from "@/modules/inventory/materials/schemas";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
@@ -14,6 +14,31 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { formatDecimal } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/cn";
+
+function widthCellContent(
+  material: Material,
+  sizeUnitCode: string,
+  linked: boolean,
+) {
+  const unit = material.size_unit_code || sizeUnitCode || "mm";
+  const sizeText = (
+    <>
+      {formatDecimal(material.size)}
+      <span className="text-muted-foreground ml-1 text-xs">{unit}</span>
+    </>
+  );
+  if (linked) {
+    return (
+      <Link
+        href={materialRoutes.view(material.id)}
+        className="hover:text-primary hover:underline"
+      >
+        {sizeText}
+      </Link>
+    );
+  }
+  return sizeText;
+}
 
 export function MaterialMicronSelector({
   microns,
@@ -39,6 +64,10 @@ export function MaterialMicronSelector({
   const priceLabel =
     canViewPrice && selectedMicron?.price_per_unit
       ? formatPricePerUnit(selectedMicron.price_per_unit, selectedMicron.price_unit_code)
+      : null;
+  const avgPriceLabel =
+    canViewPrice && selectedMicron?.avg_price_per_unit
+      ? formatPricePerUnit(selectedMicron.avg_price_per_unit, selectedMicron.price_unit_code)
       : null;
 
   return (
@@ -68,16 +97,33 @@ export function MaterialMicronSelector({
                   router.push(`${materialRoutes.view(materialId)}?${params.toString()}`);
                 }}
               >
-                {micron.name}
+                {micron.id === selectedMicronId
+                  ? formatMicronLabel(micron.name)
+                  : micron.name}
               </Button>
             ))}
           </div>
         </div>
-        {priceLabel ? (
-          <p className="text-muted-foreground shrink-0 text-sm">
-            Current price{" "}
-            <span className="text-foreground font-medium tabular-nums">{priceLabel}</span>
-          </p>
+        {priceLabel || avgPriceLabel ? (
+          <div className="flex shrink-0 flex-wrap items-baseline justify-center gap-x-4 gap-y-1 text-sm">
+            {priceLabel ? (
+              <p className="leading-snug">
+                <span className="text-muted-foreground">Curr. Price : </span>
+                <span className="text-foreground font-medium tabular-nums">{priceLabel}</span>
+              </p>
+            ) : null}
+            {priceLabel && avgPriceLabel ? (
+              <span className="text-muted-foreground/60 select-none" aria-hidden>
+                |
+              </span>
+            ) : null}
+            {avgPriceLabel ? (
+              <p className="leading-snug">
+                <span className="text-muted-foreground">Avg. Price : </span>
+                <span className="text-foreground font-medium tabular-nums">{avgPriceLabel}</span>
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </section>
@@ -104,24 +150,38 @@ export function MaterialVariantTable({
   materials,
   sizeUnitCode,
   highlightMaterialId,
+  previewMaterialId,
   loading,
   emptyMessage,
   emptyAction,
   rowActions,
   linkWidths = false,
+  selectableWidths = false,
+  onWidthHover,
+  onWidthSelect,
   stickyHeader = false,
   canViewPrice = false,
+  actionsColumn = false,
+  actionsColumnHeader = "Actions",
 }: {
   materials: Material[];
   sizeUnitCode: string;
   highlightMaterialId?: string;
+  /** Row highlighted on hover before click (e.g. breadcrumb preview). */
+  previewMaterialId?: string;
   loading?: boolean;
   emptyMessage: string;
   emptyAction?: ReactNode;
   rowActions?: (material: Material) => ReactNode;
   linkWidths?: boolean;
+  selectableWidths?: boolean;
+  onWidthHover?: (material: Material | null) => void;
+  onWidthSelect?: (material: Material) => void;
   stickyHeader?: boolean;
   canViewPrice?: boolean;
+  /** Dedicated actions column (e.g. stock out, history). */
+  actionsColumn?: boolean;
+  actionsColumnHeader?: string;
 }) {
   if (loading) {
     return (
@@ -133,27 +193,52 @@ export function MaterialVariantTable({
     );
   }
 
+  const showActionsColumn = actionsColumn || Boolean(rowActions);
   const priceColumns = canViewPrice ? 1 : 0;
-  const colSpan = (rowActions ? 5 : 4) + priceColumns;
+  const columnCount = 4 + priceColumns + (showActionsColumn ? 1 : 0);
+  const colSpan = columnCount;
   const headerRowClass = stickyHeader
     ? "bg-muted/95 hover:bg-muted/95 sticky top-0 z-10 shadow-sm backdrop-blur-sm"
     : "bg-muted/50 hover:bg-muted/50";
 
+  function isRowActionTarget(target: EventTarget | null) {
+    return target instanceof Element && Boolean(target.closest("[data-row-action]"));
+  }
+
+  const widthColPercent = 20;
+  const evenColCount = columnCount - 1;
+  const evenColPercent = evenColCount > 0 ? (100 - widthColPercent) / evenColCount : 0;
+  const variantColWidths = [
+    `${widthColPercent}%`,
+    ...Array.from({ length: evenColCount }, () => `${evenColPercent}%`),
+  ];
+
+  const headBase = "h-10 min-w-0 px-3 sm:min-w-0";
+  const headCenter = cn(headBase, "text-center");
+  const cellCenter = "px-3 py-3 text-center align-middle";
+
   return (
-    <Table>
+    <Table className="table-fixed">
+      <colgroup>
+        {variantColWidths.map((width, index) => (
+          <col key={index} style={{ width }} />
+        ))}
+      </colgroup>
       <TableHeader>
         <TableRow className={headerRowClass}>
-          <TableHead className="h-10 px-4">{`Width (${sizeUnitCode})`}</TableHead>
-          <TableHead className="h-10 px-4 text-center">Total rolls</TableHead>
-          <TableHead className="h-10 px-4 text-right">Total kg</TableHead>
-          <TableHead className="h-10 w-[7rem] px-4">Status</TableHead>
-          {canViewPrice ? (
-            <TableHead className="h-10 px-4 text-right">Avg price</TableHead>
+          <TableHead className={headBase}>{`Width (${sizeUnitCode})`}</TableHead>
+          <TableHead className={headCenter}>Total rolls</TableHead>
+          <TableHead className={headCenter}>Total kg</TableHead>
+          <TableHead className={headCenter}>Status</TableHead>
+          {canViewPrice ? <TableHead className={headCenter}>Avg price</TableHead> : null}
+          {showActionsColumn ? (
+            <TableHead className={headCenter}>{actionsColumnHeader}</TableHead>
           ) : null}
-          {rowActions ? <TableHead className="h-10 w-[1%] px-4" /> : null}
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody
+        onMouseLeave={selectableWidths ? () => onWidthHover?.(null) : undefined}
+      >
         {materials.length === 0 ? (
           <TableRow>
             <TableCell colSpan={colSpan} className="px-4 py-10 text-center">
@@ -165,24 +250,43 @@ export function MaterialVariantTable({
           materials.map((material) => (
             <TableRow
               key={material.id}
-              className={cn(highlightMaterialId === material.id && "bg-primary/5")}
+              className={cn(
+                selectableWidths && "cursor-pointer",
+                selectableWidths &&
+                  highlightMaterialId !== material.id &&
+                  previewMaterialId !== material.id &&
+                  "hover:bg-muted/45",
+                highlightMaterialId === material.id && "bg-primary/5",
+                previewMaterialId === material.id &&
+                  previewMaterialId !== highlightMaterialId &&
+                  "bg-muted/60",
+              )}
+              onMouseEnter={selectableWidths ? () => onWidthHover?.(material) : undefined}
+              onClick={
+                selectableWidths
+                  ? (event) => {
+                      if (isRowActionTarget(event.target)) {
+                        return;
+                      }
+                      onWidthSelect?.(material);
+                    }
+                  : undefined
+              }
             >
-              <TableCell className="px-4 py-3 font-medium tabular-nums">
-                {linkWidths ? (
-                  <Link
-                    href={materialRoutes.view(material.id)}
-                    className="hover:text-primary hover:underline"
-                  >
-                    {formatDecimal(material.size)}
-                  </Link>
-                ) : (
-                  formatDecimal(material.size)
+              <TableCell
+                className={cn(
+                  "px-3 py-3 font-medium tabular-nums",
+                  selectableWidths &&
+                    highlightMaterialId === material.id &&
+                    "text-primary",
                 )}
+              >
+                {widthCellContent(material, sizeUnitCode, linkWidths)}
               </TableCell>
-              <TableCell className="px-4 py-3 text-center tabular-nums font-medium">
+              <TableCell className={cn(cellCenter, "tabular-nums font-medium")}>
                 {formatDecimal(material.rolls_on_hand)}
               </TableCell>
-              <TableCell className="px-4 py-3 text-right tabular-nums font-medium">
+              <TableCell className={cn(cellCenter, "tabular-nums font-medium")}>
                 {formatDecimal(material.total_kg)}
                 {material.unit_code ? (
                   <span className="text-muted-foreground ml-1 text-xs uppercase">
@@ -192,18 +296,32 @@ export function MaterialVariantTable({
                   <span className="text-muted-foreground ml-1 text-xs uppercase">kg</span>
                 )}
               </TableCell>
-              <TableCell className="px-4 py-3">
-                <ActiveBadge active={material.is_active} />
+              <TableCell className={cellCenter}>
+                <div className="flex justify-center">
+                  <ActiveBadge active={material.is_active} />
+                </div>
               </TableCell>
               {canViewPrice ? (
-                <TableCell className="px-4 py-3 text-right tabular-nums text-sm">
+                <TableCell className={cn(cellCenter, "tabular-nums text-sm")}>
                   {formatPricePerUnit(
                     material.avg_price_per_unit ?? null,
                     material.price_unit_code,
                   )}
                 </TableCell>
               ) : null}
-              {rowActions ? <TableCell className="px-4 py-3">{rowActions(material)}</TableCell> : null}
+              {showActionsColumn ? (
+                <TableCell
+                  className={cellCenter}
+                  data-row-action
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="flex items-center justify-center gap-0.5">
+                    {rowActions?.(material) ?? (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </div>
+                </TableCell>
+              ) : null}
             </TableRow>
           ))
         )}

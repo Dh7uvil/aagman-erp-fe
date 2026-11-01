@@ -24,12 +24,15 @@ import { useAllMaterials, useMaterial } from "@/modules/inventory/materials/quer
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import {
   MaterialEditFormSchema,
+  buildExistingMaterialKeyMap,
   buildMaterialEditFormValues,
   consolidateMaterialSizeLines,
+  materialSizeLineDirectStockIncrease,
   materialSizeLineHasStockIn,
   materialSizeLineKey,
   materialSizeLineStockOmitFlags,
   micronPricePayloadsFromSizeLines,
+  stockInMovementPriceFields,
   resolveMaterialEditSizeLines,
   uniqueMicronIdsFromSizeLines,
   type MaterialEditFormValues,
@@ -158,7 +161,7 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
             parent_id: micronId,
             price_per_unit: selectedMicron?.price_per_unit ?? "",
             price_unit_id: selectedMicron?.price_unit_id ?? "",
-            size: "",
+            size: "0",
             size_unit_id: defaultSizeUnitId,
             quantity_available: "0",
             unit_id: defaultQuantityUnitId,
@@ -201,28 +204,61 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
       let lastId = materialId;
       let lastMicronId = micronIds[0] ?? micronId;
 
-      const { lines: sizeLines, removedIds } = consolidateMaterialSizeLines(resolvedLines);
+      const existingByKey = buildExistingMaterialKeyMap(
+        variantsQuery.data ?? [],
+        values.product_id,
+      );
+      const { lines: sizeLines, removedIds } = consolidateMaterialSizeLines(
+        resolvedLines,
+        existingByKey,
+      );
       const movementDate = new Date().toISOString().slice(0, 10);
+      const stockBaselineById = new Map(
+        (variantsQuery.data ?? []).map((row) => [
+          row.id,
+          {
+            rollsOnHand: String(row.rolls_on_hand ?? "0"),
+            totalKg: String(row.total_kg ?? "0"),
+          },
+        ]),
+      );
 
-      for (const line of sizeLines) {
-        if (!line.id || !materialSizeLineHasStockIn(line)) {
-          continue;
+      async function recordStockReceived(
+        line: (typeof sizeLines)[number],
+        rolls: string,
+        kilograms: string,
+      ) {
+        if (!line.id) {
+          return;
         }
-        const purchasePrice = line.price_per_unit.trim();
+        const rollQty = stockQuantity(rolls);
+        const kgQty = stockQuantity(kilograms);
+        if (Number(rollQty) === 0 && Number(kgQty) === 0) {
+          return;
+        }
         await createMovement.mutateAsync({
           category_id: line.id,
           movement_date: movementDate,
           direction: "IN",
-          rolls: stockQuantity(line.stock_in_rolls),
-          kilograms: stockQuantity(line.stock_in_kg),
+          rolls: rollQty,
+          kilograms: kgQty,
           note: "Stock received",
-          ...(canViewPrice && purchasePrice !== ""
-            ? {
-                price_per_unit: purchasePrice,
-                price_unit_id: line.price_unit_id || null,
-              }
-            : {}),
+          ...stockInMovementPriceFields(line, canViewPrice),
         });
+      }
+
+      for (const line of sizeLines) {
+        if (!line.id) {
+          continue;
+        }
+        if (materialSizeLineHasStockIn(line)) {
+          await recordStockReceived(line, line.stock_in_rolls, line.stock_in_kg);
+        }
+        const baseline = stockBaselineById.get(line.id);
+        if (baseline) {
+          const direct = materialSizeLineDirectStockIncrease(line, baseline);
+          await recordStockReceived(line, direct.rolls, direct.kilograms);
+        }
       }
 
       for (const line of sizeLines) {
