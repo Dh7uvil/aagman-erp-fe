@@ -136,7 +136,7 @@ export const stickyActionsCellClass =
 
 /** Shrink actions column to icon row width (overrides default th min-width). */
 export const actionsColumnHeadClass =
-  "w-0 max-w-[1%] min-w-0 whitespace-nowrap px-2 sm:min-w-0 sm:px-3";
+  "w-0 max-w-[1%] min-w-0 whitespace-nowrap px-2 text-center sm:min-w-0 sm:px-3";
 
 export const actionsColumnCellClass = "w-0 max-w-[1%] whitespace-nowrap px-2 sm:px-3";
 

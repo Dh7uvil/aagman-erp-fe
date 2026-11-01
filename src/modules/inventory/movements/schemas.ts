@@ -34,3 +34,17 @@ export const DayReportRowSchema = z.object({
 export type DayReportRow = z.infer<typeof DayReportRowSchema>;
 
 export const DayReportSchema = z.array(DayReportRowSchema);
+
+export const MovementDirectionSchema = z.enum(["IN", "OUT"]);
+
+export const MovementCreateRequestSchema = z.object({
+  category_id: z.string().uuid(),
+  movement_date: z.string().min(1),
+  direction: MovementDirectionSchema,
+  rolls: z.string(),
+  kilograms: z.string(),
+  note: z.string().max(2000).nullable().optional(),
+  price_per_unit: z.string().nullable().optional(),
+  price_unit_id: z.string().uuid().nullable().optional(),
+});
+export type MovementCreateRequest = z.infer<typeof MovementCreateRequestSchema>;

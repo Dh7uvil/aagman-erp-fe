@@ -7,8 +7,16 @@ function asMasterForm(form: unknown): UseFormReturn<FieldValues> {
   return form as UseFormReturn<FieldValues>;
 }
 
-export function applyCreatedProductToMaterialForm(form: unknown, productId: string) {
-  setFormValueFromQuickCreate(asMasterForm(form), "product_id", productId);
+export function applyCreatedProductToMaterialForm(
+  form: unknown,
+  productId: string,
+  companyId?: string | null,
+) {
+  const f = asMasterForm(form);
+  setFormValueFromQuickCreate(f, "product_id", productId);
+  if (companyId) {
+    setFormValueFromQuickCreate(f, "company_id", companyId);
+  }
 }
 
 export function applyCreatedMicronToMaterialForm(
@@ -50,4 +58,15 @@ export function applyCreatedSizeLineQuantityUnitToMaterialForm(
   unitId: string,
 ) {
   setFormValueFromQuickCreate(asMasterForm(form), `size_lines.${index}.unit_id`, unitId);
+}
+
+export function applyCreatedMicronToMaterialSizeLine(
+  form: unknown,
+  index: number,
+  micron: Micron,
+) {
+  const f = asMasterForm(form);
+  setFormValueFromQuickCreate(f, "product_id", micron.product_id);
+  setFormValueFromQuickCreate(f, `size_lines.${index}.parent_id`, micron.id);
+  f.clearErrors(`size_lines.${index}.parent_id`);
 }

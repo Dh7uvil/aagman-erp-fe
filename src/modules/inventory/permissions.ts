@@ -22,6 +22,7 @@ export const materialPermissions = {
   update: permissionsByModule.inventory.material.update,
   delete: permissionsByModule.inventory.material.delete,
   viewPrice: permissionsByModule.inventory.material.view_price,
+  history: permissionsByModule.inventory.material.history,
 } as const satisfies Record<string, CatalogPermission>;
 
 export const materialsReportPermissions = {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isNumericDecimalString } from "@/shared/lib/format";
+import { DISPLAY_SCALE, isNumericDecimalString, normalizeDecimalInput } from "@/shared/lib/format";
 
 /** Form stock/count fields: empty API values display as zero like rolls and qty. */
 function formQuantityValue(value: string | null | undefined): string {
@@ -26,6 +26,8 @@ const NullableDecimalStringSchema = z
 
 export const MaterialSchema = z.object({
   id: z.string().uuid(),
+  company_id: z.string().uuid().nullable(),
+  company_name: z.string(),
   product_id: z.string().uuid(),
   product_name: z.string(),
   micron_id: z.string().uuid(),
@@ -117,74 +119,403 @@ const sizeLineNumeric = z
   .refine((value) => isNumericDecimalString(value), { message: "Enter a valid number" })
   .refine(isPositiveDecimal, { message: "Enter a size greater than zero" });
 
+const stockInNumeric = z
+  .string()
+  .refine((value) => isNumericDecimalString(value.trim() || "0"), {
+    message: "Enter a valid number",
+  })
+  .refine((value) => Number(value.trim() || "0") >= 0, {
+    message: "Must be zero or greater",
+  });
+
 export const MaterialSizeLineSchema = z.object({
   id: z.string().uuid().optional(),
+  parent_id: z.union([
+    z.literal(""),
+    z.string().uuid({ message: "Select a micron" }),
+  ]),
   size: sizeLineNumeric,
   size_unit_id: z.string().uuid({ message: "Select size unit" }),
   quantity_available: z.string(),
   unit_id: z.string().uuid({ message: "Select quantity unit" }),
   opening_rolls: z.string(),
+  /** Incoming stock for an existing width (IN movement); not a second SKU row. */
+  stock_in_rolls: stockInNumeric,
+  stock_in_kg: stockInNumeric,
   is_active: z.boolean(),
 });
 export type MaterialSizeLineValues = z.infer<typeof MaterialSizeLineSchema>;
 
-export const MaterialEditFormSchema = z.object({
-  product_id: z.string().uuid({ message: "Select a product" }),
-  parent_id: z.string().uuid({ message: "Select a micron" }),
-  price_per_unit: z.string(),
-  price_unit_id: z.union([
-    z.literal(""),
-    z.string().uuid({ message: "Select price unit" }),
-  ]),
-  size_lines: z.array(MaterialSizeLineSchema).min(1, "Add at least one size"),
-});
+function addQuantityStrings(left: string, right: string): string {
+  const a = normalizeDecimalInput(left.trim() || "0", DISPLAY_SCALE);
+  const b = normalizeDecimalInput(right.trim() || "0", DISPLAY_SCALE);
+  return normalizeDecimalInput(String(Number(a) + Number(b)), DISPLAY_SCALE);
+}
+
+/** Stable key for matching size lines (300 and 300.00 are the same size). */
+export function materialSizeLineKey(
+  line: Pick<MaterialSizeLineValues, "parent_id" | "size" | "size_unit_id">,
+): string {
+  const size = line.size.trim();
+  const normalized = size === "" ? "" : normalizeDecimalInput(size, DISPLAY_SCALE);
+  return `${line.parent_id}::${normalized}::${line.size_unit_id}`;
+}
+
+export type ConsolidatedMaterialSizeLines = {
+  lines: MaterialSizeLineValues[];
+  /** Material ids merged into another row (delete after persisting the survivor). */
+  removedIds: string[];
+};
+
+/** Merge duplicate sizes (rolls/kg summed). Same micron+size+unit always becomes one line. */
+export function consolidateMaterialSizeLines(
+  lines: MaterialSizeLineValues[],
+): ConsolidatedMaterialSizeLines {
+  const byKey = new Map<string, MaterialSizeLineValues[]>();
+  const removedIds: string[] = [];
+
+  for (const line of lines) {
+    if (!line.parent_id || !line.size_unit_id) {
+      continue;
+    }
+    const key = materialSizeLineKey(line);
+    const group = byKey.get(key) ?? [];
+    group.push(line);
+    byKey.set(key, group);
+  }
+
+  const result: MaterialSizeLineValues[] = [];
+  for (const group of byKey.values()) {
+    const savedRows = group.filter((line) => line.id);
+    const draftRows = group.filter((line) => !line.id);
+
+    if (savedRows.length > 0) {
+      const [primary, ...extraSaved] = savedRows;
+      let merged = mergeDraftIncrementsIntoStockIn(primary!, draftRows);
+      for (const extra of extraSaved) {
+        if (extra.id) {
+          removedIds.push(extra.id);
+        }
+        merged.opening_rolls = addQuantityStrings(merged.opening_rolls, extra.opening_rolls);
+        merged.quantity_available = addQuantityStrings(
+          merged.quantity_available,
+          extra.quantity_available,
+        );
+        merged.stock_in_rolls = addQuantityStrings(merged.stock_in_rolls, extra.stock_in_rolls);
+        merged.stock_in_kg = addQuantityStrings(merged.stock_in_kg, extra.stock_in_kg);
+      }
+      result.push(merged);
+      continue;
+    }
+
+    if (draftRows.length > 0) {
+      result.push(mergeDraftRowsForCreate(draftRows));
+    }
+  }
+
+  return { lines: result, removedIds };
+}
+
+export function materialSizeLineHasStockIn(
+  line: Pick<MaterialSizeLineValues, "stock_in_rolls" | "stock_in_kg">,
+): boolean {
+  const rolls = Number(normalizeDecimalInput(line.stock_in_rolls.trim() || "0", DISPLAY_SCALE));
+  const kg = Number(normalizeDecimalInput(line.stock_in_kg.trim() || "0", DISPLAY_SCALE));
+  return rolls > 0 || kg > 0;
+}
+
+/** When stock-in applies, omit only the matching on-hand fields from PATCH (rolls vs kg). */
+export function materialSizeLineStockOmitFlags(
+  line: Pick<MaterialSizeLineValues, "stock_in_rolls" | "stock_in_kg">,
+): { omitRolls: boolean; omitKg: boolean } {
+  const rolls = Number(normalizeDecimalInput(line.stock_in_rolls.trim() || "0", DISPLAY_SCALE));
+  const kg = Number(normalizeDecimalInput(line.stock_in_kg.trim() || "0", DISPLAY_SCALE));
+  return { omitRolls: rolls > 0, omitKg: kg > 0 };
+}
+
+/** Saved-row receive rolls must be increments only, not a repeat of on-hand in the wrong field. */
+function normalizeSavedRowStockInLine(line: MaterialSizeLineValues): MaterialSizeLineValues {
+  if (!line.id) {
+    return line;
+  }
+  const increment = normalizeDecimalInput(line.stock_in_rolls.trim() || "0", DISPLAY_SCALE);
+  const onHand = normalizeDecimalInput(line.opening_rolls.trim() || "0", DISPLAY_SCALE);
+  if (Number(increment) > 0 && Number(increment) === Number(onHand)) {
+    return { ...line, stock_in_rolls: "0" };
+  }
+  return line;
+}
+
+export const MaterialEditFormSchema = z
+  .object({
+    company_id: z.union([
+      z.literal(""),
+      z.string().uuid({ message: "Select a company" }),
+    ]),
+    product_id: z.string().uuid({ message: "Select a product" }),
+    parent_id: z.union([
+      z.literal(""),
+      z.string().uuid({ message: "Select a micron" }),
+    ]),
+    price_per_unit: z.string(),
+    price_unit_id: z.union([
+      z.literal(""),
+      z.string().uuid({ message: "Select price unit" }),
+    ]),
+    size_lines: z.array(MaterialSizeLineSchema).min(1, "Add at least one size"),
+  })
+  .superRefine((data, ctx) => {
+    data.size_lines.forEach((line, index) => {
+      const micronId = line.parent_id || data.parent_id;
+      if (!micronId) {
+        const path =
+          data.parent_id === "" && line.parent_id === ""
+            ? (["parent_id"] as const)
+            : (["size_lines", index, "parent_id"] as const);
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a micron",
+          path: [...path],
+        });
+      }
+    });
+  });
 export type MaterialEditFormValues = z.infer<typeof MaterialEditFormSchema>;
 
-export function materialsToEditFormValues(
-  materials: Material[],
-  fallback: Material | null,
-): MaterialEditFormValues {
-  const sorted = [...materials].sort((a, b) => Number(a.size) - Number(b.size));
-  const base = sorted[0] ?? fallback ?? null;
+export const MaterialCreateFormSchema = MaterialEditFormSchema.safeExtend({
+  company_id: z.string().uuid({ message: "Select a company" }),
+});
+export type MaterialCreateFormValues = z.infer<typeof MaterialCreateFormSchema>;
+
+export type MaterialProductEditContext = {
+  productId: string;
+  companyId?: string;
+  /** Form-level micron when all rows share one, or URL context on edit. */
+  defaultMicronId?: string;
+  pricePerUnit: string;
+  priceUnitId: string;
+  defaultSizeUnitId?: string;
+  defaultQuantityUnitId?: string;
+};
+
+/** Apply form-level micron and shared units when a row omits them. */
+export function resolveMaterialEditSizeLines(
+  values: MaterialEditFormValues,
+): MaterialSizeLineValues[] {
+  const fallbackSizeUnitId =
+    values.size_lines.find((line) => line.size_unit_id)?.size_unit_id ?? "";
+  const fallbackQuantityUnitId =
+    values.size_lines.find((line) => line.unit_id)?.unit_id ?? "";
+  return values.size_lines.map((line) =>
+    normalizeSavedRowStockInLine({
+      ...line,
+      parent_id: line.parent_id || values.parent_id,
+      size_unit_id: line.size_unit_id || fallbackSizeUnitId,
+      unit_id: line.unit_id || fallbackQuantityUnitId,
+    }),
+  );
+}
+
+function draftRollIncrement(line: MaterialSizeLineValues): string {
+  return addQuantityStrings(line.stock_in_rolls, line.opening_rolls);
+}
+
+function draftKgIncrement(line: MaterialSizeLineValues): string {
+  return addQuantityStrings(line.stock_in_kg, line.quantity_available);
+}
+
+function mergeDraftIncrementsIntoStockIn(
+  base: MaterialSizeLineValues,
+  drafts: MaterialSizeLineValues[],
+): MaterialSizeLineValues {
+  let stockInRolls = base.stock_in_rolls;
+  let stockInKg = base.stock_in_kg;
+  for (const draft of drafts) {
+    stockInRolls = addQuantityStrings(stockInRolls, draftRollIncrement(draft));
+    stockInKg = addQuantityStrings(stockInKg, draftKgIncrement(draft));
+  }
   return {
-    product_id: base?.product_id ?? "",
-    parent_id: base?.micron_id ?? "",
-    price_per_unit: base?.price_per_unit ?? "",
-    price_unit_id: base?.price_unit_id ?? "",
+    ...base,
+    opening_rolls: base.opening_rolls,
+    quantity_available: base.quantity_available,
+    stock_in_rolls: stockInRolls,
+    stock_in_kg: stockInKg,
+  };
+}
+
+function mergeDraftRowsForCreate(drafts: MaterialSizeLineValues[]): MaterialSizeLineValues {
+  const [first, ...rest] = drafts;
+  if (!first) {
+    return emptyMaterialSizeLine();
+  }
+  let merged: MaterialSizeLineValues = { ...first };
+  for (const line of rest) {
+    merged = {
+      ...merged,
+      opening_rolls: addQuantityStrings(merged.opening_rolls, line.opening_rolls),
+      quantity_available: addQuantityStrings(merged.quantity_available, line.quantity_available),
+      stock_in_rolls: addQuantityStrings(merged.stock_in_rolls, line.stock_in_rolls),
+      stock_in_kg: addQuantityStrings(merged.stock_in_kg, line.stock_in_kg),
+      is_active: merged.is_active && line.is_active,
+    };
+  }
+  merged.opening_rolls = addQuantityStrings(merged.opening_rolls, merged.stock_in_rolls);
+  merged.quantity_available = addQuantityStrings(merged.quantity_available, merged.stock_in_kg);
+  merged.stock_in_rolls = "0";
+  merged.stock_in_kg = "0";
+  return merged;
+}
+
+export function buildMaterialEditFormValues(
+  materials: Material[],
+  context: MaterialProductEditContext,
+): MaterialEditFormValues {
+  const defaultMicronId = context.defaultMicronId?.trim() ?? "";
+  let forProduct = materials.filter((row) => row.product_id === context.productId);
+  if (defaultMicronId !== "") {
+    forProduct = forProduct.filter((row) => row.micron_id === defaultMicronId);
+  }
+  const sorted = [...forProduct].sort((a, b) => {
+    const byMicron = a.micron_name.localeCompare(b.micron_name);
+    if (byMicron !== 0) {
+      return byMicron;
+    }
+    return Number(a.size) - Number(b.size);
+  });
+  const sizeUnitFallback =
+    sorted[0]?.size_unit_id ?? context.defaultSizeUnitId ?? "";
+  const quantityUnitFallback =
+    sorted[0]?.unit_id ?? context.defaultQuantityUnitId ?? "";
+
+  const micronIds = new Set(sorted.map((row) => row.micron_id));
+  const sharedMicronId =
+    defaultMicronId !== ""
+      ? defaultMicronId
+      : micronIds.size === 1
+        ? [...micronIds][0]!
+        : "";
+
+  const companyId =
+    context.companyId ??
+    sorted[0]?.company_id ??
+    "";
+
+  return {
+    company_id: companyId ?? "",
+    product_id: context.productId,
+    parent_id: sharedMicronId,
+    price_per_unit: context.pricePerUnit,
+    price_unit_id: context.priceUnitId,
     size_lines:
       sorted.length > 0
-        ? sorted.map((row) => ({
-            id: row.id,
-            size: formQuantityValue(row.size),
-            size_unit_id: row.size_unit_id,
-            quantity_available: formQuantityValue(row.total_kg),
-            unit_id: row.unit_id ?? "",
-            opening_rolls: formQuantityValue(row.rolls_on_hand),
-            is_active: row.is_active,
-          }))
+        ? consolidateMaterialSizeLines(
+            sorted.map((row) => ({
+              id: row.id,
+              parent_id: row.micron_id,
+              size: formQuantityValue(row.size),
+              size_unit_id: row.size_unit_id,
+              quantity_available: formQuantityValue(row.total_kg),
+              unit_id: row.unit_id ?? "",
+              opening_rolls: formQuantityValue(row.rolls_on_hand),
+              stock_in_rolls: "0",
+              stock_in_kg: "0",
+              is_active: row.is_active,
+            })),
+          ).lines
         : [
-            {
-              size: "0",
-              size_unit_id: base?.size_unit_id ?? "",
-              quantity_available: "0",
-              unit_id: base?.unit_id ?? "",
-              opening_rolls: "0",
-              is_active: true,
-            },
+            emptyMaterialSizeLine(
+              sharedMicronId,
+              sizeUnitFallback,
+              quantityUnitFallback,
+            ),
           ],
   };
 }
 
-export function emptyMaterialSizeLine(sizeUnitId = "", quantityUnitId = ""): MaterialSizeLineValues {
+/** @deprecated Use buildMaterialEditFormValues with product context. */
+export function materialsToEditFormValues(
+  materials: Material[],
+  fallback: Material | null,
+): MaterialEditFormValues {
+  const productId = fallback?.product_id ?? materials[0]?.product_id ?? "";
+  return buildMaterialEditFormValues(materials, {
+    productId,
+    companyId: fallback?.company_id ?? materials[0]?.company_id ?? undefined,
+    defaultMicronId: fallback?.micron_id ?? "",
+    pricePerUnit: fallback?.price_per_unit ?? materials[0]?.price_per_unit ?? "",
+    priceUnitId: fallback?.price_unit_id ?? materials[0]?.price_unit_id ?? "",
+    defaultSizeUnitId: fallback?.size_unit_id,
+    defaultQuantityUnitId: fallback?.unit_id ?? undefined,
+  });
+}
+
+export function emptyMaterialSizeLine(
+  parentId = "",
+  sizeUnitId = "",
+  quantityUnitId = "",
+): MaterialSizeLineValues {
   return {
+    parent_id: parentId,
     size: "0",
     size_unit_id: sizeUnitId,
     quantity_available: "0",
     unit_id: quantityUnitId,
     opening_rolls: "0",
+    stock_in_rolls: "0",
+    stock_in_kg: "0",
     is_active: true,
   };
 }
+
+export function uniqueMicronIdsFromSizeLines(
+  lines: Pick<MaterialSizeLineValues, "parent_id">[],
+): string[] {
+  return [...new Set(lines.map((line) => line.parent_id).filter(Boolean))];
+}
+
+export function uniqueMicronIdsFromEditValues(values: MaterialEditFormValues): string[] {
+  return uniqueMicronIdsFromSizeLines(resolveMaterialEditSizeLines(values));
+}
+
+export const MaterialHistoryEntrySchema = z.object({
+  id: z.string().uuid(),
+  timestamp: z.string(),
+  kind: z.enum(["stock", "edit"]),
+  action: z.string(),
+  user: z.object({ id: z.string().uuid(), name: z.string() }).nullable().optional(),
+  company_id: z.string().uuid().nullable().optional(),
+  company_name: z.string().optional(),
+  rolls: z.union([z.string(), z.number()]).nullable().optional(),
+  kilograms: z.union([z.string(), z.number()]).nullable().optional(),
+  price_per_unit: z.union([z.string(), z.number()]).nullable().optional(),
+  price_unit_code: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  changes: z
+    .array(
+      z.object({
+        field: z.string(),
+        old_value: z.unknown().optional(),
+        new_value: z.unknown().optional(),
+      }),
+    )
+    .optional(),
+});
+export type MaterialHistoryEntry = z.infer<typeof MaterialHistoryEntrySchema>;
+
+export const MaterialHistorySummarySchema = z.object({
+  company_id: z.string().uuid().nullable(),
+  company_name: z.string(),
+  size_label: z.string(),
+  product_name: z.string(),
+  micron_name: z.string(),
+  rolls_on_hand: z.union([z.string(), z.number()]),
+  total_kg: z.union([z.string(), z.number()]),
+  last_purchase_price: z.union([z.string(), z.number()]).nullable().optional(),
+  last_purchase_price_unit_code: z.string().nullable().optional(),
+  last_purchase_date: z.string().nullable().optional(),
+  last_purchase_rolls: z.union([z.string(), z.number()]).nullable().optional(),
+});
+export type MaterialHistorySummary = z.infer<typeof MaterialHistorySummarySchema>;
 
 export type MaterialListParams = {
   page?: number;
@@ -194,6 +525,7 @@ export type MaterialListParams = {
   sort_order?: "asc" | "desc";
   parent_id?: string;
   product_id?: string;
+  company_id?: string;
   is_active?: boolean;
   size?: string;
   rolls?: string;

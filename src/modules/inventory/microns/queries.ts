@@ -9,10 +9,18 @@ export const micronKeys = {
   allItems: (productId?: string) => [...micronKeys.all, "all", productId ?? ""] as const,
 };
 
-export function useAllMicrons(productId: string | undefined, enabled = true) {
+export function useAllMicrons(
+  productId: string | undefined,
+  enabled = true,
+  activeOnly = true,
+) {
   return useQuery({
-    queryKey: micronKeys.allItems(productId),
-    queryFn: () => micronsApi.listAll({ is_active: true, product_id: productId }),
+    queryKey: [...micronKeys.allItems(productId), activeOnly ? "active" : "all"] as const,
+    queryFn: () =>
+      micronsApi.listAll({
+        product_id: productId,
+        ...(activeOnly ? { is_active: true } : {}),
+      }),
     enabled: enabled && Boolean(productId),
   });
 }

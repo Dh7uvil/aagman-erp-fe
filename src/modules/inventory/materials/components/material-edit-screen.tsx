@@ -9,19 +9,30 @@ import { toast } from "sonner";
 import {
   sizeLineToCreatePayload,
   sizeLineToUpdatePayload,
+  stockQuantity,
   toMicronPricePayload,
 } from "@/modules/inventory/materials/api";
 import { MaterialEditFormFields } from "@/modules/inventory/materials/components/material-edit-form-fields";
-import { useCreateMaterial, useUpdateMaterial } from "@/modules/inventory/materials/mutations";
+import {
+  useCreateMaterial,
+  useDeleteMaterial,
+  useUpdateMaterial,
+} from "@/modules/inventory/materials/mutations";
+import { useCreateMovement } from "@/modules/inventory/movements/mutations";
 import { useUpdateMicron } from "@/modules/inventory/microns/mutations";
+import { useAllMicrons } from "@/modules/inventory/microns/queries";
 import { useAllMaterials, useMaterial } from "@/modules/inventory/materials/queries";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import {
   MaterialEditFormSchema,
-  emptyMaterialSizeLine,
-  materialsToEditFormValues,
+  buildMaterialEditFormValues,
+  consolidateMaterialSizeLines,
+  materialSizeLineHasStockIn,
+  materialSizeLineKey,
+  materialSizeLineStockOmitFlags,
+  resolveMaterialEditSizeLines,
+  uniqueMicronIdsFromEditValues,
   type MaterialEditFormValues,
-  type MaterialSizeLineValues,
 } from "@/modules/inventory/materials/schemas";
 import {
   categoryPermissions,
@@ -41,10 +52,10 @@ import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useCan } from "@/shared/providers/session-provider";
 import { useAllUnits } from "@/modules/inventory/units/queries";
 
-function micronPriceFromEditValues(values: MaterialEditFormValues) {
+function micronPriceFromEditValues(values: MaterialEditFormValues, micronId: string) {
   return toMicronPricePayload({
     product_id: values.product_id,
-    parent_id: values.parent_id,
+    parent_id: micronId,
     size: "",
     size_unit_id: values.size_lines[0]?.size_unit_id ?? "",
     quantity_available: "0",
@@ -56,70 +67,104 @@ function micronPriceFromEditValues(values: MaterialEditFormValues) {
   });
 }
 
-function lineToUpdatePayload(values: MaterialEditFormValues, line: MaterialSizeLineValues) {
-  return {
-    parent_id: values.parent_id,
-    ...sizeLineToUpdatePayload(line),
-  };
-}
-
-function lineToCreatePayload(values: MaterialEditFormValues, line: MaterialSizeLineValues) {
-  return sizeLineToCreatePayload(values.parent_id, line);
-}
-
 export function MaterialEditScreen({ materialId }: { materialId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const can = useCan();
   const canViewPrice = can(inventoryPricePermissions.read);
   const canUpdateCategory = can(categoryPermissions.update);
-  const { canUpdate } = useCrudPermissions(materialPermissions);
+  const { canUpdate, canDelete } = useCrudPermissions(materialPermissions);
   const createMaterial = useCreateMaterial();
   const updateMaterial = useUpdateMaterial();
+  const deleteMaterial = useDeleteMaterial();
   const updateMicron = useUpdateMicron();
+  const createMovement = useCreateMovement();
   const [formError, setFormError] = useState<string | null>(null);
+  const submitInFlight = useRef(false);
 
   const materialQuery = useMaterial(materialId);
   const material = materialQuery.data;
+  const productId = material?.product_id ?? "";
   const micronFromQuery = searchParams.get("micron");
   const micronId = micronFromQuery || material?.micron_id || "";
 
-  const variantsQuery = useAllMaterials({ parent_id: micronId || undefined }, Boolean(micronId));
+  const micronsQuery = useAllMicrons(productId || undefined, Boolean(productId));
+  const selectedMicron = micronsQuery.data?.find((item) => item.id === micronId);
+
+  const variantsQuery = useAllMaterials(
+    { product_id: productId || undefined, is_active: true },
+    Boolean(productId),
+  );
   const unitsQuery = useAllUnits();
   const units = unitsQuery.data ?? [];
   const defaultSizeUnitId = units.find((item) => item.code === "mm")?.id ?? "";
   const defaultQuantityUnitId = units.find((item) => item.code === "kg")?.id ?? "";
 
+  const formValuesReady =
+    Boolean(material) && variantsQuery.isSuccess && micronsQuery.isSuccess;
+
   const form = useForm<MaterialEditFormValues>({
     resolver: zodResolver(MaterialEditFormSchema),
-    defaultValues: materialsToEditFormValues([], null),
-    values:
-      material && variantsQuery.data !== undefined
-        ? (() => {
-            const next = materialsToEditFormValues(variantsQuery.data, material);
-            if (micronId) {
-              next.parent_id = micronId;
-            }
-            if (next.size_lines.length === 0) {
-              next.size_lines = [emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId)];
-            }
-            return next;
-          })()
-        : undefined,
+    defaultValues: buildMaterialEditFormValues([], {
+      productId: "",
+      defaultMicronId: "",
+      pricePerUnit: "",
+      priceUnitId: "",
+      defaultSizeUnitId,
+      defaultQuantityUnitId,
+    }),
     mode: "onSubmit",
     reValidateMode: "onSubmit",
   });
 
+  const formHydratedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!formValuesReady || !material) {
+      return;
+    }
+    const hydrationKey = `${materialId}|${micronId}`;
+    if (formHydratedKeyRef.current === hydrationKey) {
+      return;
+    }
+    formHydratedKeyRef.current = hydrationKey;
+    form.reset(
+      buildMaterialEditFormValues(variantsQuery.data ?? [], {
+        productId: material.product_id,
+        companyId: material.company_id ?? undefined,
+        defaultMicronId: micronId || material.micron_id,
+        pricePerUnit: selectedMicron?.price_per_unit ?? "",
+        priceUnitId: selectedMicron?.price_unit_id ?? "",
+        defaultSizeUnitId,
+        defaultQuantityUnitId,
+      }),
+    );
+  }, [
+    formValuesReady,
+    material,
+    materialId,
+    micronId,
+    variantsQuery.data,
+    selectedMicron?.price_per_unit,
+    selectedMicron?.price_unit_id,
+    defaultSizeUnitId,
+    defaultQuantityUnitId,
+    form,
+  ]);
+
   useDirtyFormGuard(canUpdate && form.formState.isDirty);
 
   const addSizeHandled = useRef(false);
+  useEffect(() => {
+    addSizeHandled.current = false;
+  }, [productId]);
+
   useEffect(() => {
     if (
       addSizeHandled.current ||
       searchParams.get("addSize") !== "1" ||
       !canUpdate ||
       !defaultSizeUnitId ||
-      !variantsQuery.data
+      !formValuesReady
     ) {
       return;
     }
@@ -129,54 +174,136 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     if (!hasEmpty) {
       form.setValue(
         "size_lines",
-        [...lines, emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId)],
+        [
+          ...lines,
+          {
+            parent_id: micronId,
+            size: "0",
+            size_unit_id: defaultSizeUnitId,
+            quantity_available: "0",
+            unit_id: defaultQuantityUnitId,
+            opening_rolls: "0",
+            stock_in_rolls: "0",
+            stock_in_kg: "0",
+            is_active: true,
+          },
+        ],
         {
-        shouldDirty: true,
-      });
+          shouldDirty: true,
+        },
+      );
     }
-  }, [searchParams, canUpdate, defaultSizeUnitId, defaultQuantityUnitId, form, variantsQuery.data]);
+  }, [
+    searchParams,
+    canUpdate,
+    defaultSizeUnitId,
+    defaultQuantityUnitId,
+    form,
+    formValuesReady,
+    micronId,
+  ]);
 
   async function onSubmit(values: MaterialEditFormValues) {
-    if (!canUpdate) {
+    if (!canUpdate || submitInFlight.current) {
       return;
     }
+    submitInFlight.current = true;
     setFormError(null);
     try {
+      const resolvedLines = resolveMaterialEditSizeLines(values);
+      const micronIds = uniqueMicronIdsFromEditValues(values);
       const micronPrice =
-        canViewPrice && canUpdateCategory ? micronPriceFromEditValues(values) : null;
+        canViewPrice && canUpdateCategory && micronIds.length === 1
+          ? micronPriceFromEditValues(values, micronIds[0]!)
+          : null;
       let lastId = materialId;
+      let lastMicronId = micronIds[0] ?? micronId;
 
-      for (const line of values.size_lines) {
+      const { lines: sizeLines, removedIds } = consolidateMaterialSizeLines(resolvedLines);
+      const movementDate = new Date().toISOString().slice(0, 10);
+      const purchasePrice = values.price_per_unit.trim();
+
+      for (const line of sizeLines) {
+        if (!line.id || !materialSizeLineHasStockIn(line)) {
+          continue;
+        }
+        await createMovement.mutateAsync({
+          category_id: line.id,
+          movement_date: movementDate,
+          direction: "IN",
+          rolls: stockQuantity(line.stock_in_rolls),
+          kilograms: stockQuantity(line.stock_in_kg),
+          note: "Stock received",
+          ...(canViewPrice && purchasePrice !== ""
+            ? {
+                price_per_unit: purchasePrice,
+                price_unit_id: values.price_unit_id || null,
+              }
+            : {}),
+        });
+      }
+
+      for (const line of sizeLines) {
         if (line.id) {
+          const stockOmit = materialSizeLineStockOmitFlags(line);
           await updateMaterial.mutateAsync({
             id: line.id,
-            values: lineToUpdatePayload(values, line),
+            values: sizeLineToUpdatePayload(line, stockOmit),
           });
           lastId = line.id;
+          lastMicronId = line.parent_id;
         } else {
-          const created = await createMaterial.mutateAsync(lineToCreatePayload(values, line));
+          const created = await createMaterial.mutateAsync(sizeLineToCreatePayload(line));
+          const key = materialSizeLineKey(line);
+          values.size_lines.forEach((formLine, index) => {
+            if (materialSizeLineKey(formLine) === key) {
+              form.setValue(`size_lines.${index}.id`, created.id, {
+                shouldDirty: false,
+                shouldValidate: false,
+              });
+            }
+          });
           lastId = created.id;
+          lastMicronId = line.parent_id;
         }
       }
 
-      if (micronPrice && values.parent_id) {
-        await updateMicron.mutateAsync({ id: values.parent_id, values: micronPrice });
+      if (canDelete) {
+        for (const duplicateId of removedIds) {
+          await deleteMaterial.mutateAsync(duplicateId);
+        }
+      }
+
+      if (micronPrice && micronIds.length === 1) {
+        await updateMicron.mutateAsync({ id: micronIds[0]!, values: micronPrice });
       }
 
       toast.success("Material updated");
-      router.push(`${materialRoutes.view(lastId)}?micron=${values.parent_id}`);
+      router.push(`${materialRoutes.view(lastId)}?micron=${lastMicronId}`);
     } catch (error) {
       if (applyFieldErrors(error, form.setError)) {
         return;
       }
       setFormError(getErrorMessage(error));
+    } finally {
+      submitInFlight.current = false;
     }
   }
 
   const pending =
-    createMaterial.isPending || updateMaterial.isPending || updateMicron.isPending;
+    createMaterial.isPending ||
+    updateMaterial.isPending ||
+    deleteMaterial.isPending ||
+    createMovement.isPending ||
+    updateMicron.isPending ||
+    form.formState.isSubmitting;
 
-  if (materialQuery.isLoading || variantsQuery.isLoading) {
+  if (
+    materialQuery.isLoading ||
+    variantsQuery.isLoading ||
+    micronsQuery.isLoading ||
+    !formValuesReady
+  ) {
     return (
       <div className="flex flex-col gap-5">
         <Skeleton className="h-8 w-64" />
@@ -216,7 +343,11 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
               className="flex w-full flex-col gap-4"
             >
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
-              <MaterialEditFormFields control={form.control} readOnly={!canUpdate} />
+              <MaterialEditFormFields
+                control={form.control}
+                readOnly={!canUpdate}
+                editProductId={productId || undefined}
+              />
               {canUpdate ? (
                 <div className="flex justify-end">
                   <SubmitButton isPending={pending}>Save changes</SubmitButton>

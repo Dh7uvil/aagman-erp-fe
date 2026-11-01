@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -17,9 +17,14 @@ import {
 } from "@/modules/inventory/permissions";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import {
-  MaterialEditFormSchema,
+  MaterialCreateFormSchema,
+  consolidateMaterialSizeLines,
   emptyMaterialSizeLine,
+  materialSizeLineKey,
   materialsToEditFormValues,
+  resolveMaterialEditSizeLines,
+  uniqueMicronIdsFromEditValues,
+  type MaterialCreateFormValues,
   type MaterialEditFormValues,
 } from "@/modules/inventory/materials/schemas";
 import { useAllUnits } from "@/modules/inventory/units/queries";
@@ -33,10 +38,10 @@ import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useCan } from "@/shared/providers/session-provider";
 
-function micronPriceFromEditValues(values: MaterialEditFormValues) {
+function micronPriceFromEditValues(values: MaterialEditFormValues, micronId: string) {
   return toMicronPricePayload({
     product_id: values.product_id,
-    parent_id: values.parent_id,
+    parent_id: micronId,
     size: "",
     size_unit_id: values.size_lines[0]?.size_unit_id ?? "",
     quantity_available: "0",
@@ -57,6 +62,7 @@ export function MaterialRecordScreen() {
   const createMaterial = useCreateMaterial();
   const updateMicron = useUpdateMicron();
   const [formError, setFormError] = useState<string | null>(null);
+  const submitInFlight = useRef(false);
 
   const unitsQuery = useAllUnits();
   const units = unitsQuery.data ?? [];
@@ -66,8 +72,8 @@ export function MaterialRecordScreen() {
   const readOnly = !canCreate;
   const canSubmit = canCreate;
 
-  const form = useForm<MaterialEditFormValues>({
-    resolver: zodResolver(MaterialEditFormSchema),
+  const form = useForm<MaterialCreateFormValues>({
+    resolver: zodResolver(MaterialCreateFormSchema),
     defaultValues: materialsToEditFormValues([], null),
     mode: "onSubmit",
     reValidateMode: "onSubmit",
@@ -81,7 +87,7 @@ export function MaterialRecordScreen() {
     if (lines.length === 0) {
       form.setValue(
         "size_lines",
-        [emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId)],
+        [emptyMaterialSizeLine("", defaultSizeUnitId, defaultQuantityUnitId)],
         { shouldValidate: false },
       );
       return;
@@ -105,36 +111,59 @@ export function MaterialRecordScreen() {
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
   async function onSubmit(values: MaterialEditFormValues) {
-    if (!canSubmit) {
+    if (!canSubmit || submitInFlight.current) {
       return;
     }
+    submitInFlight.current = true;
     setFormError(null);
     try {
+      const resolvedLines = resolveMaterialEditSizeLines(values);
+      const micronIds = uniqueMicronIdsFromEditValues(values);
       const micronPrice =
-        canViewPrice && canUpdateCategory ? micronPriceFromEditValues(values) : null;
+        canViewPrice && canUpdateCategory && micronIds.length === 1
+          ? micronPriceFromEditValues(values, micronIds[0]!)
+          : null;
 
       let lastId = "";
-      for (const line of values.size_lines) {
-        const created = await createMaterial.mutateAsync(
-          sizeLineToCreatePayload(values.parent_id, line),
-        );
+      let lastMicronId = micronIds[0] ?? "";
+      const { lines: sizeLines } = consolidateMaterialSizeLines(resolvedLines);
+      for (const line of sizeLines) {
+        if (line.id) {
+          lastId = line.id;
+          lastMicronId = line.parent_id;
+          continue;
+        }
+        const created = await createMaterial.mutateAsync(sizeLineToCreatePayload(line));
+        const key = materialSizeLineKey(line);
+        values.size_lines.forEach((formLine, index) => {
+          if (materialSizeLineKey(formLine) === key) {
+            form.setValue(`size_lines.${index}.id`, created.id, {
+              shouldDirty: false,
+              shouldValidate: false,
+            });
+          }
+        });
         lastId = created.id;
+        lastMicronId = line.parent_id;
       }
 
-      if (micronPrice && values.parent_id) {
-        await updateMicron.mutateAsync({ id: values.parent_id, values: micronPrice });
+      if (micronPrice && micronIds.length === 1) {
+        await updateMicron.mutateAsync({ id: micronIds[0]!, values: micronPrice });
       }
       toast.success("Material created");
-      router.push(`${materialRoutes.view(lastId)}?micron=${values.parent_id}`);
+      router.push(`${materialRoutes.view(lastId)}?micron=${lastMicronId}`);
     } catch (error) {
       if (applyFieldErrors(error, form.setError)) {
         return;
       }
       setFormError(getErrorMessage(error));
+    } finally {
+      submitInFlight.current = false;
     }
   }
 
-  const pending = createMaterial.isPending || updateMicron.isPending;
+  const pending =
+    createMaterial.isPending || updateMicron.isPending || form.formState.isSubmitting;
 
   return (
     <div className="flex flex-col gap-5">

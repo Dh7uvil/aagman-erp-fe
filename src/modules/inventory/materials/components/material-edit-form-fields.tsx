@@ -1,15 +1,17 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Control } from "react-hook-form";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
+import { useUpdateCategory } from "@/modules/inventory/categories/mutations";
 import { useAllCategories } from "@/modules/inventory/categories/queries";
 import { useAllMicrons } from "@/modules/inventory/microns/queries";
 import {
   applyCreatedMicronToMaterialForm,
+  applyCreatedMicronToMaterialSizeLine,
   applyCreatedProductToMaterialForm,
   applyCreatedSizeLineQuantityUnitToMaterialForm,
   applyCreatedSizeLineUnitToMaterialForm,
@@ -20,6 +22,7 @@ import { MicronQuickCreateDialog } from "@/modules/inventory/materials/component
 import { useDeleteMaterial } from "@/modules/inventory/materials/mutations";
 import {
   emptyMaterialSizeLine,
+  uniqueMicronIdsFromEditValues,
   type MaterialEditFormValues,
   type MaterialSizeLineValues,
 } from "@/modules/inventory/materials/schemas";
@@ -29,6 +32,9 @@ import {
   materialPermissions,
   unitPermissions,
 } from "@/modules/inventory/permissions";
+import { CompanyQuickCreateDialog } from "@/modules/users-management/companies/components/company-quick-create-dialog";
+import { companyPermissions } from "@/modules/users-management/companies/permissions";
+import { useCompanies } from "@/modules/users-management/companies/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action-dialog";
@@ -36,6 +42,7 @@ import { UnitQuickCreateDialog } from "@/modules/inventory/units/components/unit
 import { useAllUnits } from "@/modules/inventory/units/queries";
 import type { Unit } from "@/modules/inventory/units/schemas";
 import { Button } from "@/shared/components/ui/button";
+import { AddLineItemButton } from "@/shared/components/form/add-line-item-button";
 import { DecimalInput } from "@/shared/components/form/decimal-input";
 import { DISPLAY_SCALE } from "@/shared/lib/format";
 import { MasterSelect } from "@/shared/components/form/master-select";
@@ -55,9 +62,9 @@ function unitIdForCode(units: { id: string; code: string }[], code: string): str
   return units.find((item) => item.code === code)?.id ?? "";
 }
 
-/** Size | unit | rolls | qty | unit | active | delete — balanced fr cols so numerics do not collapse on tablet. */
+/** Micron | size | unit | rolls | qty | unit | active | delete */
 const SIZE_LINE_GRID =
-  "sm:grid sm:grid-cols-[minmax(5.5rem,1.15fr)_minmax(7.5rem,1.35fr)_minmax(5rem,1fr)_minmax(5rem,1fr)_minmax(7.5rem,1.35fr)_4.25rem_2.5rem] sm:items-center";
+  "sm:grid sm:grid-cols-[minmax(7rem,1.25fr)_minmax(5.5rem,1.15fr)_minmax(7.5rem,1.35fr)_minmax(5rem,1fr)_minmax(5rem,1fr)_minmax(7.5rem,1.35fr)_4.25rem_2.5rem] sm:items-center";
 
 const SIZE_LINE_CELL = "min-w-0 w-full sm:px-3 sm:py-3 lg:px-4";
 
@@ -83,25 +90,46 @@ function MaterialFormSection({
   );
 }
 
+function clearProductCascade(form: ReturnType<typeof useFormContext<MaterialEditFormValues>>) {
+  form.setValue("product_id", "", { shouldValidate: false, shouldDirty: true });
+  form.setValue("parent_id", "", { shouldValidate: false, shouldDirty: true });
+  form.clearErrors("parent_id");
+  const lines = form.getValues("size_lines");
+  lines.forEach((_, index) => {
+    form.setValue(`size_lines.${index}.parent_id`, "", {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
+    form.clearErrors(`size_lines.${index}.parent_id`);
+  });
+}
+
 export function MaterialEditFormFields({
   control,
   readOnly,
+  editProductId,
 }: {
   control: Control<MaterialEditFormValues>;
   readOnly: boolean;
+  /** When set, changing company updates this product after confirmation. */
+  editProductId?: string;
 }) {
   const can = useCan();
   const canViewPrice = can(inventoryPricePermissions.read);
   const canCreateCategory = can(categoryPermissions.create);
+  const canUpdateCategory = can(categoryPermissions.update);
+  const canCreateCompany = can(companyPermissions.create);
   const canCreateUnit = can(unitPermissions.create);
   const { canDelete } = useCrudPermissions(materialPermissions);
   const deleteMaterial = useDeleteMaterial();
   const form = useFormContext<MaterialEditFormValues>();
   const productId = useWatch({ control, name: "product_id" });
-  const parentId = useWatch({ control, name: "parent_id" });
+  const formParentId = useWatch({ control, name: "parent_id" });
+  const sizeLinesWatch = useWatch({ control, name: "size_lines" });
   const { fields, append, remove } = useFieldArray({ control, name: "size_lines" });
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [micronDialogOpen, setMicronDialogOpen] = useState(false);
+  const [micronDialogIndex, setMicronDialogIndex] = useState<number | null>(null);
   const [sizeUnitDialogOpen, setSizeUnitDialogOpen] = useState(false);
   const [qtyUnitDialogOpen, setQtyUnitDialogOpen] = useState(false);
   const [priceUnitDialogOpen, setPriceUnitDialogOpen] = useState(false);
@@ -111,6 +139,9 @@ export function MaterialEditFormFields({
     index: number;
     line: MaterialSizeLineValues;
   } | null>(null);
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
+  const updateCategory = useUpdateCategory();
 
   function handleSizeUnitCreated(unit: Unit) {
     if (sizeUnitDialogIndex === null) {
@@ -132,8 +163,12 @@ export function MaterialEditFormFields({
     applyCreatedUnitToMaterialForm(form, "price_unit_id", unit.id);
   }
 
-  const productsQuery = useAllCategories();
-  const micronsQuery = useAllMicrons(productId || undefined);
+  const companyId = useWatch({ control, name: "company_id" });
+  const companiesQuery = useCompanies({ page: 1, page_size: 200 });
+  const companies = companiesQuery.data?.data ?? [];
+  const scopedCompanyId = companyId || undefined;
+  const productsQuery = useAllCategories(scopedCompanyId);
+  const micronsQuery = useAllMicrons(productId || undefined, Boolean(productId), false);
   const micronsLoading =
     micronsQuery.isPending || micronsQuery.isFetching || micronsQuery.isRefetching;
   const unitsQuery = useAllUnits();
@@ -144,14 +179,107 @@ export function MaterialEditFormFields({
   const defaultSizeUnitId = unitIdForCode(units, "mm");
   const defaultQuantityUnitId = unitIdForCode(units, "kg");
 
-  useEffect(() => {
-    if (!parentId) {
+  const micronIdsForPrice = uniqueMicronIdsFromEditValues({
+    company_id: companyId ?? "",
+    product_id: productId ?? "",
+    parent_id: formParentId ?? "",
+    price_per_unit: "",
+    price_unit_id: "",
+    size_lines: sizeLinesWatch ?? [],
+  });
+
+  async function applyCompanyChange(nextCompanyId: string) {
+    form.setValue("company_id", nextCompanyId, { shouldValidate: true, shouldDirty: true });
+    clearProductCascade(form);
+  }
+
+  async function confirmCompanyMove() {
+    if (!pendingCompanyId || !editProductId) {
+      setPendingCompanyId(null);
       return;
     }
-    const micron = microns.find((item) => item.id === parentId);
+    try {
+      await updateCategory.mutateAsync({
+        id: editProductId,
+        values: { company_id: pendingCompanyId },
+      });
+      await applyCompanyChange(pendingCompanyId);
+      toast.success("Product moved to the selected company");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setPendingCompanyId(null);
+    }
+  }
+
+  function handleCompanyChange(nextCompanyId: string) {
+    if (!nextCompanyId || nextCompanyId === companyId) {
+      return;
+    }
+    if (editProductId && canUpdateCategory && productId) {
+      setPendingCompanyId(nextCompanyId);
+      return;
+    }
+    void applyCompanyChange(nextCompanyId);
+  }
+  const hasSingleMicron = micronIdsForPrice.length === 1;
+  const singleMicronId = micronIdsForPrice[0];
+  const priceSyncedForParentRef = useRef<string | null>(null);
+  const priceSyncedForImplicitMicronRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!formParentId) {
+      priceSyncedForParentRef.current = null;
+      return;
+    }
+    const micron = microns.find((item) => item.id === formParentId);
     if (!micron) {
       return;
     }
+    if (priceSyncedForParentRef.current !== formParentId) {
+      priceSyncedForParentRef.current = formParentId;
+      if (canViewPrice && micron.price_per_unit) {
+        form.setValue("price_per_unit", micron.price_per_unit, { shouldDirty: false });
+      }
+      if (micron.price_unit_id) {
+        form.setValue("price_unit_id", micron.price_unit_id, { shouldDirty: false });
+      } else {
+        const kgId = unitIdForCode(units, "kg");
+        if (kgId) {
+          form.setValue("price_unit_id", kgId, { shouldDirty: false });
+        }
+      }
+    }
+    const lines = form.getValues("size_lines");
+    const hasSavedLine = lines.some((line) => line.id);
+    if (hasSavedLine) {
+      return;
+    }
+    lines.forEach((line, index) => {
+      if (!line.parent_id) {
+        form.setValue(`size_lines.${index}.parent_id`, formParentId, {
+          shouldValidate: false,
+          shouldDirty: false,
+        });
+      }
+    });
+  }, [formParentId, microns, units, canViewPrice, form]);
+
+  useEffect(() => {
+    if (!hasSingleMicron || !singleMicronId || formParentId) {
+      if (!formParentId) {
+        priceSyncedForImplicitMicronRef.current = null;
+      }
+      return;
+    }
+    const micron = microns.find((item) => item.id === singleMicronId);
+    if (!micron) {
+      return;
+    }
+    if (priceSyncedForImplicitMicronRef.current === singleMicronId) {
+      return;
+    }
+    priceSyncedForImplicitMicronRef.current = singleMicronId;
     if (canViewPrice && micron.price_per_unit) {
       form.setValue("price_per_unit", micron.price_per_unit, { shouldDirty: false });
     }
@@ -163,16 +291,25 @@ export function MaterialEditFormFields({
         form.setValue("price_unit_id", kgId, { shouldDirty: false });
       }
     }
-  }, [parentId, microns, units, canViewPrice, form]);
+  }, [hasSingleMicron, singleMicronId, formParentId, microns, units, canViewPrice, form]);
 
   useEffect(() => {
     if (!productId || micronsLoading) {
       return;
     }
-    const micronId = form.getValues("parent_id");
-    if (micronId && !microns.some((m) => m.id === micronId)) {
+    const formMicron = form.getValues("parent_id");
+    if (formMicron && !microns.some((m) => m.id === formMicron)) {
       form.setValue("parent_id", "", { shouldValidate: false, shouldDirty: true });
     }
+    const lines = form.getValues("size_lines");
+    lines.forEach((line, index) => {
+      if (line.parent_id && !microns.some((m) => m.id === line.parent_id)) {
+        form.setValue(`size_lines.${index}.parent_id`, "", {
+          shouldValidate: false,
+          shouldDirty: true,
+        });
+      }
+    });
   }, [productId, microns, micronsLoading, form]);
 
   useEffect(() => {
@@ -190,22 +327,18 @@ export function MaterialEditFormFields({
     });
   }, [defaultSizeUnitId, defaultQuantityUnitId, form, fields.length]);
 
-  function addSizeLine() {
-    append(emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId));
+  function defaultParentIdForNewLine(): string {
+    const formMicron = form.getValues("parent_id");
+    if (formMicron) {
+      return formMicron;
+    }
+    const lines = form.getValues("size_lines");
+    return lines[lines.length - 1]?.parent_id ?? "";
   }
 
-  function renderAddSizeButton() {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={addSizeLine}
-        className="w-full sm:w-auto"
-      >
-        <Plus className="size-4" />
-        Add size
-      </Button>
+  function addSizeLine() {
+    append(
+      emptyMaterialSizeLine(defaultParentIdForNewLine(), defaultSizeUnitId, defaultQuantityUnitId),
     );
   }
 
@@ -213,11 +346,12 @@ export function MaterialEditFormFields({
     if (fields.length === 1) {
       form.setValue(
         "size_lines",
-        [emptyMaterialSizeLine(defaultSizeUnitId, defaultQuantityUnitId)],
+        [emptyMaterialSizeLine(defaultParentIdForNewLine(), defaultSizeUnitId, defaultQuantityUnitId)],
         {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
+          shouldDirty: true,
+          shouldValidate: true,
+        },
+      );
       return;
     }
     remove(index);
@@ -262,6 +396,30 @@ export function MaterialEditFormFields({
         <FormGrid columns={2}>
           <FormField
             control={control}
+            name="company_id"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2 lg:col-span-1">
+                <FormLabel>Company</FormLabel>
+                <FormControl>
+                  <MasterSelect
+                    value={field.value}
+                    onValueChange={handleCompanyChange}
+                    disabled={readOnly || (Boolean(editProductId) && !canUpdateCategory)}
+                    placeholder="Select company"
+                    options={companies.map((item) => ({ value: item.id, label: item.name }))}
+                    createLabel={!readOnly && canCreateCompany ? "Add company" : undefined}
+                    onCreate={
+                      !readOnly && canCreateCompany ? () => setCompanyDialogOpen(true) : undefined
+                    }
+                    loading={companiesQuery.isLoading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
             name="product_id"
             render={({ field }) => (
               <FormItem className="sm:col-span-2 lg:col-span-1">
@@ -271,16 +429,38 @@ export function MaterialEditFormFields({
                     value={field.value}
                     onValueChange={(value) => {
                       field.onChange(value);
+                      const product = products.find((item) => item.id === value);
+                      if (product?.company_id) {
+                        form.setValue("company_id", product.company_id, {
+                          shouldValidate: false,
+                          shouldDirty: false,
+                        });
+                      }
                       form.setValue("parent_id", "", { shouldValidate: false, shouldDirty: true });
                       form.clearErrors("parent_id");
+                      const lines = form.getValues("size_lines");
+                      lines.forEach((_, index) => {
+                        form.setValue(`size_lines.${index}.parent_id`, "", {
+                          shouldValidate: false,
+                          shouldDirty: true,
+                        });
+                        form.clearErrors(`size_lines.${index}.parent_id`);
+                      });
                     }}
-                    disabled={readOnly}
-                    placeholder="Select product"
-                    options={products.map((item) => ({ value: item.id, label: item.name }))}
-                    createLabel={!readOnly && canCreateCategory ? "New product" : undefined}
-                    onCreate={
-                      !readOnly && canCreateCategory ? () => setProductDialogOpen(true) : undefined
+                    disabled={readOnly || (!companyId && !editProductId)}
+                    placeholder={
+                      companyId || editProductId ? "Select product" : "Select company first"
                     }
+                    options={products.map((item) => ({ value: item.id, label: item.name }))}
+                    createLabel={
+                      !readOnly && canCreateCategory && companyId ? "New product" : undefined
+                    }
+                    onCreate={
+                      !readOnly && canCreateCategory && companyId
+                        ? () => setProductDialogOpen(true)
+                        : undefined
+                    }
+                    loading={productsQuery.isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -316,7 +496,10 @@ export function MaterialEditFormFields({
                     }
                     onCreate={
                       !readOnly && canCreateCategory && productId
-                        ? () => setMicronDialogOpen(true)
+                        ? () => {
+                            setMicronDialogIndex(null);
+                            setMicronDialogOpen(true);
+                          }
                         : undefined
                     }
                   />
@@ -334,8 +517,17 @@ export function MaterialEditFormFields({
                   <FormItem>
                     <FormLabel>Price</FormLabel>
                     <FormControl>
-                      <DecimalInput kind="money" {...field} disabled={readOnly} />
+                      <DecimalInput
+                        kind="money"
+                        {...field}
+                        disabled={readOnly || !hasSingleMicron}
+                      />
                     </FormControl>
+                    {!readOnly && editProductId ? (
+                      <p className="text-muted-foreground text-xs">
+                        Used for new stock added via Add size rows (recorded per receipt in history).
+                      </p>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -350,7 +542,7 @@ export function MaterialEditFormFields({
                       <MasterSelect
                         value={field.value}
                         onValueChange={field.onChange}
-                        disabled={readOnly}
+                        disabled={readOnly || !hasSingleMicron}
                         placeholder="Per"
                         options={units.map((item) => ({
                           value: item.id,
@@ -376,6 +568,9 @@ export function MaterialEditFormFields({
           <div
             className={`hidden overflow-hidden rounded-md border bg-muted/50 shadow-sm sm:grid ${SIZE_LINE_GRID}`}
           >
+            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
+              Micron
+            </div>
             <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">Size</div>
             <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
               Size unit
@@ -396,12 +591,49 @@ export function MaterialEditFormFields({
           </div>
           {fields.map((fieldItem, index) => {
             const line = form.watch(`size_lines.${index}`);
+            const isIncrementRow = Boolean(editProductId && !line.id);
             const showRemove = canRemoveSizeLine(line);
             return (
               <div
                 key={fieldItem.id}
                 className={`grid grid-cols-1 gap-4 overflow-hidden rounded-md border bg-card p-4 shadow-sm ${SIZE_LINE_GRID} sm:gap-0 sm:p-0`}
               >
+                <FormField
+                  control={control}
+                  name={`size_lines.${index}.parent_id`}
+                  render={({ field }) => (
+                    <FormItem className={SIZE_LINE_CELL}>
+                      <FormLabel className="sm:sr-only">Micron</FormLabel>
+                      <FormControl>
+                        <MasterSelect
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            if (value) {
+                              form.clearErrors(`size_lines.${index}.parent_id`);
+                            }
+                          }}
+                          disabled={readOnly || !productId}
+                          placeholder={productId ? "Micron" : "Product first"}
+                          options={microns.map((item) => ({ value: item.id, label: item.name }))}
+                          loading={micronsLoading}
+                          createLabel={
+                            !readOnly && canCreateCategory && productId ? "New micron" : undefined
+                          }
+                          onCreate={
+                            !readOnly && canCreateCategory && productId
+                              ? () => {
+                                  setMicronDialogIndex(index);
+                                  setMicronDialogOpen(true);
+                                }
+                              : undefined
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={control}
                   name={`size_lines.${index}.size`}
@@ -457,7 +689,9 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.opening_rolls`}
                   render={({ field }) => (
                     <FormItem className={SIZE_LINE_CELL}>
-                      <FormLabel className="sm:sr-only">No. of rolls</FormLabel>
+                      <FormLabel className={isIncrementRow ? "sr-only" : "sm:sr-only"}>
+                        {isIncrementRow ? "Add rolls" : "No. of rolls"}
+                      </FormLabel>
                       <FormControl>
                         <DecimalInput
                           kind="quantity"
@@ -475,7 +709,9 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.quantity_available`}
                   render={({ field }) => (
                     <FormItem className={SIZE_LINE_CELL}>
-                      <FormLabel className="sm:sr-only">Qty available</FormLabel>
+                      <FormLabel className={isIncrementRow ? "sr-only" : "sm:sr-only"}>
+                        {isIncrementRow ? "Add qty (kg)" : "Qty available"}
+                      </FormLabel>
                       <FormControl>
                         <DecimalInput
                           kind="quantity"
@@ -555,21 +791,53 @@ export function MaterialEditFormFields({
             );
           })}
           {!readOnly ? (
-            <div className="flex w-full sm:justify-end">{renderAddSizeButton()}</div>
+            <AddLineItemButton onClick={addSizeLine}>Add size</AddLineItemButton>
           ) : null}
         </div>
       </MaterialFormSection>
 
+      <CompanyQuickCreateDialog
+        open={companyDialogOpen}
+        onOpenChange={setCompanyDialogOpen}
+        onCreated={(company) => {
+          form.setValue("company_id", company.id, { shouldValidate: true, shouldDirty: true });
+          clearProductCascade(form);
+        }}
+      />
       <CategoryQuickCreateDialog
         open={productDialogOpen}
         onOpenChange={setProductDialogOpen}
-        onCreated={(category) => applyCreatedProductToMaterialForm(form, category.id)}
+        companyId={companyId || undefined}
+        onCreated={(category) =>
+          applyCreatedProductToMaterialForm(form, category.id, category.company_id)
+        }
       />
       <MicronQuickCreateDialog
         open={micronDialogOpen}
-        onOpenChange={setMicronDialogOpen}
+        onOpenChange={(open) => {
+          setMicronDialogOpen(open);
+          if (!open) {
+            setMicronDialogIndex(null);
+          }
+        }}
         defaultProductId={productId || undefined}
-        onCreated={(micron) => applyCreatedMicronToMaterialForm(form, micron, canViewPrice)}
+        onCreated={(micron) => {
+          if (micronDialogIndex === null) {
+            applyCreatedMicronToMaterialForm(form, micron, canViewPrice);
+            const lines = form.getValues("size_lines");
+            lines.forEach((line, index) => {
+              if (!line.id && !line.parent_id) {
+                form.setValue(`size_lines.${index}.parent_id`, micron.id, {
+                  shouldValidate: false,
+                  shouldDirty: true,
+                });
+              }
+            });
+          } else {
+            applyCreatedMicronToMaterialSizeLine(form, micronDialogIndex, micron);
+            setMicronDialogIndex(null);
+          }
+        }}
       />
       <UnitQuickCreateDialog
         open={sizeUnitDialogOpen}
@@ -595,6 +863,15 @@ export function MaterialEditFormFields({
         open={priceUnitDialogOpen}
         onOpenChange={setPriceUnitDialogOpen}
         onCreated={handlePriceUnitCreated}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingCompanyId)}
+        title="Move product to another company"
+        description="This moves the product and all of its materials to the selected company."
+        confirmLabel="Move product"
+        pending={updateCategory.isPending}
+        onConfirm={confirmCompanyMove}
+        onOpenChange={(open) => !open && setPendingCompanyId(null)}
       />
       <ConfirmActionDialog
         open={Boolean(pendingDelete)}

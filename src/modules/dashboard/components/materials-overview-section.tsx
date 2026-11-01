@@ -72,7 +72,7 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
   const kpis = query.data?.kpis;
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex min-w-0 flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Materials & stock</h2>
         <p className="text-muted-foreground text-sm">
@@ -107,12 +107,12 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="min-w-0">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Movement (kg)</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {query.isLoading ? (
               <Skeleton className="h-[220px] w-full sm:h-[260px]" />
             ) : movementData.length === 0 ? (
@@ -139,11 +139,11 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
           </CardContent>
         </Card>
 
-        <Card className="min-w-0">
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Stock by product</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {query.isLoading ? (
               <Skeleton className="mx-auto aspect-square max-h-[220px] w-full sm:max-h-[260px]" />
             ) : productData.length === 0 ? (

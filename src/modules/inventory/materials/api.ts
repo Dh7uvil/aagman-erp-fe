@@ -1,6 +1,8 @@
 import { DEFAULT_PAGE_SIZE } from "@/config/constants";
 import {
   MaterialCreateRequestSchema,
+  MaterialHistoryEntrySchema,
+  MaterialHistorySummarySchema,
   MaterialListSchema,
   MaterialSchema,
   MaterialUpdateRequestSchema,
@@ -26,6 +28,7 @@ export const materialsApi = {
         sort_order: params.sort_order,
         parent_id: params.parent_id,
         product_id: params.product_id,
+        company_id: params.company_id,
         is_active: params.is_active,
         size: params.size,
         rolls: params.rolls,
@@ -59,9 +62,19 @@ export const materialsApi = {
     ),
   delete: async (id: string): Promise<Material> =>
     MaterialSchema.parse(await apiClient.delete(`/inventory/material-subcategories/${id}`)),
+  history: async (id: string, page = 1) => {
+    const result = await apiClient.getList<unknown>(`/inventory/material-subcategories/${id}/history`, {
+      params: { page, page_size: 50 },
+    });
+    return { data: MaterialHistoryEntrySchema.array().parse(result.data), meta: result.meta };
+  },
+  historySummary: async (id: string) =>
+    MaterialHistorySummarySchema.parse(
+      await apiClient.get(`/inventory/material-subcategories/${id}/history-summary`),
+    ),
 };
 
-function stockQuantity(value: string): string {
+export function stockQuantity(value: string): string {
   return value.trim() || "0";
 }
 
@@ -77,12 +90,9 @@ export function toCreatePayload(values: MaterialFormValues): MaterialCreateReque
   };
 }
 
-export function sizeLineToCreatePayload(
-  parentId: string,
-  line: MaterialSizeLineValues,
-): MaterialCreateRequest {
+export function sizeLineToCreatePayload(line: MaterialSizeLineValues): MaterialCreateRequest {
   return {
-    parent_id: parentId,
+    parent_id: line.parent_id,
     size: line.size.trim(),
     size_unit_id: line.size_unit_id,
     unit_id: line.unit_id,
@@ -104,15 +114,26 @@ export function toUpdatePayload(values: MaterialFormValues): MaterialUpdateReque
   };
 }
 
-export function sizeLineToUpdatePayload(line: MaterialSizeLineValues): MaterialUpdateRequest {
-  return {
+export function sizeLineToUpdatePayload(
+  line: MaterialSizeLineValues,
+  options?: { omitStock?: boolean; omitRolls?: boolean; omitKg?: boolean },
+): MaterialUpdateRequest {
+  const omitRolls = options?.omitStock || options?.omitRolls;
+  const omitKg = options?.omitStock || options?.omitKg;
+  const payload: MaterialUpdateRequest = {
+    parent_id: line.parent_id,
     size: line.size.trim(),
     size_unit_id: line.size_unit_id,
     unit_id: line.unit_id,
-    rolls_on_hand: stockQuantity(line.opening_rolls),
-    total_kg: stockQuantity(line.quantity_available),
     is_active: line.is_active,
   };
+  if (!omitRolls) {
+    payload.rolls_on_hand = stockQuantity(line.opening_rolls);
+  }
+  if (!omitKg) {
+    payload.total_kg = stockQuantity(line.quantity_available);
+  }
+  return payload;
 }
 
 export function toMicronPricePayload(values: MaterialFormValues): {

@@ -1,5 +1,6 @@
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
 import { jobRoutes } from "@/modules/inventory/jobs/routes";
+import { materialRoutes } from "@/modules/inventory/materials/routes";
 
 export const MASTER_HISTORY_PAGE_TITLE = "History";
 
@@ -22,6 +23,12 @@ const HISTORY_RESOURCES = [
     slug: "cylinder-returns",
     listHref: cylinderReturnRoutes.list,
     label: "Cylinder returns",
+    supportsAttachments: false,
+  },
+  {
+    slug: "materials",
+    listHref: materialRoutes.list,
+    label: "Materials",
     supportsAttachments: false,
   },
 ] as const satisfies readonly HistoryResourceSpec[];

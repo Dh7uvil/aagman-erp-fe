@@ -78,7 +78,7 @@ export function JobsOverviewSection({ rangeParams }: { rangeParams: DashboardRan
   const kpis = query.data?.kpis;
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex min-w-0 flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Jobs & cylinders</h2>
         <p className="text-muted-foreground text-sm">
@@ -117,12 +117,12 @@ export function JobsOverviewSection({ rangeParams }: { rangeParams: DashboardRan
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="min-w-0">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Jobs by status</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {query.isLoading ? (
               <Skeleton className="mx-auto aspect-square max-h-[220px] w-full sm:max-h-[260px]" />
             ) : statusData.length === 0 ? (
@@ -148,11 +148,11 @@ export function JobsOverviewSection({ rangeParams }: { rangeParams: DashboardRan
           </CardContent>
         </Card>
 
-        <Card className="min-w-0">
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Activity over time</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {query.isLoading ? (
               <Skeleton className="h-[220px] w-full sm:h-[260px]" />
             ) : activityData.length === 0 ? (

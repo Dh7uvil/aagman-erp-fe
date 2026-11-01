@@ -57,6 +57,7 @@ export function ListViewToggle({
  * Card/table toggle and column picker.
  * - Default: share a toolbar row (e.g. beside Sort); controls grouped on the right.
  * - `mobileFullRow`: own full-width row; toggle left, customize right.
+ *   `DataTableToolbar` sets this automatically from sibling count; pass explicitly to override.
  */
 export function ListViewToolbarControls({
   listView,

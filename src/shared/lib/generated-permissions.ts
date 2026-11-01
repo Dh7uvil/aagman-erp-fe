@@ -50,6 +50,7 @@ export const catalogPermissions = [
   "inventory.job_image.update",
   "inventory.material.create",
   "inventory.material.delete",
+  "inventory.material.history",
   "inventory.material.read",
   "inventory.material.update",
   "inventory.material.view_price",
@@ -147,6 +148,7 @@ export const permissionsByModule = {
     material: {
       create: "inventory.material.create",
       delete: "inventory.material.delete",
+      history: "inventory.material.history",
       read: "inventory.material.read",
       update: "inventory.material.update",
       view_price: "inventory.material.view_price",

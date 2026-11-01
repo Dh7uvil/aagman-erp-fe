@@ -5,6 +5,13 @@ import { useSearchParams } from "next/navigation";
 
 import { useCylinderReturnHistory } from "@/modules/inventory/cylinder-returns/queries";
 import { useJob, useJobHistory } from "@/modules/inventory/jobs/queries";
+import { MaterialHistoryCard } from "@/modules/inventory/materials/components/material-history-card";
+import {
+  useMaterialHistory,
+  useMaterialHistorySummary,
+} from "@/modules/inventory/materials/queries";
+import { inventoryPricePermissions } from "@/modules/inventory/permissions";
+import { useCan } from "@/shared/providers/session-provider";
 import { EntityHistoryCard } from "@/shared/components/document/entity-history-card";
 import { useSetBreadcrumbRecord } from "@/shared/components/layout/breadcrumb-record";
 import { PageHeader } from "@/shared/components/layout/page-header";
@@ -57,6 +64,18 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
         pageTitle={pageTitle}
         recordLabel="Cylinder return"
         supportsAttachments={spec.supportsAttachments}
+      />
+    );
+  }
+
+  if (resource === "materials") {
+    return (
+      <MaterialRecordHistory
+        id={id}
+        viewHref={viewHref}
+        code={code}
+        pageTitle={pageTitle}
+        recordLabel="Material"
       />
     );
   }
@@ -154,6 +173,45 @@ function JobRecordHistory({
       job={jobQuery.data}
       supportsAttachments={supportsAttachments}
     />
+  );
+}
+
+function MaterialRecordHistory({
+  id,
+  viewHref,
+  pageTitle,
+  recordLabel,
+}: {
+  id: string;
+  viewHref: string;
+  code: string | null;
+  pageTitle: string;
+  recordLabel: string;
+}) {
+  const can = useCan();
+  const canViewPrice = can(inventoryPricePermissions.read);
+  const historyQuery = useMaterialHistory(id);
+  const summaryQuery = useMaterialHistorySummary(id);
+
+  return (
+    <div className="flex flex-col gap-5 p-6">
+      <PageHeader
+        title={pageTitle}
+        actions={
+          <Button type="button" size="sm" variant="outline" asChild>
+            <Link href={viewHref}>
+              <BackLabel>Back to {recordLabel.toLowerCase()}</BackLabel>
+            </Link>
+          </Button>
+        }
+      />
+      <MaterialHistoryCard
+        summary={summaryQuery.data}
+        entries={historyQuery.data ?? []}
+        loading={historyQuery.isLoading || summaryQuery.isLoading}
+        canViewPrice={canViewPrice}
+      />
+    </div>
   );
 }
 

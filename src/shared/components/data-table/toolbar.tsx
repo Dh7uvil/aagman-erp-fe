@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { withToolbarMobileLayout } from "@/shared/components/data-table/toolbar-mobile-layout";
 import { Label } from "@/shared/components/ui/label";
 import { cn } from "@/shared/lib/cn";
 
@@ -19,7 +20,7 @@ export function DataTableToolbar({
         className,
       )}
     >
-      {children}
+      {withToolbarMobileLayout(children)}
     </div>
   );
 }

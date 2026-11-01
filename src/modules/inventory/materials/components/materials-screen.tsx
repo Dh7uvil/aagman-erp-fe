@@ -1,9 +1,9 @@
 "use client";
 
-import { FolderPlus, Plus } from "lucide-react";
+import { FolderPlus, History, MinusCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { formatPricePerUnit } from "@/modules/inventory/format";
@@ -19,6 +19,7 @@ import {
 } from "@/modules/inventory/materials/components/materials-table-filters";
 import { useDeleteMaterial } from "@/modules/inventory/materials/mutations";
 import { useMaterials } from "@/modules/inventory/materials/queries";
+import { stockOutButtonClassName, stockOutIconButtonClassName } from "@/modules/inventory/materials/components/material-stock-out-button-styles";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import type { Material } from "@/modules/inventory/materials/schemas";
 import {
@@ -52,6 +53,8 @@ import {
   isNonDefaultListActiveFilter,
   parseListActiveFilter,
 } from "@/shared/lib/list-filters";
+import { useCompanies } from "@/modules/users-management/companies/queries";
+import { historyHref } from "@/shared/lib/history";
 import { useCan } from "@/shared/providers/session-provider";
 
 const ALL = "all";
@@ -66,6 +69,7 @@ export function MaterialsScreen() {
   const router = useRouter();
   const can = useCan();
   const canViewPrice = can(inventoryPricePermissions.read);
+  const canViewHistory = can(materialPermissions.history);
   const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(materialPermissions);
   const canCreateCategory = can(categoryPermissions.create);
   const deleteMaterial = useDeleteMaterial();
@@ -74,6 +78,7 @@ export function MaterialsScreen() {
   const [micronDialogOpen, setMicronDialogOpen] = useState(false);
   const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
     useTableParams();
+  const companyId = filters.company_id;
   const productId = filters.product_id;
   const micronId = filters.parent_id;
   const jpStockView = Boolean(productId && micronId);
@@ -89,12 +94,15 @@ export function MaterialsScreen() {
     search,
     sort_by: effectiveSortBy,
     sort_order: effectiveSortOrder,
+    company_id: companyId,
     product_id: productId,
     parent_id: micronId,
     is_active: parseListActiveFilter(filters.active),
     ...stockFilters,
   });
-  const categoriesQuery = useAllCategories();
+  const companiesQuery = useCompanies({ page: 1, page_size: 200 });
+  const companies = companiesQuery.data?.data ?? [];
+  const categoriesQuery = useAllCategories(companyId ?? undefined);
   const micronsQuery = useAllMicrons(productId ?? undefined);
   const showActions = hasRowActions(canRead, canUpdate, canDelete);
   const materials = materialsQuery.data?.data ?? [];
@@ -106,6 +114,7 @@ export function MaterialsScreen() {
   const sizeUnitCode = materials[0]?.size_unit_code || "mm";
   const hasActiveFilters = Boolean(
     search ||
+      companyId ||
       productId ||
       micronId ||
       sortBy ||
@@ -119,6 +128,7 @@ export function MaterialsScreen() {
       sort_by: null,
       sort_order: null,
       filters: {
+        company_id: null,
         product_id: null,
         parent_id: null,
         size: null,
@@ -144,6 +154,57 @@ export function MaterialsScreen() {
     }
   }, [productId, micronId, microns, setParams]);
 
+  function stockOutHref(material?: Material) {
+    return materialRoutes.stockOut({
+      company_id: material?.company_id ?? companyId ?? undefined,
+      product_id: material?.product_id ?? productId ?? undefined,
+      parent_id: material?.micron_id ?? micronId ?? undefined,
+      material_id: material?.id,
+    });
+  }
+
+  function rowExtraActions(material: Material) {
+    const actions: ReactNode[] = [];
+    if (canUpdate && material.is_active) {
+      actions.push(
+        <Button
+          key="stock-out"
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={stockOutIconButtonClassName}
+          aria-label="Stock out"
+          asChild
+        >
+          <Link href={stockOutHref(material)}>
+            <MinusCircle className="size-3.5" />
+          </Link>
+        </Button>,
+      );
+    }
+    const history = historyAction(material);
+    if (history) {
+      actions.push(<span key="history">{history}</span>);
+    }
+    if (actions.length === 0) {
+      return undefined;
+    }
+    return <div className="flex items-center gap-0.5">{actions}</div>;
+  }
+
+  function historyAction(material: Material) {
+    if (!canViewHistory) {
+      return undefined;
+    }
+    return (
+      <Button type="button" variant="ghost" size="icon-sm" aria-label="History" asChild>
+        <Link href={historyHref("materials", material.id, material.name)}>
+          <History className="size-3.5" />
+        </Link>
+      </Button>
+    );
+  }
+
   async function confirmDelete() {
     if (!deleting) {
       return;
@@ -160,6 +221,11 @@ export function MaterialsScreen() {
   const columnDefs = useMemo((): Array<DataTableColumn<Material>> => {
     if (jpStockView) {
       const cols: Array<DataTableColumn<Material>> = [
+        {
+          id: "company",
+          header: "Company",
+          cell: (row) => row.company_name || "—",
+        },
         {
           id: "size",
           header: `Width (${sizeUnitCode})`,
@@ -197,8 +263,13 @@ export function MaterialsScreen() {
           <DataTableRowActions
             entityName={material.size_label}
             onView={canRead ? () => router.push(materialRoutes.view(material.id)) : undefined}
-            onEdit={canUpdate ? () => router.push(materialRoutes.edit(material.id)) : undefined}
+            onEdit={
+              canUpdate
+                ? () => router.push(materialRoutes.edit(material.id, material.micron_id))
+                : undefined
+            }
             onDelete={canDelete ? () => setDeleting(material) : undefined}
+            extra={rowExtraActions(material)}
           />
         )),
       );
@@ -206,6 +277,11 @@ export function MaterialsScreen() {
     }
 
     const cols: Array<DataTableColumn<Material>> = [
+      {
+        id: "company",
+        header: "Company",
+        cell: (row) => row.company_name || "—",
+      },
       {
         id: "product",
         header: "Product",
@@ -252,8 +328,13 @@ export function MaterialsScreen() {
         <DataTableRowActions
           entityName={material.name}
           onView={canRead ? () => router.push(materialRoutes.view(material.id)) : undefined}
-          onEdit={canUpdate ? () => router.push(materialRoutes.edit(material.id)) : undefined}
+          onEdit={
+            canUpdate
+              ? () => router.push(materialRoutes.edit(material.id, material.micron_id))
+              : undefined
+          }
           onDelete={canDelete ? () => setDeleting(material) : undefined}
+          extra={rowExtraActions(material)}
         />
       )),
     );
@@ -262,6 +343,7 @@ export function MaterialsScreen() {
     canDelete,
     canRead,
     canUpdate,
+    canViewHistory,
     canViewPrice,
     jpStockView,
     router,
@@ -301,6 +383,19 @@ export function MaterialsScreen() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
+            {canUpdate ? (
+              <Button
+                type="button"
+                variant="outline"
+                className={stockOutButtonClassName}
+                asChild
+              >
+                <Link href={stockOutHref()}>
+                  <MinusCircle className="size-4" />
+                  Stock out
+                </Link>
+              </Button>
+            ) : null}
             {canCreateCategory ? (
               <Button variant="outline" type="button" onClick={() => setCategoryDialogOpen(true)}>
                 <FolderPlus className="size-4" />
@@ -332,6 +427,26 @@ export function MaterialsScreen() {
           placeholder="Search materials…"
         />
         <FilterSelect
+          label="Company"
+          className="w-full sm:w-44"
+          placeholder="Company"
+          value={companyId ?? ALL}
+          onValueChange={(value) =>
+            setParams({
+              filters: {
+                company_id: value === ALL ? null : value,
+                product_id: null,
+                parent_id: null,
+              },
+              page: 1,
+            })
+          }
+          options={[
+            { value: ALL, label: "All companies" },
+            ...companies.map((item) => ({ value: item.id, label: item.name })),
+          ]}
+        />
+        <FilterSelect
           label="Product"
           className="w-full sm:w-52"
           placeholder="All products"
@@ -339,6 +454,7 @@ export function MaterialsScreen() {
           onValueChange={(value) =>
             setParams({
               filters: {
+                company_id: companyId ?? null,
                 product_id: value === ALL ? null : value,
                 parent_id: null,
               },
@@ -407,7 +523,11 @@ export function MaterialsScreen() {
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
       />
-      <CategoryQuickCreateDialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen} />
+      <CategoryQuickCreateDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        companyId={companyId ?? undefined}
+      />
       <MicronQuickCreateDialog
         open={micronDialogOpen}
         onOpenChange={setMicronDialogOpen}

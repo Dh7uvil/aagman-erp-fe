@@ -30,11 +30,13 @@ import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 export function CategoryQuickCreateDialog({
   open,
   onOpenChange,
+  companyId,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated?: (category: { id: string; name: string }) => void;
+  companyId?: string;
+  onCreated?: (category: { id: string; name: string; company_id?: string | null }) => void;
 }) {
   const createCategory = useCreateCategory();
   const [formError, setFormError] = useState<string | null>(null);
@@ -44,9 +46,14 @@ export function CategoryQuickCreateDialog({
   });
 
   async function onSubmit(values: CategoryFormValues) {
+    if (!companyId) {
+      setFormError("Select a company first");
+      return;
+    }
     setFormError(null);
     try {
       const created = await createCategory.mutateAsync({
+        company_id: companyId,
         name: values.name.trim(),
         is_active: values.is_active,
       });
