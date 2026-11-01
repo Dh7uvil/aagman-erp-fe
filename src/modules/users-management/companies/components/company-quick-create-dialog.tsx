@@ -26,6 +26,7 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Dialog, DialogContent } from "@/shared/components/ui/dialog";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 
 const CompanyQuickCreateSchema = z.object({
@@ -45,10 +46,13 @@ export function CompanyQuickCreateDialog({
 }) {
   const createCompany = useCreateCompany();
   const [formError, setFormError] = useState<string | null>(null);
+  const emptyValues = { name: "" };
+
   const form = useForm<CompanyQuickCreateValues>({
     resolver: zodResolver(CompanyQuickCreateSchema),
-    defaultValues: { name: "" },
+    defaultValues: emptyValues,
   });
+  useFormResetOnDialogOpen(form, emptyValues, open, "company-quick-create");
 
   async function onSubmit(values: CompanyQuickCreateValues) {
     setFormError(null);

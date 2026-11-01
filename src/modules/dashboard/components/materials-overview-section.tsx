@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Package, PackageX, Scale, TrendingDown } from "lucide-react";
+import { AlertCircle, IndianRupee, Package, PackageX, Scale, TrendingDown } from "lucide-react";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 
@@ -9,7 +9,7 @@ import { RankedListCard } from "@/modules/dashboard/components/ranked-list-card"
 import { formatBucketLabel } from "@/modules/dashboard/lib/bucket-label";
 import { useMaterialsDashboard } from "@/modules/dashboard/queries";
 import type { DashboardRangeParams } from "@/modules/dashboard/schemas";
-import { materialPermissions } from "@/modules/inventory/permissions";
+import { inventoryPricePermissions, materialPermissions } from "@/modules/inventory/permissions";
 import { getErrorMessage } from "@/shared/api/errors";
 import {
   ChartContainer,
@@ -35,6 +35,7 @@ const PRODUCT_COLORS = CATEGORICAL_CHART_COLORS;
 export function MaterialsOverviewSection({ rangeParams }: { rangeParams: DashboardRangeParams }) {
   const can = useCan();
   const canRead = can(materialPermissions.read);
+  const canViewPrice = can(inventoryPricePermissions.read);
   const query = useMaterialsDashboard(rangeParams, canRead);
 
   const movementData = useMemo(
@@ -84,7 +85,13 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
         <p className="text-destructive text-sm">{getErrorMessage(query.error)}</p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div
+        className={
+          canViewPrice
+            ? "grid grid-cols-2 gap-3 lg:grid-cols-4"
+            : "grid grid-cols-2 gap-3 lg:grid-cols-3"
+        }
+      >
         <KpiCard
           label="Active SKUs"
           icon={Package}
@@ -103,8 +110,18 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
           icon={PackageX}
           value={kpis?.out_of_stock_skus}
           isLoading={query.isLoading}
-          className="max-lg:col-span-2"
+          className={canViewPrice ? undefined : "max-lg:col-span-2"}
         />
+        {canViewPrice ? (
+          <KpiCard
+            label="Stock valuation"
+            icon={IndianRupee}
+            displayValue={
+              kpis?.stock_value != null ? formatDecimal(kpis.stock_value) : undefined
+            }
+            isLoading={query.isLoading}
+          />
+        ) : null}
       </div>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">

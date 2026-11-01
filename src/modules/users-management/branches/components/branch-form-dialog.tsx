@@ -49,6 +49,7 @@ import {
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 
 function toFormValues(branch: Branch | null): BranchFormValues {
   return {
@@ -99,10 +100,13 @@ export function BranchFormDialog({
     forceReadOnly,
   });
 
+  const formValues = toFormValues(branch);
+
   const form = useForm<BranchFormValues>({
     resolver: zodResolver(BranchFormSchema),
-    values: toFormValues(branch),
+    values: formValues,
   });
+  useFormResetOnDialogOpen(form, formValues, open, branch?.id ?? "create");
   useDirtyFormGuard(open && canSubmit && form.formState.isDirty);
 
   function handleOpenChange(next: boolean) {

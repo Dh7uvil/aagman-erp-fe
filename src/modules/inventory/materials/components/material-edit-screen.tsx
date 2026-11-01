@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -49,6 +49,7 @@ import { Form } from "@/shared/components/ui/form";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 import { useCan } from "@/shared/providers/session-provider";
 import { useAllUnits } from "@/modules/inventory/units/queries";
 
@@ -100,35 +101,33 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     reValidateMode: "onSubmit",
   });
 
-  const formHydratedKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!formValuesReady || !material) {
-      return;
-    }
-    const hydrationKey = `${materialId}|${micronId}`;
-    if (formHydratedKeyRef.current === hydrationKey) {
-      return;
-    }
-    formHydratedKeyRef.current = hydrationKey;
-    form.reset(
-      buildMaterialEditFormValues(variantsQuery.data ?? [], {
-        productId: material.product_id,
-        companyId: material.company_id ?? undefined,
-        defaultMicronId: micronId || material.micron_id,
-        defaultSizeUnitId,
-        defaultQuantityUnitId,
-      }),
-    );
-  }, [
-    formValuesReady,
-    material,
-    materialId,
-    micronId,
-    variantsQuery.data,
-    defaultSizeUnitId,
-    defaultQuantityUnitId,
+  const editFormValues = useMemo(
+    () =>
+      formValuesReady && material
+        ? buildMaterialEditFormValues(variantsQuery.data ?? [], {
+            productId: material.product_id,
+            companyId: material.company_id ?? undefined,
+            defaultMicronId: micronId || material.micron_id,
+            defaultSizeUnitId,
+            defaultQuantityUnitId,
+          })
+        : undefined,
+    [
+      formValuesReady,
+      material,
+      variantsQuery.data,
+      micronId,
+      defaultSizeUnitId,
+      defaultQuantityUnitId,
+    ],
+  );
+
+  useFormResetOnRouteEntry(
     form,
-  ]);
+    editFormValues,
+    formValuesReady,
+    `${materialId}|${micronId}`,
+  );
 
   useDirtyFormGuard(canUpdate && form.formState.isDirty);
 

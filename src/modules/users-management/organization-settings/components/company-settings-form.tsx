@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -36,6 +36,7 @@ import {
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 import { useCan } from "@/shared/providers/session-provider";
 
 function toFormValues(org: Organization): CompanySettingsFormValues {
@@ -87,11 +88,17 @@ export function CompanySettingsForm() {
     },
   });
 
-  useEffect(() => {
-    if (orgQuery.data) {
-      form.reset(toFormValues(orgQuery.data));
-    }
-  }, [form, orgQuery.data]);
+  const organizationFormValues = useMemo(
+    () => (orgQuery.data ? toFormValues(orgQuery.data) : undefined),
+    [orgQuery.data],
+  );
+
+  useFormResetOnRouteEntry(
+    form,
+    organizationFormValues,
+    Boolean(orgQuery.data),
+    orgQuery.data?.id ?? "organization",
+  );
 
   async function onSubmit(values: CompanySettingsFormValues) {
     try {

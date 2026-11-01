@@ -43,6 +43,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { formatDecimal } from "@/shared/lib/format";
 import { useCompanies } from "@/modules/users-management/companies/queries";
@@ -97,17 +98,19 @@ export function MaterialStockOutScreen() {
     defaultValues: { material_id: "", rolls: "", kilograms: "", note: "" },
   });
 
-  useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    form.reset({
-      material_id: selectedMaterialId,
-      rolls: "",
-      kilograms: "",
-      note: "",
-    });
-  }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps -- initial hydrate only
+  const stockOutFormValues = {
+    material_id: selectedMaterialId,
+    rolls: "",
+    kilograms: "",
+    note: "",
+  };
+
+  useFormResetOnRouteEntry(
+    form,
+    stockOutFormValues,
+    hydrated,
+    searchParams.toString(),
+  );
 
   useEffect(() => {
     if (!micronId || widthsQuery.isLoading) {

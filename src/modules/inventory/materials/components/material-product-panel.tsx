@@ -75,7 +75,7 @@ export function MaterialMicronSelector({
         </div>
         {priceLabel ? (
           <p className="text-muted-foreground shrink-0 text-sm">
-            Price{" "}
+            Current price{" "}
             <span className="text-foreground font-medium tabular-nums">{priceLabel}</span>
           </p>
         ) : null}
@@ -110,6 +110,7 @@ export function MaterialVariantTable({
   rowActions,
   linkWidths = false,
   stickyHeader = false,
+  canViewPrice = false,
 }: {
   materials: Material[];
   sizeUnitCode: string;
@@ -120,6 +121,7 @@ export function MaterialVariantTable({
   rowActions?: (material: Material) => ReactNode;
   linkWidths?: boolean;
   stickyHeader?: boolean;
+  canViewPrice?: boolean;
 }) {
   if (loading) {
     return (
@@ -131,7 +133,8 @@ export function MaterialVariantTable({
     );
   }
 
-  const colSpan = rowActions ? 5 : 4;
+  const priceColumns = canViewPrice ? 1 : 0;
+  const colSpan = (rowActions ? 5 : 4) + priceColumns;
   const headerRowClass = stickyHeader
     ? "bg-muted/95 hover:bg-muted/95 sticky top-0 z-10 shadow-sm backdrop-blur-sm"
     : "bg-muted/50 hover:bg-muted/50";
@@ -144,6 +147,9 @@ export function MaterialVariantTable({
           <TableHead className="h-10 px-4 text-center">Total rolls</TableHead>
           <TableHead className="h-10 px-4 text-right">Total kg</TableHead>
           <TableHead className="h-10 w-[7rem] px-4">Status</TableHead>
+          {canViewPrice ? (
+            <TableHead className="h-10 px-4 text-right">Avg price</TableHead>
+          ) : null}
           {rowActions ? <TableHead className="h-10 w-[1%] px-4" /> : null}
         </TableRow>
       </TableHeader>
@@ -189,6 +195,14 @@ export function MaterialVariantTable({
               <TableCell className="px-4 py-3">
                 <ActiveBadge active={material.is_active} />
               </TableCell>
+              {canViewPrice ? (
+                <TableCell className="px-4 py-3 text-right tabular-nums text-sm">
+                  {formatPricePerUnit(
+                    material.avg_price_per_unit ?? null,
+                    material.price_unit_code,
+                  )}
+                </TableCell>
+              ) : null}
               {rowActions ? <TableCell className="px-4 py-3">{rowActions(material)}</TableCell> : null}
             </TableRow>
           ))

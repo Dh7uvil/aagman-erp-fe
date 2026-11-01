@@ -55,6 +55,7 @@ import {
 } from "@/shared/components/ui/select";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { useCan } from "@/shared/providers/session-provider";
 
 function toFormValues(
@@ -112,10 +113,13 @@ export function DepartmentFormDialog({
   });
   const canPickManager = open;
 
+  const formValues = toFormValues(department, defaultBranchId);
+
   const form = useForm<DepartmentFormValues>({
     resolver: zodResolver(DepartmentFormSchema),
-    values: toFormValues(department, defaultBranchId),
+    values: formValues,
   });
+  useFormResetOnDialogOpen(form, formValues, open, department?.id ?? "create");
   useDirtyFormGuard(open && canSubmit && form.formState.isDirty);
 
   useEffect(() => {

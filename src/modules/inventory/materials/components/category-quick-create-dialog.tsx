@@ -25,6 +25,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogContent } from "@/shared/components/ui/dialog";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 
 export function CategoryQuickCreateDialog({
@@ -40,10 +41,13 @@ export function CategoryQuickCreateDialog({
 }) {
   const createCategory = useCreateCategory();
   const [formError, setFormError] = useState<string | null>(null);
+  const emptyValues = { name: "", is_active: true as const };
+
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(CategoryFormSchema),
-    defaultValues: { name: "", is_active: true },
+    defaultValues: emptyValues,
   });
+  useFormResetOnDialogOpen(form, emptyValues, open, "category-quick-create");
 
   async function onSubmit(values: CategoryFormValues) {
     if (!companyId) {

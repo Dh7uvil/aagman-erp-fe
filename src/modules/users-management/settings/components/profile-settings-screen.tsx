@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -30,6 +30,7 @@ import { ErrorState } from "@/shared/components/feedback/error-state";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { formatDateTime, humanizeEnum } from "@/shared/lib/format";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { toolbarLabelClass } from "@/shared/components/data-table/toolbar";
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
@@ -53,12 +54,9 @@ export function ProfileSettingsScreen() {
     defaultValues: { name: "", phone: "" },
   });
 
-  useEffect(() => {
-    if (!me) {
-      return;
-    }
-    form.reset({ name: me.name, phone: me.phone ?? "" });
-  }, [form, me]);
+  const profileFormValues = me ? { name: me.name, phone: me.phone ?? "" } : undefined;
+
+  useFormResetOnDialogOpen(form, profileFormValues, isEditing, "profile");
 
   useDirtyFormGuard(isEditing && form.formState.isDirty);
 

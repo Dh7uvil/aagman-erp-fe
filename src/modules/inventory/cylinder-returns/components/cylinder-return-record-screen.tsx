@@ -39,6 +39,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 
 export type CylinderReturnRecordMode = "create" | "view" | "edit";
 
@@ -60,15 +61,25 @@ export function CylinderReturnRecordScreen({
   const readOnly = mode === "view" || (mode === "create" ? !canCreate : !canUpdate);
   const canSubmit = mode === "create" ? canCreate : mode === "edit" && canUpdate;
 
+  const formValues =
+    mode === "create"
+      ? { company_id: "", job_id: "", remarks: "" }
+      : record
+        ? { company_id: record.company_id, job_id: record.job_id, remarks: record.remarks ?? "" }
+        : undefined;
+  const formValuesReady = mode === "create" || Boolean(record);
+
   const form = useForm<CylinderReturnFormValues>({
     resolver: zodResolver(CylinderReturnFormSchema),
-    values:
-      mode === "create"
-        ? { company_id: "", job_id: "", remarks: "" }
-        : record
-          ? { company_id: record.company_id, job_id: record.job_id, remarks: record.remarks ?? "" }
-          : undefined,
+    values: formValues,
   });
+
+  useFormResetOnRouteEntry(
+    form,
+    formValues,
+    formValuesReady,
+    `${mode}-${returnId ?? "new"}`,
+  );
 
   const companyId = form.watch("company_id");
   const companiesQuery = useCompanies({ page: 1, page_size: 200 });

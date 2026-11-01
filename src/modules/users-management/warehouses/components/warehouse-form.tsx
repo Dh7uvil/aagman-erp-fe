@@ -37,6 +37,7 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 
 function toFormValues(warehouse: Warehouse | null): WarehouseFormValues {
   return {
@@ -62,12 +63,14 @@ function toCreateRequest(values: WarehouseFormValues): WarehouseCreateRequest {
 
 export function WarehouseForm({
   warehouse,
+  open = true,
   disabled = false,
   onSuccess,
   showCancel = false,
   onCancel,
 }: {
   warehouse: Warehouse | null;
+  open?: boolean;
   disabled?: boolean;
   onSuccess?: (entity: { id: string }) => void;
   showCancel?: boolean;
@@ -78,10 +81,13 @@ export function WarehouseForm({
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(warehouse);
 
+  const formValues = toFormValues(warehouse);
+
   const form = useForm<WarehouseFormValues>({
     resolver: zodResolver(WarehouseFormSchema),
-    values: toFormValues(warehouse),
+    values: formValues,
   });
+  useFormResetOnDialogOpen(form, formValues, open, warehouse?.id ?? "create");
   useDirtyFormGuard(form.formState.isDirty && !disabled);
 
   async function onSubmit(values: WarehouseFormValues) {

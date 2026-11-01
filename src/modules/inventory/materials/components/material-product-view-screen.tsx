@@ -172,6 +172,7 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
             highlightMaterialId={material.micron_id === selectedMicronId ? materialId : undefined}
             loading={variantsLoading}
             stickyHeader
+            canViewPrice={canViewPrice}
             emptyMessage={
               canCreate
                 ? "No sizes stocked for this micron yet."

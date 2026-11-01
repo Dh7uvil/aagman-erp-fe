@@ -33,6 +33,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 
 export function RoleFormDialog({
   open,
@@ -61,13 +62,16 @@ export function RoleFormDialog({
     forceReadOnly,
   });
 
+  const formValues = {
+    name: role?.name ?? "",
+    description: role?.description ?? "",
+  };
+
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(RoleFormSchema),
-    values: {
-      name: role?.name ?? "",
-      description: role?.description ?? "",
-    },
+    values: formValues,
   });
+  useFormResetOnDialogOpen(form, formValues, open, role?.id ?? "create");
   useDirtyFormGuard(open && canSubmit && form.formState.isDirty);
 
   function handleOpenChange(next: boolean) {

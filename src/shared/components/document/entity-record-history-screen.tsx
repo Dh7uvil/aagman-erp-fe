@@ -179,6 +179,7 @@ function JobRecordHistory({
 function MaterialRecordHistory({
   id,
   viewHref,
+  code,
   pageTitle,
   recordLabel,
 }: {
@@ -192,15 +193,22 @@ function MaterialRecordHistory({
   const canViewPrice = can(inventoryPricePermissions.read);
   const historyQuery = useMaterialHistory(id);
   const summaryQuery = useMaterialHistorySummary(id);
+  const companyName = summaryQuery.data?.company_name?.trim();
+  const subtitle =
+    companyName || (code ? `${recordLabel} · ${code}` : recordLabel);
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex w-full flex-col gap-5">
       <PageHeader
         title={pageTitle}
+        subtitle={subtitle}
         actions={
-          <Button type="button" size="sm" variant="outline" asChild>
+          <Button type="button" variant="outline" size="sm" asChild data-page-header-persist>
             <Link href={viewHref}>
-              <BackLabel>Back to {recordLabel.toLowerCase()}</BackLabel>
+              <BackLabel>
+                <span className="sm:hidden">Back</span>
+                <span className="hidden sm:inline">Back to record</span>
+              </BackLabel>
             </Link>
           </Button>
         }

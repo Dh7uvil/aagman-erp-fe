@@ -63,8 +63,14 @@ export function MovementsScreen() {
     if (canViewPrice) {
       cols.push({
         id: "price_per_unit",
-        header: "Price",
+        header: "Current price",
         cell: (row) => formatPricePerUnit(row.price_per_unit, row.price_unit_code),
+      });
+      cols.push({
+        id: "avg_price_per_unit",
+        header: "Avg price",
+        defaultVisible: false,
+        cell: (row) => formatPricePerUnit(row.avg_price_per_unit ?? null, row.price_unit_code),
       });
     }
     return cols;

@@ -209,7 +209,23 @@ export function preferenceVisibleColumnIds<T>(
   const known = new Set(customizable.map((column) => column.id));
   const defaults = defaultColumnPreference(defs);
   const saved = (preference?.visible_columns ?? []).filter((id) => known.has(id));
-  return saved.length > 0 ? saved : defaults.visible_columns;
+  if (saved.length === 0) {
+    return defaults.visible_columns;
+  }
+  const storedOrder = new Set(
+    (preference?.column_order ?? []).filter((id) => known.has(id)),
+  );
+  const visible = [...saved];
+  for (const column of customizable) {
+    if (
+      column.defaultVisible !== false &&
+      !storedOrder.has(column.id) &&
+      !visible.includes(column.id)
+    ) {
+      visible.push(column.id);
+    }
+  }
+  return visible;
 }
 
 function applyPinnedColumns(
@@ -235,11 +251,18 @@ export function columnPickerDraft<T>(
   const pinnedSet = new Set(pinned);
   const known = new Map(customizable.map((column) => [column.id, column]));
   const savedOrder = (preference?.column_order ?? []).filter((id) => known.has(id));
-  const order = applyPinnedColumns(
-    [],
-    [...savedOrder, ...defaults.column_order.filter((id) => !savedOrder.includes(id))],
-    pinned,
-  ).order;
+  const mergedOrder = [
+    ...savedOrder,
+    ...defaults.column_order.filter((id) => !savedOrder.includes(id)),
+  ];
+  const orderSet = new Set(mergedOrder);
+  for (const column of customizable) {
+    if (!orderSet.has(column.id)) {
+      mergedOrder.push(column.id);
+      orderSet.add(column.id);
+    }
+  }
+  const order = applyPinnedColumns([], mergedOrder, pinned).order;
   const visible = new Set(preferenceVisibleColumnIds(defs, preference));
   for (const id of pinned) {
     visible.add(id);

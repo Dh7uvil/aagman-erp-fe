@@ -30,6 +30,7 @@ export const DayReportRowSchema = z.object({
   closing_kg: DecimalStringSchema,
   price_per_unit: NullableDecimalStringSchema,
   price_unit_code: z.string().nullable(),
+  avg_price_per_unit: NullableDecimalStringSchema.optional(),
 });
 export type DayReportRow = z.infer<typeof DayReportRowSchema>;
 

@@ -30,6 +30,7 @@ import { Form } from "@/shared/components/ui/form";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 
 export type CompanyRecordMode = "create" | "view" | "edit";
 
@@ -51,16 +52,25 @@ export function CompanyRecordScreen({
   const readOnly = mode === "view" || (mode === "create" ? !canCreate : !canUpdate);
   const canSubmit = mode === "create" ? canCreate : mode === "edit" && canUpdate;
 
+  const formValues =
+    mode === "create"
+      ? companyToFormValues(null)
+      : company
+        ? companyToFormValues(company)
+        : undefined;
+  const formValuesReady = mode === "create" || Boolean(company);
+
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(CompanyFormSchema),
-    values:
-      mode === "create"
-        ? companyToFormValues(null)
-        : company
-          ? companyToFormValues(company)
-          : undefined,
+    values: formValues,
   });
 
+  useFormResetOnRouteEntry(
+    form,
+    formValues,
+    formValuesReady,
+    `${mode}-${companyId ?? "new"}`,
+  );
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
   async function onSubmit(values: CompanyFormValues) {

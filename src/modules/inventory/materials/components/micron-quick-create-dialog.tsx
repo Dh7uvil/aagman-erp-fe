@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -19,6 +19,7 @@ import {
   setFormValueFromQuickCreate,
   setFormValueWhenDefaulting,
 } from "@/shared/lib/form-quick-create";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 import { DecimalInput } from "@/shared/components/form/decimal-input";
 import { FormDialogFooter } from "@/shared/components/form/form-dialog-footer";
@@ -70,16 +71,27 @@ export function MicronQuickCreateDialog({
   const units = unitsQuery.data ?? [];
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm<MicronQuickFormValues>({
-    resolver: zodResolver(MicronQuickFormSchema),
-    defaultValues: {
+  const emptyValues = useMemo(
+    () => ({
       product_id: defaultProductId ?? "",
       name: "",
       price_per_unit: "",
-      price_unit_id: "",
+      price_unit_id: units.find((item) => item.code === "kg")?.id ?? "",
       is_active: true,
-    },
+    }),
+    [defaultProductId, units],
+  );
+
+  const form = useForm<MicronQuickFormValues>({
+    resolver: zodResolver(MicronQuickFormSchema),
+    defaultValues: emptyValues,
   });
+  useFormResetOnDialogOpen(
+    form,
+    emptyValues,
+    open,
+    `micron-quick-create-${defaultProductId ?? ""}`,
+  );
 
   useEffect(() => {
     if (open && defaultProductId) {

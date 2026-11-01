@@ -38,27 +38,40 @@ function formatTimestamp(value: string) {
   return date.toLocaleString();
 }
 
-function stockDirectionLabel(action: string) {
-  if (action === "IN") {
-    return "Stock in";
-  }
-  if (action === "OUT") {
-    return "Stock out";
-  }
-  return action;
-}
-
-function stockHistoryEntries(entries: MaterialHistoryEntry[]) {
-  return entries.filter(
-    (entry) => entry.kind === "stock" && (entry.action === "IN" || entry.action === "OUT"),
-  );
-}
-
-const MATERIAL_STOCK_SPLIT_NOTES = new Set([
+const MATERIAL_EDIT_STOCK_NOTES = new Set([
   "Roll count updated from material",
   "Quantity updated from material",
   "Stock updated from material",
 ]);
+
+function isMaterialEditStockMovement(note: string | null | undefined) {
+  const trimmed = note?.trim() ?? "";
+  return MATERIAL_EDIT_STOCK_NOTES.has(trimmed);
+}
+
+function stockDirectionLabel(entry: Pick<MaterialHistoryEntry, "action" | "note">) {
+  if (entry.action === "OPENING") {
+    return "Opening balance";
+  }
+  if (isMaterialEditStockMovement(entry.note)) {
+    return "Stock updated";
+  }
+  if (entry.action === "IN") {
+    return "Stock in";
+  }
+  if (entry.action === "OUT") {
+    return "Stock out";
+  }
+  return entry.action;
+}
+
+function stockHistoryEntries(entries: MaterialHistoryEntry[]) {
+  return entries.filter(
+    (entry) =>
+      entry.kind === "stock" &&
+      (entry.action === "IN" || entry.action === "OUT" || entry.action === "OPENING"),
+  );
+}
 
 function parseHistoryQty(value: string | number | null | undefined) {
   if (value == null || value === "") {
@@ -90,7 +103,7 @@ function shouldMergeStockHistoryRows(a: MaterialHistoryEntry, b: MaterialHistory
   }
   const aNote = a.note?.trim() ?? "";
   const bNote = b.note?.trim() ?? "";
-  if (MATERIAL_STOCK_SPLIT_NOTES.has(aNote) && MATERIAL_STOCK_SPLIT_NOTES.has(bNote)) {
+  if (MATERIAL_EDIT_STOCK_NOTES.has(aNote) && MATERIAL_EDIT_STOCK_NOTES.has(bNote)) {
     return true;
   }
   return Math.abs(aTime - bTime) <= 1000;
@@ -147,14 +160,21 @@ function LastPurchaseSummary({
     canViewPrice && summary.last_purchase_price != null
       ? formatPricePerUnit(qty(summary.last_purchase_price), summary.last_purchase_price_unit_code)
       : null;
+  const avgPriceLabel =
+    canViewPrice && summary.avg_price_per_unit != null
+      ? formatPricePerUnit(
+          qty(summary.avg_price_per_unit),
+          summary.price_unit_code ?? summary.last_purchase_price_unit_code,
+        )
+      : null;
 
   return (
-    <CardContent className="py-3">
+    <CardContent className="pt-2 pb-3">
       <div className="border-border/60 bg-muted/35 flex flex-col gap-3 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:gap-6">
         <p className="text-muted-foreground shrink-0 text-xs font-semibold tracking-wide uppercase">
           Last purchase
         </p>
-        <dl className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3 sm:gap-x-6">
+        <dl className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4 sm:gap-x-6">
           <div className="min-w-0">
             <dt className="text-muted-foreground text-xs">Rolls</dt>
             <dd className="text-foreground mt-0.5 font-semibold tabular-nums">{rolls}</dd>
@@ -163,6 +183,12 @@ function LastPurchaseSummary({
             <div className="min-w-0">
               <dt className="text-muted-foreground text-xs">Price</dt>
               <dd className="text-foreground mt-0.5 font-semibold tabular-nums">{priceLabel}</dd>
+            </div>
+          ) : null}
+          {avgPriceLabel ? (
+            <div className="min-w-0">
+              <dt className="text-muted-foreground text-xs">Avg price</dt>
+              <dd className="text-foreground mt-0.5 font-semibold tabular-nums">{avgPriceLabel}</dd>
             </div>
           ) : null}
           <div className="min-w-0">
@@ -196,18 +222,14 @@ export function MaterialHistoryCard({
     <div className="flex flex-col gap-4">
       {summary ? (
         <Card className="border-border/80 gap-0 overflow-hidden shadow-sm">
-          <CardHeader className="border-border/60 bg-muted/25 gap-2 border-b py-3 sm:py-4">
-            <p className="text-foreground text-sm leading-snug sm:text-base">
-              {summary.company_name ? (
-                <span className="text-muted-foreground">{summary.company_name} · </span>
-              ) : null}
+          <CardHeader className="border-border/60 bg-muted/25 gap-2 border-b pt-3 pb-2 [.border-b]:pb-2 sm:pt-3.5">
+            <div className="text-foreground flex flex-col gap-2 text-sm leading-snug sm:flex-row sm:items-center sm:justify-between sm:text-base">
               <span className="font-semibold">{formatMaterialHistorySkuTitle(summary)}</span>
-              <span className="text-muted-foreground"> · </span>
-              <span className="font-bold tabular-nums">
+              <span className="font-bold tabular-nums sm:text-right">
                 On hand: {formatDecimal(qty(summary.rolls_on_hand))} rolls ·{" "}
                 {formatDecimal(qty(summary.total_kg))} kg
               </span>
-            </p>
+            </div>
           </CardHeader>
           <LastPurchaseSummary summary={summary} canViewPrice={canViewPrice} />
         </Card>
@@ -221,7 +243,7 @@ export function MaterialHistoryCard({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>When</TableHead>
+                <TableHead>Datetime</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Rolls</TableHead>
                 <TableHead>Kg</TableHead>
@@ -245,7 +267,7 @@ export function MaterialHistoryCard({
                       {formatTimestamp(entry.timestamp)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{stockDirectionLabel(entry.action)}</Badge>
+                      <Badge variant="outline">{stockDirectionLabel(entry)}</Badge>
                     </TableCell>
                     <TableCell>
                       {entry.rolls != null ? formatDecimal(qty(entry.rolls)) : "—"}

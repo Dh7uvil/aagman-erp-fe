@@ -28,6 +28,7 @@ import { Form } from "@/shared/components/ui/form";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 
 export type UnitRecordMode = "create" | "view" | "edit";
 
@@ -43,12 +44,16 @@ export function UnitRecordScreen({ mode, unitId }: { mode: UnitRecordMode; unitI
   const readOnly = mode === "view" || (mode === "create" ? !canCreate : !canUpdate);
   const canSubmit = mode === "create" ? canCreate : mode === "edit" && canUpdate;
 
+  const formValues =
+    mode === "create" ? unitToFormValues(null) : unit ? unitToFormValues(unit) : undefined;
+  const formValuesReady = mode === "create" || Boolean(unit);
+
   const form = useForm<UnitFormValues>({
     resolver: zodResolver(UnitFormSchema),
-    values:
-      mode === "create" ? unitToFormValues(null) : unit ? unitToFormValues(unit) : undefined,
+    values: formValues,
   });
 
+  useFormResetOnRouteEntry(form, formValues, formValuesReady, `${mode}-${unitId ?? "new"}`);
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
   async function onSubmit(values: UnitFormValues) {

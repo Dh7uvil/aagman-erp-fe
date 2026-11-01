@@ -37,6 +37,7 @@ import { Card, CardContent } from "@/shared/components/ui/card";
 import { Form } from "@/shared/components/ui/form";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 import { useCan } from "@/shared/providers/session-provider";
 
 export function MaterialRecordScreen() {
@@ -67,13 +68,22 @@ export function MaterialRecordScreen() {
     reValidateMode: "onSubmit",
   });
 
+  const createFormValues = emptyMaterialCreateFormValues(
+    defaultSizeUnitId,
+    defaultQuantityUnitId,
+  );
+
+  useFormResetOnRouteEntry(
+    form,
+    createFormValues,
+    Boolean(defaultSizeUnitId || defaultQuantityUnitId),
+    resetToken,
+  );
+
   useEffect(() => {
-    form.reset(emptyMaterialCreateFormValues(defaultSizeUnitId, defaultQuantityUnitId));
     setFormError(null);
     submitInFlight.current = false;
-    // Only re-run when opening a new create session (see materialRoutes.newWithReset).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- unit ids are read at reset time; do not reset when units load later
-  }, [resetToken, form]);
+  }, [resetToken]);
 
   useEffect(() => {
     if (!defaultSizeUnitId && !defaultQuantityUnitId) {

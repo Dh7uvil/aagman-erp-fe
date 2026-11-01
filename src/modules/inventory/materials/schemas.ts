@@ -45,6 +45,7 @@ export const MaterialSchema = z.object({
   price_per_unit: NullableDecimalStringSchema,
   price_unit_id: z.string().uuid().nullable(),
   price_unit_code: z.string().nullable(),
+  avg_price_per_unit: NullableDecimalStringSchema.optional(),
   is_active: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -554,6 +555,8 @@ export const MaterialHistorySummarySchema = z.object({
   last_purchase_price_unit_code: z.string().nullable().optional(),
   last_purchase_date: z.string().nullable().optional(),
   last_purchase_rolls: z.union([z.string(), z.number()]).nullable().optional(),
+  avg_price_per_unit: z.union([z.string(), z.number()]).nullable().optional(),
+  price_unit_code: z.string().nullable().optional(),
 });
 export type MaterialHistorySummary = z.infer<typeof MaterialHistorySummarySchema>;
 

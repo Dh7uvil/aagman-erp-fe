@@ -57,6 +57,7 @@ import {
 } from "@/shared/components/ui/select";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { useCan } from "@/shared/providers/session-provider";
 
 const STATUSES: UserStatus[] = ["ACTIVE", "INVITED", "DISABLED"];
@@ -141,17 +142,30 @@ export function UserFormDialog({
   const canAssignRoles = can(userPermissions.assignRoles);
   const canCreateRole = can(rolePermissions.create);
 
+  const createFormValues = {
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    status: "ACTIVE" as const,
+    role_ids: [] as string[],
+    ...emptyEmployeeFormValues(),
+  };
+
+  const updateFormValues = detailQuery.data
+    ? {
+        name: detailQuery.data.name,
+        email: detailQuery.data.email,
+        phone: detailQuery.data.phone ?? "",
+        status: detailQuery.data.status,
+        role_ids: detailQuery.data.roles.map((role) => role.id),
+        ...employeeFormValuesFromUser(detailQuery.data),
+      }
+    : undefined;
+
   const createForm = useForm<UserCreateFormValues>({
     resolver: zodResolver(UserCreateFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      phone: "",
-      status: "ACTIVE",
-      role_ids: [],
-      ...emptyEmployeeFormValues(),
-    },
+    defaultValues: createFormValues,
   });
 
   const updateForm = useForm<UserUpdateFormValues>({
@@ -164,24 +178,18 @@ export function UserFormDialog({
       role_ids: [],
       ...emptyEmployeeFormValues(),
     },
-    values: detailQuery.data
-      ? {
-          name: detailQuery.data.name,
-          email: detailQuery.data.email,
-          phone: detailQuery.data.phone ?? "",
-          status: detailQuery.data.status,
-          role_ids: detailQuery.data.roles.map((role) => role.id),
-          ...employeeFormValuesFromUser(detailQuery.data),
-        }
-      : undefined,
+    values: updateFormValues,
   });
+
+  useFormResetOnDialogOpen(createForm, createFormValues, open && !isEdit, "user-create");
+  useFormResetOnDialogOpen(updateForm, updateFormValues, open && isEdit, userId ?? "user-edit");
+
   useDirtyFormGuard(
     open && canSubmit && (createForm.formState.isDirty || updateForm.formState.isDirty),
   );
 
   function handleOpenChange(next: boolean) {
     if (!next) {
-      createForm.reset();
       setFormError(null);
     }
     onOpenChange(next);

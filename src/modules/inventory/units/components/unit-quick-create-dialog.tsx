@@ -27,6 +27,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogContent } from "@/shared/components/ui/dialog";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
+import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
 import { isolatedFormSubmitHandler } from "@/shared/lib/isolated-form-submit";
 
 export function UnitQuickCreateDialog({
@@ -40,10 +41,13 @@ export function UnitQuickCreateDialog({
 }) {
   const createUnit = useCreateUnit();
   const [formError, setFormError] = useState<string | null>(null);
+  const emptyValues = unitToFormValues(null);
+
   const form = useForm<UnitFormValues>({
     resolver: zodResolver(UnitFormSchema),
-    defaultValues: unitToFormValues(null),
+    defaultValues: emptyValues,
   });
+  useFormResetOnDialogOpen(form, emptyValues, open, "unit-quick-create");
 
   async function onSubmit(values: UnitFormValues) {
     setFormError(null);

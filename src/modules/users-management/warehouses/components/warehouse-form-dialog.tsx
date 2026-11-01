@@ -37,6 +37,7 @@ export function WarehouseFormDialog({
         <FormDialogHeader title={formDialogTitle("Warehouse", mode)} entity="Warehouse" />
         <WarehouseForm
           warehouse={null}
+          open={open}
           disabled={readOnly}
           showCancel
           onCancel={() => onOpenChange(false)}

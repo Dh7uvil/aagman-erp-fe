@@ -41,6 +41,7 @@ import { Form } from "@/shared/components/ui/form";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
+import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 
 export type JobRecordMode = "create" | "view" | "edit";
 
@@ -83,6 +84,7 @@ function JobRecordForm({
     values: formValues,
   });
 
+  useFormResetOnRouteEntry(form, formValues, true, `${mode}-${jobId ?? "new"}`);
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
   async function onSubmit(values: JobFormValues) {
@@ -238,7 +240,7 @@ export function JobRecordScreen({
       : jobToFormValues(job!);
 
   const formKey =
-    mode === "create" ? `create-${cloneFromId ?? "new"}` : `${job!.id}-${job!.updated_at}`;
+    mode === "create" ? `create-${cloneFromId ?? "new"}` : `${job!.id}-${mode}-${job!.updated_at}`;
 
   const title =
     mode === "create"
