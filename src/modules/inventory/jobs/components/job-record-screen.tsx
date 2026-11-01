@@ -14,6 +14,7 @@ import {
 } from "@/modules/inventory/jobs/components/job-header-create-actions";
 import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
 import { JobResumeDialog } from "@/modules/inventory/jobs/components/job-resume-dialog";
+import { JobStatusBadge } from "@/modules/inventory/jobs/components/job-status-badge";
 import { useCreateJob, useUpdateJob } from "@/modules/inventory/jobs/mutations";
 import { useJob } from "@/modules/inventory/jobs/queries";
 import { jobRoutes } from "@/modules/inventory/jobs/routes";
@@ -257,6 +258,7 @@ export function JobRecordScreen({
       <RecordPageHeader
         title={title}
         subtitle={mode === "view" ? job?.product_name : createSubtitle}
+        badges={mode === "view" && job ? <JobStatusBadge status={job.status} /> : undefined}
         listHref={jobRoutes.list}
         viewHref={jobId ? jobRoutes.view(jobId) : jobRoutes.list}
         editHref={jobId ? jobRoutes.edit(jobId) : undefined}

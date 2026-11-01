@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { jobPermissions, jobPricePermissions } from "@/modules/inventory/permissions";
 import { JobCloneDialog } from "@/modules/inventory/jobs/components/job-clone-dialog";
+import { JobStatusBadge } from "@/modules/inventory/jobs/components/job-status-badge";
 import {
   JobHeaderCreateActions,
   jobHeaderActionsClassName,
@@ -35,7 +36,6 @@ import { useTableColumns } from "@/shared/components/data-table/use-table-column
 import { ConfirmActionDialog } from "@/shared/components/feedback/confirm-action-dialog";
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
@@ -110,7 +110,7 @@ export function JobsScreen() {
       {
         id: "status",
         header: "Status",
-        cell: (row) => <Badge variant="secondary">{row.status}</Badge>,
+        cell: (row) => <JobStatusBadge status={row.status} />,
       },
       { id: "cylinder_count", header: "Cylinders", cell: (row) => String(row.cylinder_count) },
     ];

@@ -23,19 +23,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useCan } from "@/shared/providers/session-provider";
 import { formatDecimal } from "@/shared/lib/format";
+import { CATEGORICAL_CHART_COLORS, SEMANTIC_CHART } from "@/shared/lib/semantic-colors";
 
 const MOVEMENT_CHART: ChartConfig = {
-  in_kg: { label: "IN (kg)", color: "var(--chart-1)" },
-  out_kg: { label: "OUT (kg)", color: "var(--chart-4)" },
+  in_kg: { label: "IN (kg)", color: SEMANTIC_CHART.success },
+  out_kg: { label: "OUT (kg)", color: SEMANTIC_CHART.warning },
 };
 
-const PRODUCT_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
+const PRODUCT_COLORS = CATEGORICAL_CHART_COLORS;
 
 export function MaterialsOverviewSection({ rangeParams }: { rangeParams: DashboardRangeParams }) {
   const can = useCan();

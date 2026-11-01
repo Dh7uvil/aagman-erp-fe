@@ -10,8 +10,10 @@ import { RankedListCard } from "@/modules/dashboard/components/ranked-list-card"
 import { formatBucketLabel } from "@/modules/dashboard/lib/bucket-label";
 import { useJobsDashboard } from "@/modules/dashboard/queries";
 import type { DashboardRangeParams } from "@/modules/dashboard/schemas";
+import { JOB_STATUS_CHART_COLOR, jobStatusChartColor } from "@/modules/inventory/jobs/lib/job-status-style";
 import { jobRoutes } from "@/modules/inventory/jobs/routes";
 import { jobPermissions } from "@/modules/inventory/permissions";
+import { SEMANTIC_CHART } from "@/shared/lib/semantic-colors";
 import { getErrorMessage } from "@/shared/api/errors";
 import {
   ChartContainer,
@@ -27,24 +29,20 @@ import { useCan } from "@/shared/providers/session-provider";
 import { humanizeEnum } from "@/shared/lib/format";
 
 const STATUS_CHART: ChartConfig = {
-  ACTIVE: { label: "Active", color: "var(--chart-1)" },
-  RESUMED: { label: "Resumed", color: "var(--chart-2)" },
-  PAUSED: { label: "Paused", color: "var(--chart-3)" },
-  COMPLETED: { label: "Completed", color: "var(--chart-4)" },
-  RETURNED: { label: "Returned", color: "var(--chart-5)" },
+  ACTIVE: { label: "Active", color: JOB_STATUS_CHART_COLOR.ACTIVE },
+  RESUMED: { label: "Resumed", color: JOB_STATUS_CHART_COLOR.RESUMED },
+  PAUSED: { label: "Paused", color: JOB_STATUS_CHART_COLOR.PAUSED },
+  COMPLETED: { label: "Completed", color: JOB_STATUS_CHART_COLOR.COMPLETED },
+  RETURNED: { label: "Returned", color: JOB_STATUS_CHART_COLOR.RETURNED },
 };
 
 const ACTIVITY_CHART: ChartConfig = {
-  jobs_created: { label: "New jobs", color: "var(--chart-1)" },
-  returns_created: { label: "Returns", color: "var(--chart-2)" },
+  jobs_created: { label: "New jobs", color: SEMANTIC_CHART.primary },
+  returns_created: { label: "Returns", color: SEMANTIC_CHART.info },
 };
 
 function statusColor(status: string): string {
-  const entry = STATUS_CHART[status];
-  if (entry && "color" in entry && entry.color) {
-    return entry.color;
-  }
-  return "var(--muted-foreground)";
+  return jobStatusChartColor(status);
 }
 
 export function JobsOverviewSection({ rangeParams }: { rangeParams: DashboardRangeParams }) {
