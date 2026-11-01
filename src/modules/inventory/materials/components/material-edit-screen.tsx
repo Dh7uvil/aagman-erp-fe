@@ -10,7 +10,6 @@ import {
   sizeLineToCreatePayload,
   sizeLineToUpdatePayload,
   stockQuantity,
-  toMicronPricePayload,
 } from "@/modules/inventory/materials/api";
 import { MaterialEditFormFields } from "@/modules/inventory/materials/components/material-edit-form-fields";
 import {
@@ -30,8 +29,9 @@ import {
   materialSizeLineHasStockIn,
   materialSizeLineKey,
   materialSizeLineStockOmitFlags,
+  micronPricePayloadsFromSizeLines,
   resolveMaterialEditSizeLines,
-  uniqueMicronIdsFromEditValues,
+  uniqueMicronIdsFromSizeLines,
   type MaterialEditFormValues,
 } from "@/modules/inventory/materials/schemas";
 import {
@@ -51,21 +51,6 @@ import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useCan } from "@/shared/providers/session-provider";
 import { useAllUnits } from "@/modules/inventory/units/queries";
-
-function micronPriceFromEditValues(values: MaterialEditFormValues, micronId: string) {
-  return toMicronPricePayload({
-    product_id: values.product_id,
-    parent_id: micronId,
-    size: "",
-    size_unit_id: values.size_lines[0]?.size_unit_id ?? "",
-    quantity_available: "0",
-    unit_id: values.size_lines[0]?.unit_id ?? "",
-    opening_rolls: "0",
-    price_per_unit: values.price_per_unit,
-    price_unit_id: values.price_unit_id,
-    is_active: true,
-  });
-}
 
 export function MaterialEditScreen({ materialId }: { materialId: string }) {
   const router = useRouter();
@@ -108,8 +93,6 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     defaultValues: buildMaterialEditFormValues([], {
       productId: "",
       defaultMicronId: "",
-      pricePerUnit: "",
-      priceUnitId: "",
       defaultSizeUnitId,
       defaultQuantityUnitId,
     }),
@@ -132,8 +115,6 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
         productId: material.product_id,
         companyId: material.company_id ?? undefined,
         defaultMicronId: micronId || material.micron_id,
-        pricePerUnit: selectedMicron?.price_per_unit ?? "",
-        priceUnitId: selectedMicron?.price_unit_id ?? "",
         defaultSizeUnitId,
         defaultQuantityUnitId,
       }),
@@ -144,8 +125,6 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     materialId,
     micronId,
     variantsQuery.data,
-    selectedMicron?.price_per_unit,
-    selectedMicron?.price_unit_id,
     defaultSizeUnitId,
     defaultQuantityUnitId,
     form,
@@ -178,7 +157,9 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
           ...lines,
           {
             parent_id: micronId,
-            size: "0",
+            price_per_unit: selectedMicron?.price_per_unit ?? "",
+            price_unit_id: selectedMicron?.price_unit_id ?? "",
+            size: "",
             size_unit_id: defaultSizeUnitId,
             quantity_available: "0",
             unit_id: defaultQuantityUnitId,
@@ -201,6 +182,8 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     form,
     formValuesReady,
     micronId,
+    selectedMicron?.price_per_unit,
+    selectedMicron?.price_unit_id,
   ]);
 
   async function onSubmit(values: MaterialEditFormValues) {
@@ -211,22 +194,22 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     setFormError(null);
     try {
       const resolvedLines = resolveMaterialEditSizeLines(values);
-      const micronIds = uniqueMicronIdsFromEditValues(values);
-      const micronPrice =
-        canViewPrice && canUpdateCategory && micronIds.length === 1
-          ? micronPriceFromEditValues(values, micronIds[0]!)
-          : null;
+      const micronIds = uniqueMicronIdsFromSizeLines(resolvedLines);
+      const micronPrices =
+        canViewPrice && canUpdateCategory
+          ? micronPricePayloadsFromSizeLines(resolvedLines)
+          : [];
       let lastId = materialId;
       let lastMicronId = micronIds[0] ?? micronId;
 
       const { lines: sizeLines, removedIds } = consolidateMaterialSizeLines(resolvedLines);
       const movementDate = new Date().toISOString().slice(0, 10);
-      const purchasePrice = values.price_per_unit.trim();
 
       for (const line of sizeLines) {
         if (!line.id || !materialSizeLineHasStockIn(line)) {
           continue;
         }
+        const purchasePrice = line.price_per_unit.trim();
         await createMovement.mutateAsync({
           category_id: line.id,
           movement_date: movementDate,
@@ -237,7 +220,7 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
           ...(canViewPrice && purchasePrice !== ""
             ? {
                 price_per_unit: purchasePrice,
-                price_unit_id: values.price_unit_id || null,
+                price_unit_id: line.price_unit_id || null,
               }
             : {}),
         });
@@ -274,8 +257,8 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
         }
       }
 
-      if (micronPrice && micronIds.length === 1) {
-        await updateMicron.mutateAsync({ id: micronIds[0]!, values: micronPrice });
+      for (const { id, ...micronValues } of micronPrices) {
+        await updateMicron.mutateAsync({ id, values: micronValues });
       }
 
       toast.success("Material updated");
@@ -329,7 +312,7 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
     <div className="flex flex-col gap-5">
       <RecordPageHeader
         title={material.product_name}
-        subtitle="Edit product, micron, price, and sizes"
+        subtitle="Edit product, sizes, and micron prices per line"
         listHref={materialRoutes.list}
         viewHref={`${materialRoutes.view(materialId)}?micron=${micronId}`}
         mode="edit"
@@ -339,7 +322,13 @@ export function MaterialEditScreen({ materialId }: { materialId: string }) {
         <CardContent className="pt-6">
           <Form {...form}>
             <form
-              onSubmit={canUpdate ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
+              onSubmit={
+                canUpdate
+                  ? form.handleSubmit(onSubmit, () => {
+                      toast.error("Fix the highlighted fields before saving.");
+                    })
+                  : (event) => event.preventDefault()
+              }
               className="flex w-full flex-col gap-4"
             >
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}

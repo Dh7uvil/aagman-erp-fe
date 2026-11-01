@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Control } from "react-hook-form";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
@@ -10,19 +10,16 @@ import { useUpdateCategory } from "@/modules/inventory/categories/mutations";
 import { useAllCategories } from "@/modules/inventory/categories/queries";
 import { useAllMicrons } from "@/modules/inventory/microns/queries";
 import {
-  applyCreatedMicronToMaterialForm,
   applyCreatedMicronToMaterialSizeLine,
   applyCreatedProductToMaterialForm,
   applyCreatedSizeLineQuantityUnitToMaterialForm,
   applyCreatedSizeLineUnitToMaterialForm,
-  applyCreatedUnitToMaterialForm,
 } from "@/modules/inventory/materials/components/apply-quick-create-selection";
 import { CategoryQuickCreateDialog } from "@/modules/inventory/materials/components/category-quick-create-dialog";
 import { MicronQuickCreateDialog } from "@/modules/inventory/materials/components/micron-quick-create-dialog";
 import { useDeleteMaterial } from "@/modules/inventory/materials/mutations";
 import {
   emptyMaterialSizeLine,
-  uniqueMicronIdsFromEditValues,
   type MaterialEditFormValues,
   type MaterialSizeLineValues,
 } from "@/modules/inventory/materials/schemas";
@@ -62,11 +59,30 @@ function unitIdForCode(units: { id: string; code: string }[], code: string): str
   return units.find((item) => item.code === code)?.id ?? "";
 }
 
-/** Micron | size | unit | rolls | qty | unit | active | delete */
+/** Micron [| price | per] | size | unit | rolls | qty | unit | active | delete */
 const SIZE_LINE_GRID =
-  "sm:grid sm:grid-cols-[minmax(7rem,1.25fr)_minmax(5.5rem,1.15fr)_minmax(7.5rem,1.35fr)_minmax(5rem,1fr)_minmax(5rem,1fr)_minmax(7.5rem,1.35fr)_4.25rem_2.5rem] sm:items-center";
+  "sm:grid-cols-[minmax(7.5rem,1.15fr)_minmax(5rem,0.95fr)_minmax(7.25rem,1.15fr)_minmax(4.5rem,0.85fr)_minmax(4.5rem,0.85fr)_minmax(7.25rem,1.15fr)_3.25rem_2.25rem] sm:items-stretch";
+const SIZE_LINE_GRID_WITH_PRICE =
+  "sm:grid-cols-[minmax(7.5rem,1.1fr)_minmax(4.25rem,0.75fr)_minmax(8.75rem,1fr)_minmax(4.75rem,0.8fr)_minmax(7rem,1fr)_minmax(4.25rem,0.8fr)_minmax(4.25rem,0.8fr)_minmax(7rem,1fr)_3.25rem_2.25rem] sm:items-stretch";
 
-const SIZE_LINE_CELL = "min-w-0 w-full sm:px-3 sm:py-3 lg:px-4";
+function sizeLineGridClass(canViewPrice: boolean) {
+  const cols = canViewPrice ? SIZE_LINE_GRID_WITH_PRICE : SIZE_LINE_GRID;
+  return `sm:grid ${cols}`;
+}
+
+function sizeLineTableMinWidth(canViewPrice: boolean) {
+  return canViewPrice ? "sm:min-w-[60rem]" : "sm:min-w-[46rem]";
+}
+
+const SIZE_LINE_HEADER =
+  "flex items-center px-1 py-2 text-xs font-medium text-muted-foreground sm:px-1.5";
+const SIZE_LINE_CELL =
+  "flex min-h-0 min-w-0 w-full flex-col justify-center space-y-0 overflow-hidden sm:px-1.5 sm:py-2 [&_[data-slot=form-control]]:min-w-0";
+/** Unit / Per columns: tighter horizontal inset so selects align with numeric fields */
+const SIZE_LINE_UNIT_CELL =
+  "flex min-h-0 min-w-0 w-full flex-col justify-center space-y-0 overflow-hidden sm:px-1 sm:py-2 [&_[data-slot=form-control]]:min-w-0";
+/** Vertical rule after Per, size unit, rolls, and qty unit (desktop grid only) */
+const SIZE_LINE_COL_DIVIDER = "sm:self-stretch sm:border-r-2 sm:border-border";
 
 function MaterialFormSection({
   title,
@@ -92,11 +108,17 @@ function MaterialFormSection({
 
 function clearProductCascade(form: ReturnType<typeof useFormContext<MaterialEditFormValues>>) {
   form.setValue("product_id", "", { shouldValidate: false, shouldDirty: true });
-  form.setValue("parent_id", "", { shouldValidate: false, shouldDirty: true });
-  form.clearErrors("parent_id");
   const lines = form.getValues("size_lines");
   lines.forEach((_, index) => {
     form.setValue(`size_lines.${index}.parent_id`, "", {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
+    form.setValue(`size_lines.${index}.price_per_unit`, "", {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
+    form.setValue(`size_lines.${index}.price_unit_id`, "", {
       shouldValidate: false,
       shouldDirty: true,
     });
@@ -124,8 +146,6 @@ export function MaterialEditFormFields({
   const deleteMaterial = useDeleteMaterial();
   const form = useFormContext<MaterialEditFormValues>();
   const productId = useWatch({ control, name: "product_id" });
-  const formParentId = useWatch({ control, name: "parent_id" });
-  const sizeLinesWatch = useWatch({ control, name: "size_lines" });
   const { fields, append, remove } = useFieldArray({ control, name: "size_lines" });
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [micronDialogOpen, setMicronDialogOpen] = useState(false);
@@ -133,6 +153,7 @@ export function MaterialEditFormFields({
   const [sizeUnitDialogOpen, setSizeUnitDialogOpen] = useState(false);
   const [qtyUnitDialogOpen, setQtyUnitDialogOpen] = useState(false);
   const [priceUnitDialogOpen, setPriceUnitDialogOpen] = useState(false);
+  const [priceUnitDialogIndex, setPriceUnitDialogIndex] = useState<number | null>(null);
   const [sizeUnitDialogIndex, setSizeUnitDialogIndex] = useState<number | null>(null);
   const [qtyUnitDialogIndex, setQtyUnitDialogIndex] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{
@@ -160,7 +181,72 @@ export function MaterialEditFormFields({
   }
 
   function handlePriceUnitCreated(unit: Unit) {
-    applyCreatedUnitToMaterialForm(form, "price_unit_id", unit.id);
+    if (priceUnitDialogIndex === null) {
+      return;
+    }
+    form.setValue(`size_lines.${priceUnitDialogIndex}.price_unit_id`, unit.id, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    syncLinePriceToSameMicron(priceUnitDialogIndex, { price_unit_id: unit.id });
+    setPriceUnitDialogIndex(null);
+  }
+
+  function micronCatalogPrice(micronId: string): { price: string; priceUnitId: string } {
+    const micron = microns.find((item) => item.id === micronId);
+    const kgId = unitIdForCode(units, "kg");
+    return {
+      price: micron?.price_per_unit ?? "",
+      priceUnitId: micron?.price_unit_id ?? kgId,
+    };
+  }
+
+  function syncLinePriceToSameMicron(
+    sourceIndex: number,
+    patch: Partial<Pick<MaterialSizeLineValues, "price_per_unit" | "price_unit_id">>,
+  ) {
+    const lines = form.getValues("size_lines");
+    const micronId = lines[sourceIndex]?.parent_id;
+    if (!micronId) {
+      return;
+    }
+    lines.forEach((line, index) => {
+      if (index === sourceIndex || line.parent_id !== micronId) {
+        return;
+      }
+      if (patch.price_per_unit !== undefined) {
+        form.setValue(`size_lines.${index}.price_per_unit`, patch.price_per_unit, {
+          shouldValidate: false,
+          shouldDirty: true,
+        });
+      }
+      if (patch.price_unit_id !== undefined) {
+        form.setValue(`size_lines.${index}.price_unit_id`, patch.price_unit_id, {
+          shouldValidate: false,
+          shouldDirty: true,
+        });
+      }
+    });
+  }
+
+  function applyMicronToLine(index: number, micronId: string) {
+    const { price, priceUnitId } = micronCatalogPrice(micronId);
+    if (canViewPrice && price) {
+      form.setValue(`size_lines.${index}.price_per_unit`, price, {
+        shouldValidate: false,
+        shouldDirty: true,
+      });
+    }
+    if (priceUnitId) {
+      form.setValue(`size_lines.${index}.price_unit_id`, priceUnitId, {
+        shouldValidate: false,
+        shouldDirty: true,
+      });
+    }
+    syncLinePriceToSameMicron(index, {
+      price_per_unit: form.getValues(`size_lines.${index}.price_per_unit`),
+      price_unit_id: form.getValues(`size_lines.${index}.price_unit_id`),
+    });
   }
 
   const companyId = useWatch({ control, name: "company_id" });
@@ -178,15 +264,6 @@ export function MaterialEditFormFields({
   const units = unitsQuery.data ?? [];
   const defaultSizeUnitId = unitIdForCode(units, "mm");
   const defaultQuantityUnitId = unitIdForCode(units, "kg");
-
-  const micronIdsForPrice = uniqueMicronIdsFromEditValues({
-    company_id: companyId ?? "",
-    product_id: productId ?? "",
-    parent_id: formParentId ?? "",
-    price_per_unit: "",
-    price_unit_id: "",
-    size_lines: sizeLinesWatch ?? [],
-  });
 
   async function applyCompanyChange(nextCompanyId: string) {
     form.setValue("company_id", nextCompanyId, { shouldValidate: true, shouldDirty: true });
@@ -222,89 +299,22 @@ export function MaterialEditFormFields({
     }
     void applyCompanyChange(nextCompanyId);
   }
-  const hasSingleMicron = micronIdsForPrice.length === 1;
-  const singleMicronId = micronIdsForPrice[0];
-  const priceSyncedForParentRef = useRef<string | null>(null);
-  const priceSyncedForImplicitMicronRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!formParentId) {
-      priceSyncedForParentRef.current = null;
-      return;
-    }
-    const micron = microns.find((item) => item.id === formParentId);
-    if (!micron) {
-      return;
-    }
-    if (priceSyncedForParentRef.current !== formParentId) {
-      priceSyncedForParentRef.current = formParentId;
-      if (canViewPrice && micron.price_per_unit) {
-        form.setValue("price_per_unit", micron.price_per_unit, { shouldDirty: false });
-      }
-      if (micron.price_unit_id) {
-        form.setValue("price_unit_id", micron.price_unit_id, { shouldDirty: false });
-      } else {
-        const kgId = unitIdForCode(units, "kg");
-        if (kgId) {
-          form.setValue("price_unit_id", kgId, { shouldDirty: false });
-        }
-      }
-    }
-    const lines = form.getValues("size_lines");
-    const hasSavedLine = lines.some((line) => line.id);
-    if (hasSavedLine) {
-      return;
-    }
-    lines.forEach((line, index) => {
-      if (!line.parent_id) {
-        form.setValue(`size_lines.${index}.parent_id`, formParentId, {
-          shouldValidate: false,
-          shouldDirty: false,
-        });
-      }
-    });
-  }, [formParentId, microns, units, canViewPrice, form]);
-
-  useEffect(() => {
-    if (!hasSingleMicron || !singleMicronId || formParentId) {
-      if (!formParentId) {
-        priceSyncedForImplicitMicronRef.current = null;
-      }
-      return;
-    }
-    const micron = microns.find((item) => item.id === singleMicronId);
-    if (!micron) {
-      return;
-    }
-    if (priceSyncedForImplicitMicronRef.current === singleMicronId) {
-      return;
-    }
-    priceSyncedForImplicitMicronRef.current = singleMicronId;
-    if (canViewPrice && micron.price_per_unit) {
-      form.setValue("price_per_unit", micron.price_per_unit, { shouldDirty: false });
-    }
-    if (micron.price_unit_id) {
-      form.setValue("price_unit_id", micron.price_unit_id, { shouldDirty: false });
-    } else {
-      const kgId = unitIdForCode(units, "kg");
-      if (kgId) {
-        form.setValue("price_unit_id", kgId, { shouldDirty: false });
-      }
-    }
-  }, [hasSingleMicron, singleMicronId, formParentId, microns, units, canViewPrice, form]);
-
   useEffect(() => {
     if (!productId || micronsLoading) {
       return;
-    }
-    const formMicron = form.getValues("parent_id");
-    if (formMicron && !microns.some((m) => m.id === formMicron)) {
-      form.setValue("parent_id", "", { shouldValidate: false, shouldDirty: true });
     }
     const lines = form.getValues("size_lines");
     lines.forEach((line, index) => {
       if (line.parent_id && !microns.some((m) => m.id === line.parent_id)) {
         form.setValue(`size_lines.${index}.parent_id`, "", {
+          shouldValidate: false,
+          shouldDirty: true,
+        });
+        form.setValue(`size_lines.${index}.price_per_unit`, "", {
+          shouldValidate: false,
+          shouldDirty: true,
+        });
+        form.setValue(`size_lines.${index}.price_unit_id`, "", {
           shouldValidate: false,
           shouldDirty: true,
         });
@@ -327,26 +337,46 @@ export function MaterialEditFormFields({
     });
   }, [defaultSizeUnitId, defaultQuantityUnitId, form, fields.length]);
 
-  function defaultParentIdForNewLine(): string {
-    const formMicron = form.getValues("parent_id");
-    if (formMicron) {
-      return formMicron;
-    }
+  function defaultLineSeed(): Pick<
+    MaterialSizeLineValues,
+    "parent_id" | "price_per_unit" | "price_unit_id"
+  > {
     const lines = form.getValues("size_lines");
-    return lines[lines.length - 1]?.parent_id ?? "";
+    const last = lines[lines.length - 1];
+    return {
+      parent_id: last?.parent_id ?? "",
+      price_per_unit: last?.price_per_unit ?? "",
+      price_unit_id: last?.price_unit_id ?? unitIdForCode(units, "kg"),
+    };
   }
 
   function addSizeLine() {
+    const seed = defaultLineSeed();
     append(
-      emptyMaterialSizeLine(defaultParentIdForNewLine(), defaultSizeUnitId, defaultQuantityUnitId),
+      emptyMaterialSizeLine(
+        seed.parent_id,
+        defaultSizeUnitId,
+        defaultQuantityUnitId,
+        seed.price_per_unit,
+        seed.price_unit_id,
+      ),
     );
   }
 
   function removeSizeRow(index: number) {
     if (fields.length === 1) {
+      const seed = defaultLineSeed();
       form.setValue(
         "size_lines",
-        [emptyMaterialSizeLine(defaultParentIdForNewLine(), defaultSizeUnitId, defaultQuantityUnitId)],
+        [
+          emptyMaterialSizeLine(
+            seed.parent_id,
+            defaultSizeUnitId,
+            defaultQuantityUnitId,
+            seed.price_per_unit,
+            seed.price_unit_id,
+          ),
+        ],
         {
           shouldDirty: true,
           shouldValidate: true,
@@ -436,11 +466,17 @@ export function MaterialEditFormFields({
                           shouldDirty: false,
                         });
                       }
-                      form.setValue("parent_id", "", { shouldValidate: false, shouldDirty: true });
-                      form.clearErrors("parent_id");
                       const lines = form.getValues("size_lines");
                       lines.forEach((_, index) => {
                         form.setValue(`size_lines.${index}.parent_id`, "", {
+                          shouldValidate: false,
+                          shouldDirty: true,
+                        });
+                        form.setValue(`size_lines.${index}.price_per_unit`, "", {
+                          shouldValidate: false,
+                          shouldDirty: true,
+                        });
+                        form.setValue(`size_lines.${index}.price_unit_id`, "", {
                           shouldValidate: false,
                           shouldDirty: true,
                         });
@@ -470,133 +506,35 @@ export function MaterialEditFormFields({
         </FormGrid>
       </MaterialFormSection>
 
-      <MaterialFormSection>
-        <FormGrid columns={canViewPrice ? 3 : 2}>
-          <FormField
-            control={control}
-            name="parent_id"
-            render={({ field }) => (
-              <FormItem className={canViewPrice ? undefined : "sm:col-span-2 lg:col-span-1"}>
-                <FormLabel>Micron</FormLabel>
-                <FormControl>
-                  <MasterSelect
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      if (value) {
-                        form.clearErrors("parent_id");
-                      }
-                    }}
-                    disabled={readOnly || !productId}
-                    placeholder={productId ? "Select micron" : "Select product first"}
-                    options={microns.map((item) => ({ value: item.id, label: item.name }))}
-                    loading={micronsLoading}
-                    createLabel={
-                      !readOnly && canCreateCategory && productId ? "New micron" : undefined
-                    }
-                    onCreate={
-                      !readOnly && canCreateCategory && productId
-                        ? () => {
-                            setMicronDialogIndex(null);
-                            setMicronDialogOpen(true);
-                          }
-                        : undefined
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {canViewPrice ? (
-            <>
-              <FormField
-                control={control}
-                name="price_per_unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price</FormLabel>
-                    <FormControl>
-                      <DecimalInput
-                        kind="money"
-                        {...field}
-                        disabled={readOnly || !hasSingleMicron}
-                      />
-                    </FormControl>
-                    {!readOnly && editProductId ? (
-                      <p className="text-muted-foreground text-xs">
-                        Used for new stock added via Add size rows (recorded per receipt in history).
-                      </p>
-                    ) : null}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="price_unit_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price unit</FormLabel>
-                    <FormControl>
-                      <MasterSelect
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={readOnly || !hasSingleMicron}
-                        placeholder="Per"
-                        options={units.map((item) => ({
-                          value: item.id,
-                          label: item.code,
-                        }))}
-                        createLabel={!readOnly && canCreateUnit ? "New unit" : undefined}
-                        onCreate={
-                          !readOnly && canCreateUnit ? () => setPriceUnitDialogOpen(true) : undefined
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </>
-          ) : null}
-        </FormGrid>
-      </MaterialFormSection>
-
       <MaterialFormSection title="Sizes">
-        <div className="flex flex-col gap-3">
-          <div
-            className={`hidden overflow-hidden rounded-md border bg-muted/50 shadow-sm sm:grid ${SIZE_LINE_GRID}`}
-          >
-            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
-              Micron
+        <div className="flex flex-col gap-3 overflow-x-auto">
+          <div className={sizeLineTableMinWidth(canViewPrice)}>
+            <div
+              className={`hidden overflow-hidden rounded-md border bg-muted/50 shadow-sm ${sizeLineGridClass(canViewPrice)}`}
+            >
+              <div className={SIZE_LINE_HEADER}>Micron</div>
+              {canViewPrice ? (
+                <>
+                  <div className={SIZE_LINE_HEADER}>Price</div>
+                  <div className={`${SIZE_LINE_HEADER} ${SIZE_LINE_COL_DIVIDER}`}>Per</div>
+                </>
+              ) : null}
+              <div className={SIZE_LINE_HEADER}>Size</div>
+              <div className={`${SIZE_LINE_HEADER} ${SIZE_LINE_COL_DIVIDER}`}>Size unit</div>
+              <div className={`${SIZE_LINE_HEADER} ${SIZE_LINE_COL_DIVIDER}`}>No. of rolls</div>
+              <div className={SIZE_LINE_HEADER}>Qty available</div>
+              <div className={`${SIZE_LINE_HEADER} ${SIZE_LINE_COL_DIVIDER}`}>Qty unit</div>
+              <div className={`${SIZE_LINE_HEADER} text-center`}>Active</div>
+              <div className={SIZE_LINE_HEADER} aria-hidden />
             </div>
-            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">Size</div>
-            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
-              Size unit
-            </div>
-            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
-              No. of rolls
-            </div>
-            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
-              Qty available
-            </div>
-            <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground lg:px-4">
-              Qty unit
-            </div>
-            <div className="px-1 py-2.5 text-center text-xs font-medium text-muted-foreground">
-              Active
-            </div>
-            <div className="px-1 py-2.5" aria-hidden />
-          </div>
-          {fields.map((fieldItem, index) => {
+            {fields.map((fieldItem, index) => {
             const line = form.watch(`size_lines.${index}`);
             const isIncrementRow = Boolean(editProductId && !line.id);
             const showRemove = canRemoveSizeLine(line);
             return (
               <div
                 key={fieldItem.id}
-                className={`grid grid-cols-1 gap-4 overflow-hidden rounded-md border bg-card p-4 shadow-sm ${SIZE_LINE_GRID} sm:gap-0 sm:p-0`}
+                className={`grid grid-cols-1 gap-4 overflow-hidden rounded-md border bg-card p-4 shadow-sm ${sizeLineGridClass(canViewPrice)} sm:gap-0 sm:p-0`}
               >
                 <FormField
                   control={control}
@@ -606,11 +544,13 @@ export function MaterialEditFormFields({
                       <FormLabel className="sm:sr-only">Micron</FormLabel>
                       <FormControl>
                         <MasterSelect
+                          compact
                           value={field.value}
                           onValueChange={(value) => {
                             field.onChange(value);
                             if (value) {
                               form.clearErrors(`size_lines.${index}.parent_id`);
+                              applyMicronToLine(index, value);
                             }
                           }}
                           disabled={readOnly || !productId}
@@ -634,6 +574,69 @@ export function MaterialEditFormFields({
                     </FormItem>
                   )}
                 />
+                {canViewPrice ? (
+                  <>
+                    <FormField
+                      control={control}
+                      name={`size_lines.${index}.price_per_unit`}
+                      render={({ field }) => (
+                        <FormItem className={SIZE_LINE_CELL}>
+                          <FormLabel className="sm:sr-only">Price</FormLabel>
+                          <FormControl>
+                            <DecimalInput
+                              kind="money"
+                              {...field}
+                              disabled={readOnly}
+                              onChange={(event) => {
+                                field.onChange(event);
+                                syncLinePriceToSameMicron(index, {
+                                  price_per_unit: event.target.value,
+                                });
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name={`size_lines.${index}.price_unit_id`}
+                      render={({ field }) => (
+                        <FormItem className={`${SIZE_LINE_UNIT_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
+                          <FormLabel className="sm:sr-only">Price unit</FormLabel>
+                          <FormControl>
+                            <MasterSelect
+                              compact
+                              className="min-w-0 max-w-full"
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                syncLinePriceToSameMicron(index, { price_unit_id: value });
+                              }}
+                              disabled={readOnly}
+                              placeholder="Per"
+                              options={units.map((item) => ({
+                                value: item.id,
+                                label: item.code,
+                              }))}
+                              createLabel={!readOnly && canCreateUnit ? "New unit" : undefined}
+                              onCreate={
+                                !readOnly && canCreateUnit
+                                  ? () => {
+                                      setPriceUnitDialogIndex(index);
+                                      setPriceUnitDialogOpen(true);
+                                    }
+                                  : undefined
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                ) : null}
                 <FormField
                   control={control}
                   name={`size_lines.${index}.size`}
@@ -657,10 +660,12 @@ export function MaterialEditFormFields({
                   control={control}
                   name={`size_lines.${index}.size_unit_id`}
                   render={({ field }) => (
-                    <FormItem className={SIZE_LINE_CELL}>
+                    <FormItem className={`${SIZE_LINE_UNIT_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
                       <FormLabel className="sm:sr-only">Size unit</FormLabel>
                       <FormControl>
                         <MasterSelect
+                          compact
+                          className="min-w-0 max-w-full"
                           value={field.value}
                           onValueChange={field.onChange}
                           disabled={readOnly}
@@ -688,7 +693,7 @@ export function MaterialEditFormFields({
                   control={control}
                   name={`size_lines.${index}.opening_rolls`}
                   render={({ field }) => (
-                    <FormItem className={SIZE_LINE_CELL}>
+                    <FormItem className={`${SIZE_LINE_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
                       <FormLabel className={isIncrementRow ? "sr-only" : "sm:sr-only"}>
                         {isIncrementRow ? "Add rolls" : "No. of rolls"}
                       </FormLabel>
@@ -728,10 +733,12 @@ export function MaterialEditFormFields({
                   control={control}
                   name={`size_lines.${index}.unit_id`}
                   render={({ field }) => (
-                    <FormItem className={SIZE_LINE_CELL}>
+                    <FormItem className={`${SIZE_LINE_UNIT_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
                       <FormLabel className="sm:sr-only">Qty unit</FormLabel>
                       <FormControl>
                         <MasterSelect
+                          compact
+                          className="min-w-0 max-w-full"
                           value={field.value}
                           onValueChange={field.onChange}
                           disabled={readOnly}
@@ -760,7 +767,7 @@ export function MaterialEditFormFields({
                     control={control}
                     name={`size_lines.${index}.is_active`}
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center gap-2 space-y-0 sm:justify-center sm:px-2 sm:py-3">
+                      <FormItem className="flex flex-row items-center gap-2 space-y-0 sm:justify-center sm:px-1 sm:py-2">
                         <FormLabel className="text-sm font-normal sm:sr-only">Active</FormLabel>
                         <FormControl>
                           <Switch
@@ -772,7 +779,7 @@ export function MaterialEditFormFields({
                       </FormItem>
                     )}
                   />
-                  <div className="flex shrink-0 items-center sm:justify-center sm:px-1 sm:py-3">
+                  <div className="flex shrink-0 items-center sm:justify-center sm:px-1 sm:py-2">
                     {showRemove ? (
                       <Button
                         type="button"
@@ -790,6 +797,7 @@ export function MaterialEditFormFields({
               </div>
             );
           })}
+          </div>
           {!readOnly ? (
             <AddLineItemButton onClick={addSizeLine}>Add size</AddLineItemButton>
           ) : null}
@@ -822,21 +830,13 @@ export function MaterialEditFormFields({
         }}
         defaultProductId={productId || undefined}
         onCreated={(micron) => {
-          if (micronDialogIndex === null) {
-            applyCreatedMicronToMaterialForm(form, micron, canViewPrice);
-            const lines = form.getValues("size_lines");
-            lines.forEach((line, index) => {
-              if (!line.id && !line.parent_id) {
-                form.setValue(`size_lines.${index}.parent_id`, micron.id, {
-                  shouldValidate: false,
-                  shouldDirty: true,
-                });
-              }
-            });
-          } else {
-            applyCreatedMicronToMaterialSizeLine(form, micronDialogIndex, micron);
-            setMicronDialogIndex(null);
-          }
+          const targetIndex = micronDialogIndex ?? 0;
+          applyCreatedMicronToMaterialSizeLine(form, targetIndex, micron, canViewPrice);
+          syncLinePriceToSameMicron(targetIndex, {
+            price_per_unit: form.getValues(`size_lines.${targetIndex}.price_per_unit`),
+            price_unit_id: form.getValues(`size_lines.${targetIndex}.price_unit_id`),
+          });
+          setMicronDialogIndex(null);
         }}
       />
       <UnitQuickCreateDialog
@@ -861,7 +861,12 @@ export function MaterialEditFormFields({
       />
       <UnitQuickCreateDialog
         open={priceUnitDialogOpen}
-        onOpenChange={setPriceUnitDialogOpen}
+        onOpenChange={(open) => {
+          setPriceUnitDialogOpen(open);
+          if (!open) {
+            setPriceUnitDialogIndex(null);
+          }
+        }}
         onCreated={handlePriceUnitCreated}
       />
       <ConfirmActionDialog

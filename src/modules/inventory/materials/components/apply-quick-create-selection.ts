@@ -64,9 +64,22 @@ export function applyCreatedMicronToMaterialSizeLine(
   form: unknown,
   index: number,
   micron: Micron,
+  canViewPrice: boolean,
 ) {
   const f = asMasterForm(form);
   setFormValueFromQuickCreate(f, "product_id", micron.product_id);
   setFormValueFromQuickCreate(f, `size_lines.${index}.parent_id`, micron.id);
+  if (canViewPrice && micron.price_per_unit) {
+    f.setValue(`size_lines.${index}.price_per_unit`, micron.price_per_unit, {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
+  }
+  if (micron.price_unit_id) {
+    f.setValue(`size_lines.${index}.price_unit_id`, micron.price_unit_id, {
+      shouldValidate: false,
+      shouldDirty: true,
+    });
+  }
   f.clearErrors(`size_lines.${index}.parent_id`);
 }

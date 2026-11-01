@@ -136,17 +136,19 @@ export function sizeLineToUpdatePayload(
   return payload;
 }
 
-export function toMicronPricePayload(values: MaterialFormValues): {
+export function toMicronPricePayload(
+  price: Pick<MaterialFormValues, "price_per_unit" | "price_unit_id">,
+): {
   price_per_unit: string | null;
   price_unit_id: string;
 } | null {
-  const priceUnitId = values.price_unit_id.trim();
+  const priceUnitId = price.price_unit_id.trim();
   if (!priceUnitId) {
     return null;
   }
-  const price = values.price_per_unit.trim();
+  const amount = price.price_per_unit.trim();
   return {
-    price_per_unit: price === "" ? null : price,
+    price_per_unit: amount === "" ? null : amount,
     price_unit_id: priceUnitId,
   };
 }

@@ -128,12 +128,19 @@ const stockInNumeric = z
     message: "Must be zero or greater",
   });
 
+const linePriceUnitIdSchema = z.union([
+  z.literal(""),
+  z.string().uuid({ message: "Select price unit" }),
+]);
+
 export const MaterialSizeLineSchema = z.object({
   id: z.string().uuid().optional(),
   parent_id: z.union([
     z.literal(""),
     z.string().uuid({ message: "Select a micron" }),
   ]),
+  price_per_unit: z.string(),
+  price_unit_id: linePriceUnitIdSchema,
   size: sizeLineNumeric,
   size_unit_id: z.string().uuid({ message: "Select size unit" }),
   quantity_available: z.string(),
@@ -253,29 +260,15 @@ export const MaterialEditFormSchema = z
       z.string().uuid({ message: "Select a company" }),
     ]),
     product_id: z.string().uuid({ message: "Select a product" }),
-    parent_id: z.union([
-      z.literal(""),
-      z.string().uuid({ message: "Select a micron" }),
-    ]),
-    price_per_unit: z.string(),
-    price_unit_id: z.union([
-      z.literal(""),
-      z.string().uuid({ message: "Select price unit" }),
-    ]),
     size_lines: z.array(MaterialSizeLineSchema).min(1, "Add at least one size"),
   })
   .superRefine((data, ctx) => {
     data.size_lines.forEach((line, index) => {
-      const micronId = line.parent_id || data.parent_id;
-      if (!micronId) {
-        const path =
-          data.parent_id === "" && line.parent_id === ""
-            ? (["parent_id"] as const)
-            : (["size_lines", index, "parent_id"] as const);
+      if (!line.parent_id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Select a micron",
-          path: [...path],
+          path: ["size_lines", index, "parent_id"],
         });
       }
     });
@@ -290,15 +283,13 @@ export type MaterialCreateFormValues = z.infer<typeof MaterialCreateFormSchema>;
 export type MaterialProductEditContext = {
   productId: string;
   companyId?: string;
-  /** Form-level micron when all rows share one, or URL context on edit. */
+  /** URL context on edit: only load sizes for this micron. */
   defaultMicronId?: string;
-  pricePerUnit: string;
-  priceUnitId: string;
   defaultSizeUnitId?: string;
   defaultQuantityUnitId?: string;
 };
 
-/** Apply form-level micron and shared units when a row omits them. */
+/** Apply shared units when a row omits them. */
 export function resolveMaterialEditSizeLines(
   values: MaterialEditFormValues,
 ): MaterialSizeLineValues[] {
@@ -309,11 +300,41 @@ export function resolveMaterialEditSizeLines(
   return values.size_lines.map((line) =>
     normalizeSavedRowStockInLine({
       ...line,
-      parent_id: line.parent_id || values.parent_id,
       size_unit_id: line.size_unit_id || fallbackSizeUnitId,
       unit_id: line.unit_id || fallbackQuantityUnitId,
     }),
   );
+}
+
+export type MicronPriceUpdatePayload = {
+  id: string;
+  price_per_unit: string | null;
+  price_unit_id: string;
+};
+
+/** One micron PATCH payload per distinct parent_id (last line wins for that micron). */
+export function micronPricePayloadsFromSizeLines(
+  lines: MaterialSizeLineValues[],
+): MicronPriceUpdatePayload[] {
+  const byMicron = new Map<string, { price_per_unit: string; price_unit_id: string }>();
+  for (const line of lines) {
+    if (!line.parent_id) {
+      continue;
+    }
+    const priceUnitId = line.price_unit_id.trim();
+    if (!priceUnitId) {
+      continue;
+    }
+    byMicron.set(line.parent_id, {
+      price_per_unit: line.price_per_unit.trim(),
+      price_unit_id: priceUnitId,
+    });
+  }
+  return [...byMicron.entries()].map(([id, { price_per_unit, price_unit_id }]) => ({
+    id,
+    price_per_unit: price_per_unit === "" ? null : price_per_unit,
+    price_unit_id,
+  }));
 }
 
 function draftRollIncrement(line: MaterialSizeLineValues): string {
@@ -388,7 +409,7 @@ export function buildMaterialEditFormValues(
     sorted[0]?.unit_id ?? context.defaultQuantityUnitId ?? "";
 
   const micronIds = new Set(sorted.map((row) => row.micron_id));
-  const sharedMicronId =
+  const defaultLineMicronId =
     defaultMicronId !== ""
       ? defaultMicronId
       : micronIds.size === 1
@@ -400,18 +421,21 @@ export function buildMaterialEditFormValues(
     sorted[0]?.company_id ??
     "";
 
+  const defaultLinePrice =
+    sorted[0]?.price_per_unit != null ? String(sorted[0].price_per_unit) : "";
+  const defaultLinePriceUnitId = sorted[0]?.price_unit_id ?? "";
+
   return {
     company_id: companyId ?? "",
     product_id: context.productId,
-    parent_id: sharedMicronId,
-    price_per_unit: context.pricePerUnit,
-    price_unit_id: context.priceUnitId,
     size_lines:
       sorted.length > 0
         ? consolidateMaterialSizeLines(
             sorted.map((row) => ({
               id: row.id,
               parent_id: row.micron_id,
+              price_per_unit: row.price_per_unit != null ? String(row.price_per_unit) : "",
+              price_unit_id: row.price_unit_id ?? "",
               size: formQuantityValue(row.size),
               size_unit_id: row.size_unit_id,
               quantity_available: formQuantityValue(row.total_kg),
@@ -424,9 +448,11 @@ export function buildMaterialEditFormValues(
           ).lines
         : [
             emptyMaterialSizeLine(
-              sharedMicronId,
+              defaultLineMicronId,
               sizeUnitFallback,
               quantityUnitFallback,
+              defaultLinePrice,
+              defaultLinePriceUnitId,
             ),
           ],
   };
@@ -442,21 +468,35 @@ export function materialsToEditFormValues(
     productId,
     companyId: fallback?.company_id ?? materials[0]?.company_id ?? undefined,
     defaultMicronId: fallback?.micron_id ?? "",
-    pricePerUnit: fallback?.price_per_unit ?? materials[0]?.price_per_unit ?? "",
-    priceUnitId: fallback?.price_unit_id ?? materials[0]?.price_unit_id ?? "",
     defaultSizeUnitId: fallback?.size_unit_id,
     defaultQuantityUnitId: fallback?.unit_id ?? undefined,
   });
+}
+
+/** Blank create form (no product/micron/size prefill). */
+export function emptyMaterialCreateFormValues(
+  defaultSizeUnitId = "",
+  defaultQuantityUnitId = "",
+): MaterialCreateFormValues {
+  return {
+    company_id: "",
+    product_id: "",
+    size_lines: [emptyMaterialSizeLine("", defaultSizeUnitId, defaultQuantityUnitId)],
+  };
 }
 
 export function emptyMaterialSizeLine(
   parentId = "",
   sizeUnitId = "",
   quantityUnitId = "",
+  pricePerUnit = "",
+  priceUnitId = "",
 ): MaterialSizeLineValues {
   return {
     parent_id: parentId,
-    size: "0",
+    price_per_unit: pricePerUnit,
+    price_unit_id: priceUnitId,
+    size: "",
     size_unit_id: sizeUnitId,
     quantity_available: "0",
     unit_id: quantityUnitId,

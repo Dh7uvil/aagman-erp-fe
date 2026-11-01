@@ -13,9 +13,17 @@ export function useCreateMicron() {
   return useMutation({
     mutationFn: (values: MicronCreateRequest) => micronsApi.create(values),
     onSuccess: (data, variables) => {
-      upsertQueryListItem(queryClient, micronKeys.allItems(variables.product_id), data);
+      upsertQueryListItem(
+        queryClient,
+        micronKeys.listItems(variables.product_id, true),
+        data,
+      );
+      upsertQueryListItem(
+        queryClient,
+        micronKeys.listItems(variables.product_id, false),
+        data,
+      );
       void queryClient.invalidateQueries({ queryKey: micronKeys.all });
-      void queryClient.invalidateQueries({ queryKey: micronKeys.allItems(variables.product_id) });
     },
   });
 }
@@ -28,6 +36,8 @@ export function useUpdateMicron() {
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: micronKeys.all });
       void queryClient.invalidateQueries({ queryKey: micronKeys.allItems(data.product_id) });
+      void queryClient.invalidateQueries({ queryKey: micronKeys.listItems(data.product_id, true) });
+      void queryClient.invalidateQueries({ queryKey: micronKeys.listItems(data.product_id, false) });
       void queryClient.invalidateQueries({ queryKey: materialKeys.all });
     },
   });

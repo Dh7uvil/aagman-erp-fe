@@ -13,6 +13,9 @@ export const materialRoutes = {
   list: base,
   report: `${base}/report`,
   new: `${base}/new`,
+  /** Fresh create form; pass a new token on each navigation (avoids Next.js route cache reusing form state). */
+  newWithReset: (resetToken: string) =>
+    `${base}/new?reset=${encodeURIComponent(resetToken)}`,
   stockOut: (params?: MaterialStockOutSearchParams) => {
     const path = `${base}/stock-out`;
     if (!params) {

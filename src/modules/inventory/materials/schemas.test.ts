@@ -5,6 +5,7 @@ import {
   consolidateMaterialSizeLines,
   materialSizeLineKey,
   materialSizeLineStockOmitFlags,
+  micronPricePayloadsFromSizeLines,
   resolveMaterialEditSizeLines,
   type MaterialEditFormValues,
   type MaterialSizeLineValues,
@@ -14,11 +15,14 @@ const micronA = "11111111-1111-4111-8111-111111111111";
 const micronB = "22222222-2222-4222-8222-222222222222";
 const sizeUnit = "33333333-3333-4333-8333-333333333333";
 const qtyUnit = "44444444-4444-4444-8444-444444444444";
+const priceUnit = "77777777-7777-4777-8777-777777777777";
 
 function line(
   overrides: Partial<MaterialSizeLineValues> & Pick<MaterialSizeLineValues, "parent_id" | "size">,
 ): MaterialSizeLineValues {
   return {
+    price_per_unit: "",
+    price_unit_id: "",
     size_unit_id: sizeUnit,
     quantity_available: "0",
     unit_id: qtyUnit,
@@ -143,9 +147,6 @@ describe("resolveMaterialEditSizeLines", () => {
     const values: MaterialEditFormValues = {
       company_id: "",
       product_id: "66666666-6666-4666-8666-666666666666",
-      parent_id: micronA,
-      price_per_unit: "",
-      price_unit_id: "",
       size_lines: [
         line({
           id: keepId,
@@ -159,16 +160,49 @@ describe("resolveMaterialEditSizeLines", () => {
     expect(resolveMaterialEditSizeLines(values)[0]?.stock_in_rolls).toBe("0");
   });
 
-  it("uses form micron when a row micron is empty", () => {
+  it("does not fill micron from a removed form-level field", () => {
     const values: MaterialEditFormValues = {
       company_id: "",
       product_id: "66666666-6666-4666-8666-666666666666",
-      parent_id: micronA,
-      price_per_unit: "",
-      price_unit_id: "",
       size_lines: [line({ parent_id: "", size: "300" })],
     };
-    expect(resolveMaterialEditSizeLines(values)[0]?.parent_id).toBe(micronA);
+    expect(resolveMaterialEditSizeLines(values)[0]?.parent_id).toBe("");
+  });
+});
+
+describe("micronPricePayloadsFromSizeLines", () => {
+  it("returns one payload per micron with the last line price winning", () => {
+    const payloads = micronPricePayloadsFromSizeLines([
+      line({
+        parent_id: micronA,
+        size: "300",
+        price_per_unit: "10",
+        price_unit_id: priceUnit,
+      }),
+      line({
+        parent_id: micronA,
+        size: "400",
+        price_per_unit: "12",
+        price_unit_id: priceUnit,
+      }),
+      line({
+        parent_id: micronB,
+        size: "300",
+        price_per_unit: "20",
+        price_unit_id: priceUnit,
+      }),
+    ]);
+    expect(payloads).toHaveLength(2);
+    const micronAPayload = payloads.find((item) => item.id === micronA);
+    expect(micronAPayload?.price_per_unit).toBe("12");
+    expect(payloads.find((item) => item.id === micronB)?.price_per_unit).toBe("20");
+  });
+
+  it("skips microns without a price unit", () => {
+    const payloads = micronPricePayloadsFromSizeLines([
+      line({ parent_id: micronA, size: "300", price_per_unit: "10", price_unit_id: "" }),
+    ]);
+    expect(payloads).toHaveLength(0);
   });
 });
 

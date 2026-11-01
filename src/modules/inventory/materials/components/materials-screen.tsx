@@ -409,11 +409,14 @@ export function MaterialsScreen() {
               </Button>
             ) : null}
             {canCreate ? (
-              <Button asChild>
-                <Link href={materialRoutes.new}>
-                  <Plus className="size-4" />
-                  Add material
-                </Link>
+              <Button
+                type="button"
+                onClick={() =>
+                  router.push(materialRoutes.newWithReset(String(Date.now())))
+                }
+              >
+                <Plus className="size-4" />
+                Add material
               </Button>
             ) : null}
           </div>

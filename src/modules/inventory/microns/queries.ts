@@ -7,6 +7,8 @@ import { micronsApi } from "@/modules/inventory/microns/api";
 export const micronKeys = {
   all: ["inventory", "microns"] as const,
   allItems: (productId?: string) => [...micronKeys.all, "all", productId ?? ""] as const,
+  listItems: (productId?: string, activeOnly = true) =>
+    [...micronKeys.allItems(productId), activeOnly ? "active" : "all"] as const,
 };
 
 export function useAllMicrons(
@@ -15,7 +17,7 @@ export function useAllMicrons(
   activeOnly = true,
 ) {
   return useQuery({
-    queryKey: [...micronKeys.allItems(productId), activeOnly ? "active" : "all"] as const,
+    queryKey: micronKeys.listItems(productId, activeOnly),
     queryFn: () =>
       micronsApi.listAll({
         product_id: productId,

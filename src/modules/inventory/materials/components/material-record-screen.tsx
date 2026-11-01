@@ -1,12 +1,12 @@
 "use client";
 
 import { zodResolver } from "@/shared/lib/zod-resolver";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { sizeLineToCreatePayload, toMicronPricePayload } from "@/modules/inventory/materials/api";
+import { sizeLineToCreatePayload } from "@/modules/inventory/materials/api";
 import { MaterialEditFormFields } from "@/modules/inventory/materials/components/material-edit-form-fields";
 import { useCreateMaterial } from "@/modules/inventory/materials/mutations";
 import { useUpdateMicron } from "@/modules/inventory/microns/mutations";
@@ -19,11 +19,12 @@ import { materialRoutes } from "@/modules/inventory/materials/routes";
 import {
   MaterialCreateFormSchema,
   consolidateMaterialSizeLines,
+  emptyMaterialCreateFormValues,
   emptyMaterialSizeLine,
   materialSizeLineKey,
-  materialsToEditFormValues,
+  micronPricePayloadsFromSizeLines,
   resolveMaterialEditSizeLines,
-  uniqueMicronIdsFromEditValues,
+  uniqueMicronIdsFromSizeLines,
   type MaterialCreateFormValues,
   type MaterialEditFormValues,
 } from "@/modules/inventory/materials/schemas";
@@ -38,23 +39,10 @@ import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useCan } from "@/shared/providers/session-provider";
 
-function micronPriceFromEditValues(values: MaterialEditFormValues, micronId: string) {
-  return toMicronPricePayload({
-    product_id: values.product_id,
-    parent_id: micronId,
-    size: "",
-    size_unit_id: values.size_lines[0]?.size_unit_id ?? "",
-    quantity_available: "0",
-    unit_id: values.size_lines[0]?.unit_id ?? "",
-    opening_rolls: "0",
-    price_per_unit: values.price_per_unit,
-    price_unit_id: values.price_unit_id,
-    is_active: true,
-  });
-}
-
 export function MaterialRecordScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetToken = searchParams.get("reset") ?? "initial";
   const can = useCan();
   const canViewPrice = can(inventoryPricePermissions.read);
   const canUpdateCategory = can(categoryPermissions.update);
@@ -74,10 +62,18 @@ export function MaterialRecordScreen() {
 
   const form = useForm<MaterialCreateFormValues>({
     resolver: zodResolver(MaterialCreateFormSchema),
-    defaultValues: materialsToEditFormValues([], null),
+    defaultValues: emptyMaterialCreateFormValues(),
     mode: "onSubmit",
     reValidateMode: "onSubmit",
   });
+
+  useEffect(() => {
+    form.reset(emptyMaterialCreateFormValues(defaultSizeUnitId, defaultQuantityUnitId));
+    setFormError(null);
+    submitInFlight.current = false;
+    // Only re-run when opening a new create session (see materialRoutes.newWithReset).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unit ids are read at reset time; do not reset when units load later
+  }, [resetToken, form]);
 
   useEffect(() => {
     if (!defaultSizeUnitId && !defaultQuantityUnitId) {
@@ -118,14 +114,15 @@ export function MaterialRecordScreen() {
     setFormError(null);
     try {
       const resolvedLines = resolveMaterialEditSizeLines(values);
-      const micronIds = uniqueMicronIdsFromEditValues(values);
-      const micronPrice =
-        canViewPrice && canUpdateCategory && micronIds.length === 1
-          ? micronPriceFromEditValues(values, micronIds[0]!)
-          : null;
+      const micronIds = uniqueMicronIdsFromSizeLines(resolvedLines);
+      const micronPrices =
+        canViewPrice && canUpdateCategory
+          ? micronPricePayloadsFromSizeLines(resolvedLines)
+          : [];
 
       let lastId = "";
       let lastMicronId = micronIds[0] ?? "";
+      let createdCount = 0;
       const { lines: sizeLines } = consolidateMaterialSizeLines(resolvedLines);
       for (const line of sizeLines) {
         if (line.id) {
@@ -134,6 +131,7 @@ export function MaterialRecordScreen() {
           continue;
         }
         const created = await createMaterial.mutateAsync(sizeLineToCreatePayload(line));
+        createdCount += 1;
         const key = materialSizeLineKey(line);
         values.size_lines.forEach((formLine, index) => {
           if (materialSizeLineKey(formLine) === key) {
@@ -147,8 +145,13 @@ export function MaterialRecordScreen() {
         lastMicronId = line.parent_id;
       }
 
-      if (micronPrice && micronIds.length === 1) {
-        await updateMicron.mutateAsync({ id: micronIds[0]!, values: micronPrice });
+      if (createdCount === 0) {
+        setFormError("Enter at least one size with a micron before saving.");
+        return;
+      }
+
+      for (const { id, ...micronValues } of micronPrices) {
+        await updateMicron.mutateAsync({ id, values: micronValues });
       }
       toast.success("Material created");
       router.push(`${materialRoutes.view(lastId)}?micron=${lastMicronId}`);
@@ -178,7 +181,13 @@ export function MaterialRecordScreen() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form
-              onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
+              onSubmit={
+                canSubmit
+                  ? form.handleSubmit(onSubmit, () => {
+                      toast.error("Fix the highlighted fields before saving.");
+                    })
+                  : (event) => event.preventDefault()
+              }
               className="flex w-full flex-col gap-4"
             >
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
