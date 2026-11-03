@@ -67,6 +67,19 @@ export function CompanyFormFields({
           </FormItem>
         )}
       />
+      <FormField
+        control={control}
+        name="gst_number"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>GST no.</FormLabel>
+            <FormControl>
+              <Input placeholder="e.g. 22AAAAA0000A1Z5" disabled={readOnly} {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <section className="col-span-full flex flex-col gap-3">
         <p className="text-sm font-medium">Address</p>
         <AddressFields control={control} name="address" disabled={readOnly} />

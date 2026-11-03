@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
-import { jobRoutes } from "@/modules/inventory/jobs/routes";
+import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import {
   cylinderReturnPermissions,
-  jobPermissions,
+  cylinderPermissions,
   materialPermissions,
   materialsReportPermissions,
   unitPermissions,
@@ -104,9 +104,9 @@ export const navigation: NavigationGroup[] = [
         subsection: "Materials",
       },
       {
-        label: "Jobs",
-        href: jobRoutes.list,
-        permission: jobPermissions.read,
+        label: "Cylinders",
+        href: cylinderRoutes.list,
+        permission: cylinderPermissions.read,
         icon: Briefcase,
         subsection: "Operations",
       },

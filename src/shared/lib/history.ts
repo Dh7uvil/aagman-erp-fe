@@ -1,5 +1,5 @@
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
-import { jobRoutes } from "@/modules/inventory/jobs/routes";
+import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 
 export const MASTER_HISTORY_PAGE_TITLE = "History";
@@ -14,9 +14,9 @@ export type HistoryResourceSpec = {
 
 const HISTORY_RESOURCES = [
   {
-    slug: "jobs",
-    listHref: jobRoutes.list,
-    label: "Jobs",
+    slug: "cylinders",
+    listHref: cylinderRoutes.list,
+    label: "Cylinders",
     supportsAttachments: true,
   },
   {

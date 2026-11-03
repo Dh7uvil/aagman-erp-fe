@@ -3,8 +3,8 @@
 import { Expand, FileText, ImageIcon, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { jobsApi } from "@/modules/inventory/jobs/api";
-import type { EntityHistoryEntry, Job } from "@/modules/inventory/jobs/schemas";
+import { cylindersApi } from "@/modules/inventory/cylinders/api";
+import type { Cylinder, EntityHistoryEntry } from "@/modules/inventory/cylinders/schemas";
 import {
   formatAuditValue,
   humanizeAuditField,
@@ -42,8 +42,8 @@ function historyDaySummary(count: number, noun: string): string {
 }
 
 function attachmentSlotLabel(slot: string | null | undefined): string {
-  if (slot === "job_image") {
-    return "Job image";
+  if (slot === "cylinder_image") {
+    return "Cylinder image";
   }
   if (slot === "challan") {
     return "Challan";
@@ -59,30 +59,30 @@ function isPdfFileName(name: string): boolean {
   return /\.pdf$/i.test(name);
 }
 
-function resolveJobAttachmentUrl(
-  jobId: string | undefined,
+function resolveCylinderAttachmentUrl(
+  cylinderId: string | undefined,
   entry: EntityHistoryEntry,
-  job: Job | null | undefined,
+  cylinder: Cylinder | null | undefined,
 ): string | null {
-  if (!jobId) {
+  if (!cylinderId) {
     return null;
   }
   if (entry.storage_key) {
-    return jobsApi.historyAttachmentUrl(jobId, entry.id);
+    return cylindersApi.historyAttachmentUrl(cylinderId, entry.id);
   }
   if (entry.attachment_deleted) {
     return null;
   }
   const slot = entry.attachment_slot;
-  if (!job || !slot || !entry.summary) {
+  if (!cylinder || !slot || !entry.summary) {
     return null;
   }
-  if (slot !== "job_image" && slot !== "challan") {
+  if (slot !== "cylinder_image" && slot !== "challan") {
     return null;
   }
-  const meta = slot === "job_image" ? job.job_image : job.challan;
+  const meta = slot === "cylinder_image" ? cylinder.cylinder_image : cylinder.challan;
   if (meta?.filename === entry.summary) {
-    return jobsApi.fileUrl(jobId, slot);
+    return cylindersApi.fileUrl(cylinderId, slot);
   }
   return null;
 }
@@ -515,12 +515,12 @@ function AttachmentHistoryCard({
 
 function AttachmentsTimelineGrid({
   entries,
-  jobId,
-  job,
+  cylinderId,
+  cylinder,
 }: {
   entries: EntityHistoryEntry[];
-  jobId?: string;
-  job?: Job | null;
+  cylinderId?: string;
+  cylinder?: Cylinder | null;
 }) {
   const groups = groupHistoryByDay(entries);
 
@@ -541,7 +541,7 @@ function AttachmentsTimelineGrid({
                 <AttachmentHistoryCard
                   key={entry.id}
                   entry={entry}
-                  fileUrl={resolveJobAttachmentUrl(jobId, entry, job)}
+                  fileUrl={resolveCylinderAttachmentUrl(cylinderId, entry, cylinder)}
                 />
               ))}
             </div>
@@ -584,8 +584,8 @@ export function EntityHistoryCard({
   isError,
   onRetry,
   className,
-  jobId,
-  job,
+  cylinderId,
+  cylinder,
   supportsAttachments = true,
 }: {
   title?: string;
@@ -595,9 +595,9 @@ export function EntityHistoryCard({
   isError?: boolean;
   onRetry?: () => void;
   className?: string;
-  /** When set, attachment previews resolve via job history file URLs. */
-  jobId?: string;
-  job?: Job | null;
+  /** When set, attachment previews resolve via cylinder history file URLs. */
+  cylinderId?: string;
+  cylinder?: Cylinder | null;
   /** Records without file uploads hide the Attachments tab entirely. */
   supportsAttachments?: boolean;
 }) {
@@ -659,11 +659,11 @@ export function EntityHistoryCard({
             </TabsContent>
             <TabsContent value="attachments" className="pt-4">
               {attachmentEntries.length > 0 ? (
-                <AttachmentsTimelineGrid entries={attachmentEntries} jobId={jobId} job={job} />
+                <AttachmentsTimelineGrid entries={attachmentEntries} cylinderId={cylinderId} cylinder={cylinder} />
               ) : (
                 <DataTableEmpty
                   title="No attachments yet"
-                  message="Job image and challan uploads will appear here."
+                  message="Cylinder image and challan uploads will appear here."
                 />
               )}
             </TabsContent>

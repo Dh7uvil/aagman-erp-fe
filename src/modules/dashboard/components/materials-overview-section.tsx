@@ -1,6 +1,16 @@
 "use client";
 
-import { AlertCircle, IndianRupee, Package, PackageX, Scale, TrendingDown } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Archive,
+  IndianRupee,
+  Package,
+  PackageX,
+  Scale,
+  TrendingDown,
+} from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 
@@ -9,6 +19,7 @@ import { RankedListCard } from "@/modules/dashboard/components/ranked-list-card"
 import { formatBucketLabel } from "@/modules/dashboard/lib/bucket-label";
 import { useMaterialsDashboard } from "@/modules/dashboard/queries";
 import type { DashboardRangeParams } from "@/modules/dashboard/schemas";
+import { materialRoutes } from "@/modules/inventory/materials/routes";
 import { inventoryPricePermissions, materialPermissions } from "@/modules/inventory/permissions";
 import { getErrorMessage } from "@/shared/api/errors";
 import {
@@ -88,8 +99,8 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
       <div
         className={
           canViewPrice
-            ? "grid grid-cols-2 gap-3 lg:grid-cols-4"
-            : "grid grid-cols-2 gap-3 lg:grid-cols-3"
+            ? "grid grid-cols-2 gap-3 lg:grid-cols-5"
+            : "grid grid-cols-2 gap-3 lg:grid-cols-4"
         }
       >
         <KpiCard
@@ -110,7 +121,6 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
           icon={PackageX}
           value={kpis?.out_of_stock_skus}
           isLoading={query.isLoading}
-          className={canViewPrice ? undefined : "max-lg:col-span-2"}
         />
         {canViewPrice ? (
           <KpiCard
@@ -122,6 +132,12 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
             isLoading={query.isLoading}
           />
         ) : null}
+        <KpiCard
+          label="Dead stock"
+          icon={Archive}
+          value={kpis?.dead_stock_skus}
+          isLoading={query.isLoading}
+        />
       </div>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
@@ -220,6 +236,31 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
           ))}
         />
       </div>
+
+      <RankedListCard
+        title="Dead stock (no movement in 60 days)"
+        isLoading={query.isLoading}
+        emptyMessage="No materials idle for more than 60 days."
+        items={(query.data?.dead_stock ?? []).map((row) => (
+          <li key={row.material_id} className="flex items-center justify-between gap-2 py-2 text-sm">
+            <div className="min-w-0">
+              <Link
+                href={materialRoutes.view(row.material_id)}
+                className="text-primary font-medium hover:underline"
+              >
+                {row.name}
+              </Link>
+              <p className="text-muted-foreground font-mono text-xs">
+                {formatDecimal(row.total_kg)} kg on hand
+              </p>
+            </div>
+            <span className="text-muted-foreground flex shrink-0 items-center gap-1 font-mono text-xs">
+              <AlertTriangle className="size-3" />
+              {row.days_idle}d
+            </span>
+          </li>
+        ))}
+      />
 
       {!query.isLoading && (kpis?.out_of_stock_skus ?? 0) > 0 ? (
         <p className="text-muted-foreground flex items-center gap-1.5 text-xs">

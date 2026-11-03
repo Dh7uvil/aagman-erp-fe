@@ -14,6 +14,7 @@ export const CompanySchema = z.object({
   name: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
+  gst_number: z.string().nullable(),
   address: AddressPayloadSchema.nullable().default(null),
   bill_to_address: AddressPayloadSchema.nullable().default(null),
   ship_to_address: AddressPayloadSchema.nullable().default(null),
@@ -28,6 +29,7 @@ export const CompanyCreateRequestSchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().max(255).nullable().optional(),
   phone: z.string().max(50).nullable().optional(),
+  gst_number: z.string().max(15).nullable().optional(),
   address: AddressPayloadSchema.nullable().optional(),
   bill_to_address: AddressPayloadSchema.nullable().optional(),
   ship_to_address: AddressPayloadSchema.nullable().optional(),
@@ -38,6 +40,7 @@ export const CompanyUpdateRequestSchema = z.object({
   name: z.string().min(1).max(200).nullable().optional(),
   email: z.string().max(255).nullable().optional(),
   phone: z.string().max(50).nullable().optional(),
+  gst_number: z.string().max(15).nullable().optional(),
   address: AddressPayloadSchema.nullable().optional(),
   bill_to_address: AddressPayloadSchema.nullable().optional(),
   ship_to_address: AddressPayloadSchema.nullable().optional(),
@@ -53,6 +56,12 @@ export const CompanyFormSchema = z.object({
       message: "Enter a valid email address",
     }),
   phone: z.string().max(50),
+  gst_number: z
+    .string()
+    .max(15, "GST no. must be at most 15 characters")
+    .refine((value) => !value.trim() || /^[A-Za-z0-9]+$/.test(value.trim()), {
+      message: "GST no. must contain only letters and digits",
+    }),
   address: AddressFormSchema,
   bill_to_address: AddressFormSchema,
   ship_to_address: AddressFormSchema,
@@ -84,6 +93,7 @@ export function companyToFormValues(company: Company | null): CompanyFormValues 
     name: company?.name ?? "",
     email: company?.email ?? "",
     phone: company?.phone ?? "",
+    gst_number: company?.gst_number ?? "",
     address,
     bill_to_address: billTo,
     ship_to_address: shipTo,

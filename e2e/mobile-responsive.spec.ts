@@ -124,10 +124,10 @@ test.describe("mobile list views", () => {
     }
   });
 
-  test("jobs list uses cards without horizontal page overflow", async ({ page }) => {
+  test("cylinders list uses cards without horizontal page overflow", async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto("/inventory/jobs");
-    await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+    await page.goto("/inventory/cylinders");
+    await expect(page.getByRole("heading", { name: "Cylinders" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Card view" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -147,9 +147,9 @@ test.describe("tablet viewport", () => {
     await expect(page.getByText("Secure access management")).toHaveCount(0);
   });
 
-  test("jobs list table fits default columns at tablet width", async ({ page }) => {
+  test("cylinders list table fits default columns at tablet width", async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto("/inventory/jobs");
+    await page.goto("/inventory/cylinders");
     await page.getByRole("button", { name: "Table view" }).click();
     await expect(page.locator('[data-slot="table"]')).toBeVisible();
     const fitsViewport = await page.evaluate(

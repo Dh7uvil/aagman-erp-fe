@@ -7,6 +7,19 @@ export function initials(name: string): string {
     .join("");
 }
 
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** Calendar date as dd/mm/yyyy in the date's local components. */
+export function formatCalendarDate(date: Date): string {
+  return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
+
+function formatCalendarTime(date: Date): string {
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) {
     return "—";
@@ -15,7 +28,7 @@ export function formatDateTime(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString();
+  return `${formatCalendarDate(date)}, ${formatCalendarTime(date)}`;
 }
 
 export function formatDate(value: string | null | undefined): string {
@@ -25,13 +38,13 @@ export function formatDate(value: string | null | undefined): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   if (match) {
     const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-    return date.toLocaleDateString();
+    return formatCalendarDate(date);
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleDateString();
+  return formatCalendarDate(date);
 }
 
 function parseDecimalParts(value: string): { negative: boolean; whole: string; fraction: string } {

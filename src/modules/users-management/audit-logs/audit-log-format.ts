@@ -1,3 +1,5 @@
+import { formatDate, formatDateTime } from "@/shared/lib/format";
+
 export type FormattedAuditValue =
   | { kind: "empty" }
   | { kind: "text"; text: string }
@@ -9,6 +11,8 @@ function isPrimitive(value: unknown): value is string | number | boolean {
 }
 
 const DECIMAL_STRING = /^-?\d+\.\d+$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 function formatDecimalish(value: string): string {
   const [whole, fraction = ""] = value.split(".");
@@ -32,6 +36,12 @@ function formatPrimitive(value: string | number | boolean): string {
   }
   if (typeof value === "string" && DECIMAL_STRING.test(value)) {
     return formatDecimalish(value);
+  }
+  if (typeof value === "string" && ISO_DATE.test(value)) {
+    return formatDate(value);
+  }
+  if (typeof value === "string" && ISO_DATE_TIME.test(value)) {
+    return formatDateTime(value);
   }
   return String(value);
 }

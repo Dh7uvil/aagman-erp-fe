@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { useResumeJob } from "@/modules/inventory/jobs/mutations";
+import { usePauseCylinder } from "@/modules/inventory/cylinders/mutations";
 import { getErrorMessage } from "@/shared/api/errors";
-import { CancelLabel, ResumeLabel } from "@/shared/components/ui/action-button-labels";
+import { CancelLabel, PauseLabel } from "@/shared/components/ui/action-button-labels";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -16,27 +16,27 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Textarea } from "@/shared/components/ui/textarea";
 
-export function JobResumeDialog({
-  jobId,
+export function CylinderPauseDialog({
+  cylinderId,
   open,
   onOpenChange,
-  onResumed,
+  onPaused,
 }: {
-  jobId: string;
+  cylinderId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onResumed?: () => void;
+  onPaused?: () => void;
 }) {
-  const resumeJob = useResumeJob();
+  const pauseCylinder = usePauseCylinder();
   const [remarks, setRemarks] = useState("");
 
   async function submit() {
     try {
-      await resumeJob.mutateAsync({ id: jobId, resume_remarks: remarks.trim() || null });
-      toast.success("Job resumed");
+      await pauseCylinder.mutateAsync({ id: cylinderId, pause_remarks: remarks.trim() || null });
+      toast.success("Cylinder paused");
       onOpenChange(false);
       setRemarks("");
-      onResumed?.();
+      onPaused?.();
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -46,20 +46,20 @@ export function JobResumeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Resume job</DialogTitle>
+          <DialogTitle>Pause cylinder</DialogTitle>
         </DialogHeader>
         <Textarea
           value={remarks}
           onChange={(event) => setRemarks(event.target.value)}
-          placeholder="Resumed remarks"
+          placeholder="Paused remarks"
           rows={4}
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <CancelLabel />
           </Button>
-          <Button onClick={() => void submit()} disabled={resumeJob.isPending}>
-            <ResumeLabel />
+          <Button onClick={() => void submit()} disabled={pauseCylinder.isPending}>
+            <PauseLabel />
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,8 +1,8 @@
 import {
-  JobsDashboardSchema,
+  CylindersDashboardSchema,
   MaterialsDashboardSchema,
   type DashboardRangeParams,
-  type JobsDashboard,
+  type CylindersDashboard,
   type MaterialsDashboard,
 } from "@/modules/dashboard/schemas";
 import { apiClient } from "@/shared/api/client";
@@ -15,9 +15,9 @@ function rangeQuery(params: DashboardRangeParams = {}) {
 }
 
 export const dashboardApi = {
-  jobs: async (params: DashboardRangeParams = {}): Promise<JobsDashboard> =>
-    JobsDashboardSchema.parse(
-      await apiClient.get("/inventory/dashboard/jobs", { params: rangeQuery(params) }),
+  cylinders: async (params: DashboardRangeParams = {}): Promise<CylindersDashboard> =>
+    CylindersDashboardSchema.parse(
+      await apiClient.get("/inventory/dashboard/cylinders", { params: rangeQuery(params) }),
     ),
   materials: async (params: DashboardRangeParams = {}): Promise<MaterialsDashboard> =>
     MaterialsDashboardSchema.parse(

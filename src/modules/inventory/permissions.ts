@@ -33,31 +33,31 @@ export const inventoryPricePermissions = {
   read: permissionsByModule.inventory.material.view_price,
 } as const satisfies Record<string, CatalogPermission>;
 
-export const jobPermissions = {
-  read: permissionsByModule.inventory.job.read,
-  create: permissionsByModule.inventory.job.create,
-  update: permissionsByModule.inventory.job.update,
-  delete: permissionsByModule.inventory.job.delete,
-  viewPrice: permissionsByModule.inventory.job.view_price,
-  history: permissionsByModule.inventory.job.history,
+export const cylinderPermissions = {
+  read: permissionsByModule.inventory.cylinder.read,
+  create: permissionsByModule.inventory.cylinder.create,
+  update: permissionsByModule.inventory.cylinder.update,
+  delete: permissionsByModule.inventory.cylinder.delete,
+  viewPrice: permissionsByModule.inventory.cylinder.view_price,
+  history: permissionsByModule.inventory.cylinder.history,
 } as const satisfies Record<string, CatalogPermission>;
 
-export const jobPricePermissions = {
-  read: permissionsByModule.inventory.job.view_price,
+export const cylinderPricePermissions = {
+  read: permissionsByModule.inventory.cylinder.view_price,
 } as const satisfies Record<string, CatalogPermission>;
 
-export const jobImagePermissions = {
-  read: permissionsByModule.inventory.job_image.read,
-  create: permissionsByModule.inventory.job_image.create,
-  update: permissionsByModule.inventory.job_image.update,
-  delete: permissionsByModule.inventory.job_image.delete,
+export const cylinderImagePermissions = {
+  read: permissionsByModule.inventory.cylinder_image.read,
+  create: permissionsByModule.inventory.cylinder_image.create,
+  update: permissionsByModule.inventory.cylinder_image.update,
+  delete: permissionsByModule.inventory.cylinder_image.delete,
 } as const satisfies Record<string, CatalogPermission>;
 
-export const jobChallanPermissions = {
-  read: permissionsByModule.inventory.job_challan.read,
-  create: permissionsByModule.inventory.job_challan.create,
-  update: permissionsByModule.inventory.job_challan.update,
-  delete: permissionsByModule.inventory.job_challan.delete,
+export const cylinderChallanPermissions = {
+  read: permissionsByModule.inventory.cylinder_challan.read,
+  create: permissionsByModule.inventory.cylinder_challan.create,
+  update: permissionsByModule.inventory.cylinder_challan.update,
+  delete: permissionsByModule.inventory.cylinder_challan.delete,
 } as const satisfies Record<string, CatalogPermission>;
 
 export const cylinderReturnPermissions = {

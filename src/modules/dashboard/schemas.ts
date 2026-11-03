@@ -9,51 +9,51 @@ export const DashboardRangeParamsSchema = z.object({
 
 export type DashboardRangeParams = z.infer<typeof DashboardRangeParamsSchema>;
 
-export const JobStatusCountSchema = z.object({
+export const CylinderStatusCountSchema = z.object({
   status: z.string(),
   count: z.number(),
 });
 
-export const JobActivityBucketSchema = z.object({
+export const CylinderActivityBucketSchema = z.object({
   bucket_start: z.string(),
-  jobs_created: z.number(),
+  cylinders_created: z.number(),
   returns_created: z.number(),
 });
 
-export const TopCompanyJobsSchema = z.object({
+export const TopCompanyCylindersSchema = z.object({
   company_id: z.string(),
   company_name: z.string(),
-  active_jobs: z.number(),
+  active_cylinders: z.number(),
   cylinder_count: z.number(),
 });
 
-export const OpenJobPauseSchema = z.object({
-  job_id: z.string(),
-  job_number: z.string(),
+export const OpenCylinderPauseSchema = z.object({
+  cylinder_id: z.string(),
+  cylinder_number: z.string(),
   company_name: z.string(),
   paused_at: z.string(),
   days_paused: z.number(),
 });
 
-export const JobsDashboardKpisSchema = z.object({
-  active_jobs: z.number(),
-  paused_jobs: z.number(),
+export const CylindersDashboardKpisSchema = z.object({
+  active_cylinders: z.number(),
+  paused_cylinders: z.number(),
   cylinders_in_circulation: z.number(),
   awaiting_return: z.number(),
   cylinder_cost_exposure: DecimalStringSchema.nullable(),
 });
 
-export const JobsDashboardSchema = z.object({
+export const CylindersDashboardSchema = z.object({
   date_from: z.string(),
   date_to: z.string(),
-  kpis: JobsDashboardKpisSchema,
-  status_breakdown: z.array(JobStatusCountSchema),
-  activity_buckets: z.array(JobActivityBucketSchema),
-  top_companies: z.array(TopCompanyJobsSchema),
-  open_pauses: z.array(OpenJobPauseSchema),
+  kpis: CylindersDashboardKpisSchema,
+  status_breakdown: z.array(CylinderStatusCountSchema),
+  activity_buckets: z.array(CylinderActivityBucketSchema),
+  top_companies: z.array(TopCompanyCylindersSchema),
+  open_pauses: z.array(OpenCylinderPauseSchema),
 });
 
-export type JobsDashboard = z.infer<typeof JobsDashboardSchema>;
+export type CylindersDashboard = z.infer<typeof CylindersDashboardSchema>;
 
 export const MovementActivityBucketSchema = z.object({
   bucket_start: z.string(),
@@ -80,12 +80,21 @@ export const TopConsumedSkuSchema = z.object({
   out_kg: DecimalStringSchema,
 });
 
+export const DeadStockItemSchema = z.object({
+  material_id: z.string(),
+  name: z.string(),
+  total_kg: DecimalStringSchema,
+  days_idle: z.number(),
+  last_activity_date: z.string(),
+});
+
 export const MaterialsDashboardKpisSchema = z.object({
   active_skus: z.number(),
   total_kg_on_hand: DecimalStringSchema,
   out_of_stock_skus: z.number(),
   stock_value: DecimalStringSchema.nullable(),
   valued_sku_count: z.number(),
+  dead_stock_skus: z.number(),
 });
 
 export const MaterialsDashboardSchema = z.object({
@@ -96,6 +105,7 @@ export const MaterialsDashboardSchema = z.object({
   stock_by_product: z.array(StockByProductSchema),
   reorder_watchlist: z.array(ReorderWatchItemSchema),
   top_consumed: z.array(TopConsumedSkuSchema),
+  dead_stock: z.array(DeadStockItemSchema),
 });
 
 export type MaterialsDashboard = z.infer<typeof MaterialsDashboardSchema>;

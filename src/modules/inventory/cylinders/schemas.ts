@@ -2,19 +2,18 @@ import { z } from "zod";
 
 import { RelatedDocumentRefSchema } from "@/shared/components/document/schemas";
 
-export const JOB_STATUSES = [
+export const CYLINDER_STATUSES = [
   "ACTIVE",
   "PAUSED",
-  "RESUMED",
   "COMPLETED",
   "RETURNED",
 ] as const;
 
-export type JobStatus = (typeof JOB_STATUSES)[number];
+export type CylinderStatus = (typeof CYLINDER_STATUSES)[number];
 
-/** Status values shown in the job form; includes read-only lifecycle states when current. */
-export function jobFormStatusOptions(current?: JobStatus | null): JobStatus[] {
-  const editable = JOB_STATUSES.filter(
+/** Status values shown in the cylinder form; includes read-only lifecycle states when current. */
+export function cylinderFormStatusOptions(current?: CylinderStatus | null): CylinderStatus[] {
+  const editable = CYLINDER_STATUSES.filter(
     (status) => status !== "RETURNED" && status !== "PAUSED",
   );
   if (current && (current === "PAUSED" || current === "RETURNED")) {
@@ -23,24 +22,24 @@ export function jobFormStatusOptions(current?: JobStatus | null): JobStatus[] {
   return [...editable];
 }
 
-export const JobCylinderSchema = z.object({
+export const CylinderSizeSchema = z.object({
   position: z.number().int(),
   width: z.union([z.string(), z.number()]).transform(String),
   circumference: z.union([z.string(), z.number()]).transform(String),
 });
 
-export const JobColorSchema = z.object({
+export const CylinderColorSchema = z.object({
   position: z.number().int(),
   name: z.string(),
 });
 
-export const JobFileMetaSchema = z.object({
+export const CylinderFileMetaSchema = z.object({
   filename: z.string().nullable().optional(),
   content_type: z.string().nullable().optional(),
   size_bytes: z.number().nullable().optional(),
 });
 
-export const JobPauseSchema = z.object({
+export const CylinderPauseSchema = z.object({
   id: z.string().uuid(),
   paused_at: z.string(),
   paused_by: z.string().uuid().nullable(),
@@ -52,9 +51,9 @@ export const JobPauseSchema = z.object({
   resume_remarks: z.string().nullable(),
 });
 
-export const JobListItemSchema = z.object({
+export const CylinderListItemSchema = z.object({
   id: z.string().uuid(),
-  job_number: z.string(),
+  cylinder_number: z.string(),
   company_id: z.string().uuid(),
   company_name: z.string(),
   product_name: z.string(),
@@ -67,27 +66,27 @@ export const JobListItemSchema = z.object({
     .optional()
     .transform((value) => (value === null || value === undefined ? null : String(value))),
   cylinder_location: z.string().nullable(),
-  status: z.enum(JOB_STATUSES),
+  status: z.enum(CYLINDER_STATUSES),
+  cylinder_image: CylinderFileMetaSchema.nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });
 
-export const JobSchema = JobListItemSchema.extend({
+export const CylinderSchema = CylinderListItemSchema.extend({
   remarks: z.string().nullable(),
-  cylinders: z.array(JobCylinderSchema),
-  colors: z.array(JobColorSchema),
-  pauses: z.array(JobPauseSchema).optional(),
-  job_image: JobFileMetaSchema.nullable().optional(),
-  challan: JobFileMetaSchema.nullable().optional(),
+  cylinders: z.array(CylinderSizeSchema),
+  colors: z.array(CylinderColorSchema),
+  pauses: z.array(CylinderPauseSchema).optional(),
+  challan: CylinderFileMetaSchema.nullable().optional(),
   related_documents: z.array(RelatedDocumentRefSchema).optional(),
 });
 
-export type Job = z.infer<typeof JobSchema>;
-export type JobListItem = z.infer<typeof JobListItemSchema>;
+export type Cylinder = z.infer<typeof CylinderSchema>;
+export type CylinderListItem = z.infer<typeof CylinderListItemSchema>;
 
-export const JobListSchema = z.array(JobListItemSchema);
+export const CylinderListSchema = z.array(CylinderListItemSchema);
 
-export const JobSizeLineSchema = z.object({
+export const CylinderSizeLineSchema = z.object({
   width: z.string().min(1, "Enter width"),
   circumference: z.string().min(1, "Enter circumference"),
 });
@@ -100,18 +99,18 @@ function parseCount(value: string, max: number): number {
   return parsed;
 }
 
-export const JobFormSchema = z.object({
+export const CylinderFormSchema = z.object({
   company_id: z.string().uuid({ message: "Select a company" }),
   product_name: z.string().min(1, "Enter product name").max(200),
   cylinder_count: z.string().min(1, "Enter cylinder count"),
-  size_lines: z.array(JobSizeLineSchema).min(1),
+  size_lines: z.array(CylinderSizeLineSchema).min(1),
   color_count: z.string(),
   color_lines: z.array(z.object({ name: z.string() })),
-  pet_size: z.string(),
+  pet_size: z.string().min(1, "Enter pet size").max(100, "Pet size must be at most 100 characters"),
   cylinder_cost: z.string(),
   cylinder_location: z.string(),
   remarks: z.string(),
-  status: z.enum(JOB_STATUSES),
+  status: z.enum(CYLINDER_STATUSES),
 }).superRefine((values, ctx) => {
   let cylinderCount = 0;
   let colorCount = 0;
@@ -146,15 +145,15 @@ export const JobFormSchema = z.object({
   }
 });
 
-export type JobFormValues = z.infer<typeof JobFormSchema>;
+export type CylinderFormValues = z.infer<typeof CylinderFormSchema>;
 
-export type JobListParams = {
+export type CylinderListParams = {
   page?: number;
   page_size?: number;
   search?: string;
   sort_by?: string;
   sort_order?: "asc" | "desc";
-  status?: JobStatus;
+  status?: CylinderStatus;
   company_id?: string;
   include_closed?: boolean;
 };
@@ -184,7 +183,7 @@ export const EntityHistoryEntrySchema = z.object({
 
 export type EntityHistoryEntry = z.infer<typeof EntityHistoryEntrySchema>;
 
-export function emptyJobFormValues(): JobFormValues {
+export function emptyCylinderFormValues(): CylinderFormValues {
   return {
     company_id: "",
     product_name: "",
@@ -200,32 +199,32 @@ export function emptyJobFormValues(): JobFormValues {
   };
 }
 
-export function jobToFormValues(job: Job | null): JobFormValues {
-  if (!job) {
-    return emptyJobFormValues();
+export function cylinderToFormValues(cylinder: Cylinder | null): CylinderFormValues {
+  if (!cylinder) {
+    return emptyCylinderFormValues();
   }
   return {
-    company_id: job.company_id,
-    product_name: job.product_name,
-    cylinder_count: String(job.cylinder_count),
-    size_lines: job.cylinders.map((row) => ({
+    company_id: cylinder.company_id,
+    product_name: cylinder.product_name,
+    cylinder_count: String(cylinder.cylinder_count),
+    size_lines: cylinder.cylinders.map((row) => ({
       width: row.width,
       circumference: row.circumference,
     })),
-    color_count: String(job.color_count ?? job.colors.length),
-    color_lines: job.colors.map((row) => ({ name: row.name })),
-    pet_size: job.pet_size ?? "",
-    cylinder_cost: job.cylinder_cost ?? "",
-    cylinder_location: job.cylinder_location ?? "",
-    remarks: job.remarks ?? "",
-    status: job.status,
+    color_count: String(cylinder.color_count ?? cylinder.colors.length),
+    color_lines: cylinder.colors.map((row) => ({ name: row.name })),
+    pet_size: cylinder.pet_size ?? "",
+    cylinder_cost: cylinder.cylinder_cost ?? "",
+    cylinder_location: cylinder.cylinder_location ?? "",
+    remarks: cylinder.remarks ?? "",
+    status: cylinder.status,
   };
 }
 
-/** Prefill a new job from an existing one (new number and files on submit). */
-export function jobToCloneFormValues(job: Job): JobFormValues {
+/** Prefill a new cylinder from an existing one (new number and files on submit). */
+export function cylinderToCloneFormValues(cylinder: Cylinder): CylinderFormValues {
   return {
-    ...jobToFormValues(job),
+    ...cylinderToFormValues(cylinder),
     status: "ACTIVE",
   };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Printer } from "lucide-react";
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -14,11 +15,12 @@ import {
   CylinderReturnFormSchema,
   type CylinderReturnFormValues,
 } from "@/modules/inventory/cylinder-returns/schemas";
-import { useJobs } from "@/modules/inventory/jobs/queries";
+import { useCylinders } from "@/modules/inventory/cylinders/queries";
 import { useCompanies } from "@/modules/users-management/companies/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { DataTableError } from "@/shared/components/data-table/states";
+import { usePrintCylinderReturnMemo } from "@/modules/inventory/cylinder-returns/lib/print-cylinder-return-memo";
 import { HistoryHeaderButton } from "@/shared/components/document/history-header-button";
 import { RelatedDocumentsCard } from "@/shared/components/document/related-documents-card";
 import { MasterSelect } from "@/shared/components/form/master-select";
@@ -35,13 +37,24 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/components/ui/form";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { formatDate } from "@/shared/lib/format";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 
 export type CylinderReturnRecordMode = "create" | "view" | "edit";
+
+function localCalendarDate(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export function CylinderReturnRecordScreen({
   mode,
@@ -54,6 +67,7 @@ export function CylinderReturnRecordScreen({
   const { canCreate, canUpdate } = useCrudPermissions(cylinderReturnPermissions);
   const createReturn = useCreateCylinderReturn();
   const updateReturn = useUpdateCylinderReturn();
+  const printMemo = usePrintCylinderReturnMemo();
   const [formError, setFormError] = useState<string | null>(null);
 
   const returnQuery = useCylinderReturn(mode === "create" ? null : (returnId ?? null));
@@ -63,9 +77,9 @@ export function CylinderReturnRecordScreen({
 
   const formValues =
     mode === "create"
-      ? { company_id: "", job_id: "", remarks: "" }
+      ? { company_id: "", cylinder_id: "", remarks: "" }
       : record
-        ? { company_id: record.company_id, job_id: record.job_id, remarks: record.remarks ?? "" }
+        ? { company_id: record.company_id, cylinder_id: record.cylinder_id, remarks: record.remarks ?? "" }
         : undefined;
   const formValuesReady = mode === "create" || Boolean(record);
 
@@ -83,16 +97,19 @@ export function CylinderReturnRecordScreen({
 
   const companyId = form.watch("company_id");
   const companiesQuery = useCompanies({ page: 1, page_size: 200 });
-  const jobsQuery = useJobs(
+  const cylindersQuery = useCylinders(
     { page: 1, page_size: 100, company_id: companyId || undefined, include_closed: false },
     Boolean(companyId),
   );
   const jobOptions = useMemo(
     () =>
-      (jobsQuery.data?.data ?? [])
-        .filter((job) => job.status !== "RETURNED")
-        .map((job) => ({ value: job.id, label: `${job.job_number} — ${job.product_name}` })),
-    [jobsQuery.data?.data],
+      (cylindersQuery.data?.data ?? [])
+        .filter((row) => row.status !== "RETURNED")
+        .map((row) => ({
+          value: row.id,
+          label: `${row.cylinder_number} — ${row.product_name}`,
+        })),
+    [cylindersQuery.data?.data],
   );
 
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
@@ -138,6 +155,8 @@ export function CylinderReturnRecordScreen({
       : mode === "edit"
         ? "Edit cylinder return"
         : (record?.return_number ?? "Cylinder return");
+  const returnDateLabel =
+    mode === "create" ? formatDate(localCalendarDate()) : formatDate(record?.created_at);
 
   return (
     <div className="flex flex-col gap-5">
@@ -148,6 +167,14 @@ export function CylinderReturnRecordScreen({
         editHref={returnId ? cylinderReturnRoutes.edit(returnId) : undefined}
         canUpdate={canUpdate}
         mode={mode === "edit" ? "edit" : "view"}
+        extraActions={
+          mode === "view" && record ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => printMemo(record)}>
+              <Printer className="size-4" />
+              Print memo
+            </Button>
+          ) : null
+        }
       />
       <Card>
         {mode === "view" && returnId ? (
@@ -177,7 +204,7 @@ export function CylinderReturnRecordScreen({
                           value={field.value}
                           onValueChange={(value) => {
                             field.onChange(value);
-                            form.setValue("job_id", "");
+                            form.setValue("cylinder_id", "");
                           }}
                           disabled={readOnly || mode === "edit"}
                           placeholder="Select customer"
@@ -193,16 +220,16 @@ export function CylinderReturnRecordScreen({
                 />
                 <FormField
                   control={form.control}
-                  name="job_id"
+                  name="cylinder_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Job</FormLabel>
+                      <FormLabel>Cylinder</FormLabel>
                       <FormControl>
                         <MasterSelect
                           value={field.value}
                           onValueChange={field.onChange}
                           disabled={readOnly || mode === "edit" || !companyId}
-                          placeholder="Select job"
+                          placeholder="Select cylinder"
                           options={jobOptions}
                         />
                       </FormControl>
@@ -210,6 +237,11 @@ export function CylinderReturnRecordScreen({
                     </FormItem>
                   )}
                 />
+                <FormItem>
+                  <Label>Return date</Label>
+                  <Input value={returnDateLabel} disabled readOnly />
+                  <span className="min-h-5" />
+                </FormItem>
               </FormGrid>
               <FormField
                 control={form.control}

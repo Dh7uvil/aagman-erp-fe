@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cylinderReturnsApi } from "@/modules/inventory/cylinder-returns/api";
 import { cylinderReturnKeys } from "@/modules/inventory/cylinder-returns/queries";
 import type { CylinderReturnFormValues } from "@/modules/inventory/cylinder-returns/schemas";
-import { jobKeys } from "@/modules/inventory/jobs/queries";
+import { cylinderKeys } from "@/modules/inventory/cylinders/queries";
 
 export function useCreateCylinderReturn() {
   const queryClient = useQueryClient();
@@ -13,7 +13,7 @@ export function useCreateCylinderReturn() {
     mutationFn: (values: CylinderReturnFormValues) => cylinderReturnsApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cylinderReturnKeys.all });
-      queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: cylinderKeys.all });
     },
   });
 }
@@ -33,7 +33,7 @@ export function useDeleteCylinderReturn() {
     mutationFn: (id: string) => cylinderReturnsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cylinderReturnKeys.all });
-      queryClient.invalidateQueries({ queryKey: jobKeys.all });
+      queryClient.invalidateQueries({ queryKey: cylinderKeys.all });
     },
   });
 }

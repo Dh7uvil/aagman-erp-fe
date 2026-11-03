@@ -7,7 +7,7 @@ import {
   type CylinderReturnFormValues,
   type CylinderReturnListParams,
 } from "@/modules/inventory/cylinder-returns/schemas";
-import { EntityHistoryEntrySchema } from "@/modules/inventory/jobs/schemas";
+import { EntityHistoryEntrySchema } from "@/modules/inventory/cylinders/schemas";
 import { apiClient } from "@/shared/api/client";
 import type { ListResponse } from "@/shared/api/envelope";
 import { z } from "zod";
@@ -22,7 +22,7 @@ export const cylinderReturnsApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         company_id: params.company_id,
-        job_id: params.job_id,
+        cylinder_id: params.cylinder_id,
       },
     });
     return { data: CylinderReturnListSchema.parse(result.data), meta: result.meta };
@@ -34,7 +34,7 @@ export const cylinderReturnsApi = {
     return CylinderReturnSchema.parse(
       await apiClient.post("/inventory/cylinder-returns", {
         company_id: parsed.company_id,
-        job_id: parsed.job_id,
+        cylinder_id: parsed.cylinder_id,
         remarks: parsed.remarks.trim() || null,
       }),
     );

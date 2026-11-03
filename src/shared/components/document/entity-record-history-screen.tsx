@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
 import { useCylinderReturnHistory } from "@/modules/inventory/cylinder-returns/queries";
-import { useJob, useJobHistory } from "@/modules/inventory/jobs/queries";
+import { useCylinder, useCylinderHistory } from "@/modules/inventory/cylinders/queries";
 import { MaterialHistoryCard } from "@/modules/inventory/materials/components/material-history-card";
 import { materialHistoryBreadcrumbCrumbs } from "@/modules/inventory/materials/material-breadcrumb";
 import { useMaterial } from "@/modules/inventory/materials/queries";
@@ -50,14 +50,14 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
   const viewHref = historyViewHref(resource as HistoryResource, id);
   const pageTitle = historyPageTitle();
 
-  if (resource === "jobs") {
+  if (resource === "cylinders") {
     return (
-      <JobRecordHistory
+      <CylinderRecordHistory
         id={id}
         viewHref={viewHref}
         code={code}
         pageTitle={pageTitle}
-        recordLabel="Job"
+        recordLabel="Cylinder"
         supportsAttachments={spec.supportsAttachments}
       />
     );
@@ -102,20 +102,20 @@ function RecordHistoryLayout({
   isLoading,
   isError,
   onRetry,
-  jobId,
-  job,
+  cylinderId,
+  cylinder,
   supportsAttachments,
 }: {
   viewHref: string;
   code: string | null;
   pageTitle: string;
   recordLabel?: string;
-  entries: ReturnType<typeof useJobHistory>["data"];
+  entries: ReturnType<typeof useCylinderHistory>["data"];
   isLoading: boolean;
   isError: boolean;
   onRetry?: () => void;
-  jobId?: string;
-  job?: ReturnType<typeof useJob>["data"];
+  cylinderId?: string;
+  cylinder?: ReturnType<typeof useCylinder>["data"];
   supportsAttachments: boolean;
 }) {
   const subtitle = code ? (recordLabel ? `${recordLabel} · ${code}` : code) : recordLabel;
@@ -142,15 +142,15 @@ function RecordHistoryLayout({
         isLoading={isLoading}
         isError={isError}
         onRetry={onRetry}
-        jobId={jobId}
-        job={job}
+        cylinderId={cylinderId}
+        cylinder={cylinder}
         supportsAttachments={supportsAttachments}
       />
     </div>
   );
 }
 
-function JobRecordHistory({
+function CylinderRecordHistory({
   id,
   viewHref,
   code,
@@ -165,8 +165,8 @@ function JobRecordHistory({
   recordLabel: string;
   supportsAttachments: boolean;
 }) {
-  const historyQuery = useJobHistory(id);
-  const jobQuery = useJob(id);
+  const historyQuery = useCylinderHistory(id);
+  const cylinderQuery = useCylinder(id);
   return (
     <RecordHistoryLayout
       viewHref={viewHref}
@@ -174,11 +174,11 @@ function JobRecordHistory({
       pageTitle={pageTitle}
       recordLabel={recordLabel}
       entries={historyQuery.data}
-      isLoading={historyQuery.isLoading || jobQuery.isLoading}
+      isLoading={historyQuery.isLoading || cylinderQuery.isLoading}
       isError={historyQuery.isError}
       onRetry={() => void historyQuery.refetch()}
-      jobId={id}
-      job={jobQuery.data}
+      cylinderId={id}
+      cylinder={cylinderQuery.data}
       supportsAttachments={supportsAttachments}
     />
   );

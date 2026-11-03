@@ -1,23 +1,28 @@
 "use client";
 
-import { Pause, Play } from "lucide-react";
+import { ImageIcon, Pause, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { jobPermissions, jobPricePermissions } from "@/modules/inventory/permissions";
-import { JobCloneDialog } from "@/modules/inventory/jobs/components/job-clone-dialog";
-import { JobStatusBadge } from "@/modules/inventory/jobs/components/job-status-badge";
 import {
-  JobHeaderCreateActions,
-  jobHeaderActionsClassName,
-} from "@/modules/inventory/jobs/components/job-header-create-actions";
-import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
-import { JobResumeDialog } from "@/modules/inventory/jobs/components/job-resume-dialog";
-import { useDeleteJob } from "@/modules/inventory/jobs/mutations";
-import { useJobs } from "@/modules/inventory/jobs/queries";
-import { jobRoutes } from "@/modules/inventory/jobs/routes";
-import type { JobListItem } from "@/modules/inventory/jobs/schemas";
+  cylinderImagePermissions,
+  cylinderPermissions,
+  cylinderPricePermissions,
+} from "@/modules/inventory/permissions";
+import { CylinderCloneDialog } from "@/modules/inventory/cylinders/components/cylinder-clone-dialog";
+import { CylinderImagePreviewDialog } from "@/modules/inventory/cylinders/components/cylinder-image-preview-dialog";
+import { CylinderStatusBadge } from "@/modules/inventory/cylinders/components/cylinder-status-badge";
+import {
+  CylinderHeaderCreateActions,
+  cylinderHeaderActionsClassName,
+} from "@/modules/inventory/cylinders/components/cylinder-header-create-actions";
+import { CylinderPauseDialog } from "@/modules/inventory/cylinders/components/cylinder-pause-dialog";
+import { CylinderResumeDialog } from "@/modules/inventory/cylinders/components/cylinder-resume-dialog";
+import { useDeleteCylinder } from "@/modules/inventory/cylinders/mutations";
+import { useCylinders } from "@/modules/inventory/cylinders/queries";
+import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
+import type { CylinderListItem } from "@/modules/inventory/cylinders/schemas";
 import { useCompanies } from "@/modules/users-management/companies/queries";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
@@ -42,38 +47,49 @@ import { useTableParams } from "@/shared/hooks/use-table-params";
 import { useCan } from "@/shared/providers/session-provider";
 
 const SORT_FIELDS: SortFieldOption[] = [
-  { value: "job_number", label: "Job number" },
+  { value: "cylinder_number", label: "Cylinder number" },
   { value: "product_name", label: "Product" },
   { value: "created_at", label: "Created" },
 ];
 const SORT_BY = new Set(SORT_FIELDS.map((field) => field.value));
-/** No empty option: default (no URL filter) shows placeholder only; API returns active + resumed. */
-function canPauseJob(status: JobListItem["status"]): boolean {
+/** No empty option: default (no URL filter) shows placeholder only; API returns active + completed. */
+function canPauseCylinder(status: CylinderListItem["status"]): boolean {
   return status !== "PAUSED" && status !== "RETURNED" && status !== "COMPLETED";
 }
 
-function canResumeJob(status: JobListItem["status"]): boolean {
+function canResumeCylinder(status: CylinderListItem["status"]): boolean {
   return status === "PAUSED";
 }
 
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Active" },
-  { value: "RESUMED", label: "Resumed" },
   { value: "PAUSED", label: "Paused" },
   { value: "COMPLETED", label: "Completed" },
   { value: "RETURNED", label: "Returned" },
   { value: "ALL", label: "All statuses" },
 ];
 
-export function JobsScreen() {
+const LIST_VIEW_PREFIX = "aagman-list-view:";
+
+export function CylindersScreen() {
+  useEffect(() => {
+    const legacyKey = `${LIST_VIEW_PREFIX}inventory.jobs`;
+    const nextKey = `${LIST_VIEW_PREFIX}inventory.cylinders`;
+    if (!localStorage.getItem(nextKey) && localStorage.getItem(legacyKey)) {
+      localStorage.setItem(nextKey, localStorage.getItem(legacyKey)!);
+    }
+  }, []);
+
   const router = useRouter();
   const can = useCan();
-  const canViewPrice = can(jobPricePermissions.read);
-  const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(jobPermissions);
-  const deleteJob = useDeleteJob();
-  const [deleting, setDeleting] = useState<JobListItem | null>(null);
-  const [pausing, setPausing] = useState<JobListItem | null>(null);
-  const [resuming, setResuming] = useState<JobListItem | null>(null);
+  const canViewPrice = can(cylinderPricePermissions.read);
+  const canPreviewImage = can(cylinderImagePermissions.read);
+  const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(cylinderPermissions);
+  const deleteCylinder = useDeleteCylinder();
+  const [deleting, setDeleting] = useState<CylinderListItem | null>(null);
+  const [pausing, setPausing] = useState<CylinderListItem | null>(null);
+  const [resuming, setResuming] = useState<CylinderListItem | null>(null);
+  const [previewing, setPreviewing] = useState<CylinderListItem | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
   const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
     useTableParams();
@@ -83,10 +99,10 @@ export function JobsScreen() {
   const includeClosed = statusFilter === "ALL";
   const status =
     statusFilter && statusFilter !== "" && statusFilter !== "ALL"
-      ? (statusFilter as JobListItem["status"])
+      ? (statusFilter as CylinderListItem["status"])
       : undefined;
 
-  const jobsQuery = useJobs({
+  const cylindersQuery = useCylinders({
     page,
     page_size,
     search,
@@ -98,19 +114,19 @@ export function JobsScreen() {
   });
   const companiesQuery = useCompanies({ page: 1, page_size: 200 });
   const companies = companiesQuery.data?.data ?? [];
-  const jobs = jobsQuery.data?.data ?? [];
-  const meta = jobsQuery.data?.meta;
+  const cylinders = cylindersQuery.data?.data ?? [];
+  const meta = cylindersQuery.data?.meta;
   const showActions = hasRowActions(canRead, canUpdate, canDelete, canCreate);
 
-  const columnDefs = useMemo((): Array<DataTableColumn<JobListItem>> => {
-    const cols: Array<DataTableColumn<JobListItem>> = [
-      { id: "job_number", header: "Job #", cell: (row) => row.job_number },
+  const columnDefs = useMemo((): Array<DataTableColumn<CylinderListItem>> => {
+    const cols: Array<DataTableColumn<CylinderListItem>> = [
+      { id: "cylinder_number", header: "Cylinder #", cell: (row) => row.cylinder_number },
       { id: "company", header: "Company", cell: (row) => row.company_name },
       { id: "product", header: "Product", cell: (row) => row.product_name },
       {
         id: "status",
         header: "Status",
-        cell: (row) => <JobStatusBadge status={row.status} />,
+        cell: (row) => <CylinderStatusBadge status={row.status} />,
       },
       { id: "cylinder_count", header: "Cylinders", cell: (row) => String(row.cylinder_count) },
     ];
@@ -132,48 +148,61 @@ export function JobsScreen() {
       },
     );
     cols.push(
-      ...actionsColumn<JobListItem>(showActions, (row) => (
+      ...actionsColumn<CylinderListItem>(showActions, (row) => (
         <DataTableRowActions
-          entityName={row.job_number}
-          onView={canRead ? () => router.push(jobRoutes.view(row.id)) : undefined}
-          onEdit={canUpdate ? () => router.push(jobRoutes.edit(row.id)) : undefined}
-          cloneHref={canCreate && canRead ? jobRoutes.clone(row.id) : undefined}
+          entityName={row.cylinder_number}
+          onView={canRead ? () => router.push(cylinderRoutes.view(row.id)) : undefined}
+          onEdit={canUpdate ? () => router.push(cylinderRoutes.edit(row.id)) : undefined}
+          cloneHref={canCreate && canRead ? cylinderRoutes.clone(row.id) : undefined}
           onDelete={canDelete ? () => setDeleting(row) : undefined}
           extra={
-            canUpdate ? (
-                <>
-                  {canPauseJob(row.status) ? (
-                    <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Pause ${row.job_number}`}
-                    title={`Pause ${row.job_number}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setPausing(row);
-                    }}
-                  >
-                      <Pause className="size-3.5" />
-                    </Button>
-                  ) : null}
-                  {canResumeJob(row.status) ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Resume ${row.job_number}`}
-                      title={`Resume ${row.job_number}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setResuming(row);
-                      }}
-                    >
-                      <Play className="size-3.5" />
-                    </Button>
-                  ) : null}
-                </>
-            ) : null
+            <>
+              {canPreviewImage && row.cylinder_image?.filename ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Preview image ${row.cylinder_number}`}
+                  title={`Preview image ${row.cylinder_number}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setPreviewing(row);
+                  }}
+                >
+                  <ImageIcon className="size-3.5" />
+                </Button>
+              ) : null}
+              {canUpdate && canPauseCylinder(row.status) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Pause ${row.cylinder_number}`}
+                  title={`Pause ${row.cylinder_number}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setPausing(row);
+                  }}
+                >
+                  <Pause className="size-3.5" />
+                </Button>
+              ) : null}
+              {canUpdate && canResumeCylinder(row.status) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Resume ${row.cylinder_number}`}
+                  title={`Resume ${row.cylinder_number}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setResuming(row);
+                  }}
+                >
+                  <Play className="size-3.5" />
+                </Button>
+              ) : null}
+            </>
           }
         />
       )),
@@ -182,6 +211,7 @@ export function JobsScreen() {
   }, [
     canCreate,
     canDelete,
+    canPreviewImage,
     canRead,
     canUpdate,
     canViewPrice,
@@ -189,16 +219,16 @@ export function JobsScreen() {
     showActions,
   ]);
 
-  const { columns, columnsDialog, colSpan } = useTableColumns("inventory.jobs", columnDefs);
-  const listView = useListView("inventory.jobs");
+  const { columns, columnsDialog, colSpan } = useTableColumns("inventory.cylinders", columnDefs);
+  const listView = useListView("inventory.cylinders");
 
   async function confirmDelete() {
     if (!deleting) {
       return;
     }
     try {
-      await deleteJob.mutateAsync(deleting.id);
-      toast.success("Job deleted");
+      await deleteCylinder.mutateAsync(deleting.id);
+      toast.success("Cylinder deleted");
       setDeleting(null);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -208,15 +238,15 @@ export function JobsScreen() {
   return (
     <ListPage>
       <PageHeader
-        title="Jobs"
+        title="Cylinders"
         subtitle="Track printing jobs and cylinder details"
         actions={
           canCreate ? (
-            <div className={jobHeaderActionsClassName()}>
+            <div className={cylinderHeaderActionsClassName()}>
               {canRead ? (
-                <JobHeaderCreateActions onCloneClick={() => setCloneOpen(true)} />
+                <CylinderHeaderCreateActions onCloneClick={() => setCloneOpen(true)} />
               ) : (
-                <JobHeaderCreateActions showNewJob />
+                <CylinderHeaderCreateActions showNewCylinder />
               )}
             </div>
           ) : null
@@ -226,7 +256,7 @@ export function JobsScreen() {
         <ListSearch
           value={search ?? ""}
           onChange={(value) => setParams({ search: value || null })}
-          placeholder="Search jobs…"
+          placeholder="Search cylinders…"
         />
         <FilterSelect
           label="Status"
@@ -257,51 +287,56 @@ export function JobsScreen() {
       <ListView
         columns={columns}
         colSpan={colSpan}
-        rows={jobs}
+        rows={cylinders}
         getRowKey={(row) => row.id}
-        getRowLabel={(row) => row.job_number}
-        onRowClick={canRead ? (row) => router.push(jobRoutes.view(row.id)) : undefined}
-        isLoading={jobsQuery.isLoading}
-        isError={jobsQuery.isError}
+        getRowLabel={(row) => row.cylinder_number}
+        onRowClick={canRead ? (row) => router.push(cylinderRoutes.view(row.id)) : undefined}
+        isLoading={cylindersQuery.isLoading}
+        isError={cylindersQuery.isError}
         error={
           <DataTableError
-            message={getErrorMessage(jobsQuery.error)}
-            onRetry={() => jobsQuery.refetch()}
+            message={getErrorMessage(cylindersQuery.error)}
+            onRetry={() => cylindersQuery.refetch()}
           />
         }
-        empty={<DataTableEmpty message="No jobs found." />}
+        empty={<DataTableEmpty message="No cylinders found." />}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
       />
       <ConfirmActionDialog
         open={Boolean(deleting)}
-        title="Delete job"
-        description={`Delete job ${deleting?.job_number}?`}
+        title="Delete cylinder"
+        description={`Delete cylinder ${deleting?.cylinder_number}?`}
         confirmLabel="Delete"
         onConfirm={() => void confirmDelete()}
         onOpenChange={(open) => !open && setDeleting(null)}
       />
-      <JobCloneDialog open={cloneOpen} onOpenChange={setCloneOpen} />
+      <CylinderCloneDialog open={cloneOpen} onOpenChange={setCloneOpen} />
+      <CylinderImagePreviewDialog
+        cylinder={previewing}
+        open={Boolean(previewing)}
+        onOpenChange={(open) => !open && setPreviewing(null)}
+      />
       {pausing ? (
-        <JobPauseDialog
-          jobId={pausing.id}
+        <CylinderPauseDialog
+          cylinderId={pausing.id}
           open={Boolean(pausing)}
           onOpenChange={(open) => !open && setPausing(null)}
           onPaused={() => {
             setPausing(null);
-            void jobsQuery.refetch();
+            void cylindersQuery.refetch();
           }}
         />
       ) : null}
       {resuming ? (
-        <JobResumeDialog
-          jobId={resuming.id}
+        <CylinderResumeDialog
+          cylinderId={resuming.id}
           open={Boolean(resuming)}
           onOpenChange={(open) => !open && setResuming(null)}
           onResumed={() => {
             setResuming(null);
-            void jobsQuery.refetch();
+            void cylindersQuery.refetch();
           }}
         />
       ) : null}

@@ -7,14 +7,14 @@ import type { DashboardRangeParams } from "@/modules/dashboard/schemas";
 
 export const dashboardKeys = {
   all: ["dashboard"] as const,
-  jobs: (params: DashboardRangeParams) => [...dashboardKeys.all, "jobs", params] as const,
+  cylinders: (params: DashboardRangeParams) => [...dashboardKeys.all, "cylinders", params] as const,
   materials: (params: DashboardRangeParams) => [...dashboardKeys.all, "materials", params] as const,
 };
 
-export function useJobsDashboard(params: DashboardRangeParams, enabled = true) {
+export function useCylindersDashboard(params: DashboardRangeParams, enabled = true) {
   return useQuery({
-    queryKey: dashboardKeys.jobs(params),
-    queryFn: () => dashboardApi.jobs(params),
+    queryKey: dashboardKeys.cylinders(params),
+    queryFn: () => dashboardApi.cylinders(params),
     enabled,
   });
 }

@@ -63,9 +63,9 @@ export const PERMISSION_MATRIX_LAYOUT: MatrixDisplayModule[] = [
     resources: [
       { module: "inventory", resource: "material", label: "Materials" },
       { module: "inventory", resource: "materials_report", label: "Materials report" },
-      { module: "inventory", resource: "job", label: "Jobs" },
-      { module: "inventory", resource: "job_image", label: "Job image" },
-      { module: "inventory", resource: "job_challan", label: "Challan" },
+      { module: "inventory", resource: "cylinder", label: "Cylinders" },
+      { module: "inventory", resource: "cylinder_image", label: "Cylinder image" },
+      { module: "inventory", resource: "cylinder_challan", label: "Challan" },
       { module: "inventory", resource: "cylinder_return", label: "Cylinder returns" },
     ],
   },

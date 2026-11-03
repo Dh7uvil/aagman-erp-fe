@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { useJobs } from "@/modules/inventory/jobs/queries";
-import { jobRoutes } from "@/modules/inventory/jobs/routes";
+import { useCylinders } from "@/modules/inventory/cylinders/queries";
+import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import {
   SearchableSelect,
   type SearchableSelectOption,
@@ -19,20 +19,20 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 
-function toJobOption(job: {
+function toCylinderOption(cylinder: {
   id: string;
-  job_number: string;
+  cylinder_number: string;
   product_name: string;
   status: string;
 }): SearchableSelectOption {
   return {
-    value: job.id,
-    label: `${job.job_number} — ${job.product_name} (${job.status})`,
-    triggerLabel: job.job_number,
+    value: cylinder.id,
+    label: `${cylinder.cylinder_number} — ${cylinder.product_name} (${cylinder.status})`,
+    triggerLabel: cylinder.cylinder_number,
   };
 }
 
-export function JobCloneDialog({
+export function CylinderCloneDialog({
   open,
   onOpenChange,
 }: {
@@ -40,11 +40,11 @@ export function JobCloneDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [jobId, setJobId] = useState("");
+  const [cylinderId, setCylinderId] = useState("");
   const [search, setSearch] = useState("");
   const [pinnedOption, setPinnedOption] = useState<SearchableSelectOption | null>(null);
 
-  const jobsQuery = useJobs(
+  const cylindersQuery = useCylinders(
     {
       page: 1,
       page_size: 100,
@@ -55,16 +55,16 @@ export function JobCloneDialog({
   );
 
   const jobOptions = useMemo(() => {
-    const mapped = (jobsQuery.data?.data ?? []).map(toJobOption);
+    const mapped = (cylindersQuery.data?.data ?? []).map(toCylinderOption);
     if (pinnedOption && !mapped.some((option) => option.value === pinnedOption.value)) {
       return [pinnedOption, ...mapped];
     }
     return mapped;
-  }, [jobsQuery.data?.data, pinnedOption]);
+  }, [cylindersQuery.data?.data, pinnedOption]);
 
   useEffect(() => {
     if (!open) {
-      setJobId("");
+      setCylinderId("");
       setSearch("");
       setPinnedOption(null);
     }
@@ -74,8 +74,8 @@ export function JobCloneDialog({
     onOpenChange(next);
   }
 
-  function handleJobChange(nextId: string) {
-    setJobId(nextId);
+  function handleCylinderChange(nextId: string) {
+    setCylinderId(nextId);
     const option = jobOptions.find((row) => row.value === nextId);
     if (option) {
       setPinnedOption(option);
@@ -83,40 +83,40 @@ export function JobCloneDialog({
   }
 
   function continueClone() {
-    if (!jobId) {
+    if (!cylinderId) {
       return;
     }
     onOpenChange(false);
-    router.push(jobRoutes.clone(jobId));
+    router.push(cylinderRoutes.clone(cylinderId));
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Clone job</DialogTitle>
+          <DialogTitle>Clone cylinder</DialogTitle>
         </DialogHeader>
         <p className="text-muted-foreground text-sm">
-          Choose a job to copy. You will get a new job number; documents are not copied.
+          Choose a cylinder to copy. You will get a new cylinder number; documents are not copied.
         </p>
         <SearchableSelect
           asFormControl={false}
           searchable
           aria-label="Job to clone"
-          placeholder="Select job"
-          searchPlaceholder="Search job number or product…"
-          emptyText={jobsQuery.isError ? "Could not load jobs" : "No jobs found"}
+          placeholder="Select cylinder"
+          searchPlaceholder="Search cylinder number or product…"
+          emptyText={cylindersQuery.isError ? "Could not load jobs" : "No cylinders found"}
           options={jobOptions}
-          value={jobId}
-          onValueChange={handleJobChange}
+          value={cylinderId}
+          onValueChange={handleCylinderChange}
           onQueryChange={setSearch}
-          loading={jobsQuery.isFetching}
+          loading={cylindersQuery.isFetching}
         />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             <CancelLabel />
           </Button>
-          <Button type="button" disabled={!jobId} onClick={continueClone}>
+          <Button type="button" disabled={!cylinderId} onClick={continueClone}>
             <ContinueLabel />
           </Button>
         </DialogFooter>

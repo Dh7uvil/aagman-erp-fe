@@ -1,11 +1,12 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { usePrintCylinderReturnMemo } from "@/modules/inventory/cylinder-returns/lib/print-cylinder-return-memo";
 import { cylinderReturnPermissions } from "@/modules/inventory/permissions";
 import { useDeleteCylinderReturn } from "@/modules/inventory/cylinder-returns/mutations";
 import { useCylinderReturns } from "@/modules/inventory/cylinder-returns/queries";
@@ -30,10 +31,11 @@ import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
+import { formatDate } from "@/shared/lib/format";
 
 const SORT_FIELDS: SortFieldOption[] = [
   { value: "return_number", label: "Return #" },
-  { value: "created_at", label: "Created" },
+  { value: "created_at", label: "Return date" },
 ];
 const SORT_BY = new Set(SORT_FIELDS.map((field) => field.value));
 
@@ -41,6 +43,7 @@ export function CylinderReturnsScreen() {
   const router = useRouter();
   const { canCreate, canRead, canUpdate, canDelete } = useCrudPermissions(cylinderReturnPermissions);
   const deleteReturn = useDeleteCylinderReturn();
+  const printMemo = usePrintCylinderReturnMemo();
   const [deleting, setDeleting] = useState<CylinderReturn | null>(null);
   const { page, page_size, search, sort_by, sort_order, setParams, setPage } = useTableParams();
   const sortBy = sort_by && SORT_BY.has(sort_by) ? sort_by : undefined;
@@ -59,7 +62,13 @@ export function CylinderReturnsScreen() {
     return [
       { id: "return_number", header: "Return #", cell: (row) => row.return_number },
       { id: "customer", header: "Customer", cell: (row) => row.company_name },
-      { id: "job", header: "Job", cell: (row) => row.job_number },
+      {
+        id: "return_date",
+        header: "Return date",
+        sortableField: "created_at",
+        cell: (row) => formatDate(row.created_at),
+      },
+      { id: "cylinder", header: "Cylinder", cell: (row) => row.cylinder_number },
       { id: "remarks", header: "Remarks", cell: (row) => row.remarks ?? "—" },
       ...actionsColumn<CylinderReturn>(showActions, (row) => (
         <DataTableRowActions
@@ -67,10 +76,26 @@ export function CylinderReturnsScreen() {
           onView={canRead ? () => router.push(cylinderReturnRoutes.view(row.id)) : undefined}
           onEdit={canUpdate ? () => router.push(cylinderReturnRoutes.edit(row.id)) : undefined}
           onDelete={canDelete ? () => setDeleting(row) : undefined}
+          extra={
+            canRead ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Print memo ${row.return_number}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  printMemo(row);
+                }}
+              >
+                <Printer className="size-3.5" />
+              </Button>
+            ) : null
+          }
         />
       )),
     ];
-  }, [canDelete, canRead, canUpdate, router, showActions]);
+  }, [canDelete, canRead, canUpdate, printMemo, router, showActions]);
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.cylinder_returns", columnDefs);
   const listView = useListView("inventory.cylinder_returns");
@@ -79,7 +104,7 @@ export function CylinderReturnsScreen() {
     <ListPage>
       <PageHeader
         title="Cylinder returns"
-        subtitle="Record cylinder returns against jobs"
+        subtitle="Record cylinder returns against cylinders"
         actions={
           canCreate ? (
             <Button asChild>

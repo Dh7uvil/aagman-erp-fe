@@ -3,13 +3,13 @@
 import Link from "next/link";
 
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
-import { jobRoutes } from "@/modules/inventory/jobs/routes";
+import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import type { RelatedDocumentRef } from "@/shared/components/document/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 
 function documentHref(doc: RelatedDocumentRef): string | null {
-  if (doc.document_type === "job") {
-    return jobRoutes.view(doc.document_id);
+  if (doc.document_type === "cylinder") {
+    return cylinderRoutes.view(doc.document_id);
   }
   if (doc.document_type === "cylinder_return") {
     return cylinderReturnRoutes.view(doc.document_id);

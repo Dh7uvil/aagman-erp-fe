@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { syncCountToRows } from "@/modules/inventory/jobs/lib/sync-count-rows";
+import { syncCountToRows } from "@/modules/inventory/cylinders/lib/sync-count-rows";
 
 describe("syncCountToRows", () => {
   it("trims extra rows", () => {

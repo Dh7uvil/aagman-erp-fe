@@ -1,8 +1,8 @@
 import { appSegments } from "@/config/app-segments";
 
-const base = `${appSegments.inventory}/jobs`;
+const base = `${appSegments.inventory}/cylinders`;
 
-export const jobRoutes = {
+export const cylinderRoutes = {
   list: base,
   new: `${base}/new`,
   clone: (id: string) => `${base}/new?clone=${id}`,

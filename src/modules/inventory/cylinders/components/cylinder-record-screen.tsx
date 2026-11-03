@@ -6,25 +6,25 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { jobPermissions } from "@/modules/inventory/permissions";
-import { JobFormFields } from "@/modules/inventory/jobs/components/job-form-fields";
+import { cylinderPermissions } from "@/modules/inventory/permissions";
+import { CylinderFormFields } from "@/modules/inventory/cylinders/components/cylinder-form-fields";
 import {
-  JobHeaderCreateActions,
-  jobSecondaryHeaderActionClass,
-} from "@/modules/inventory/jobs/components/job-header-create-actions";
-import { JobPauseDialog } from "@/modules/inventory/jobs/components/job-pause-dialog";
-import { JobResumeDialog } from "@/modules/inventory/jobs/components/job-resume-dialog";
-import { JobStatusBadge } from "@/modules/inventory/jobs/components/job-status-badge";
-import { useCreateJob, useUpdateJob } from "@/modules/inventory/jobs/mutations";
-import { useJob } from "@/modules/inventory/jobs/queries";
-import { jobRoutes } from "@/modules/inventory/jobs/routes";
+  CylinderHeaderCreateActions,
+  cylinderSecondaryHeaderActionClass,
+} from "@/modules/inventory/cylinders/components/cylinder-header-create-actions";
+import { CylinderPauseDialog } from "@/modules/inventory/cylinders/components/cylinder-pause-dialog";
+import { CylinderResumeDialog } from "@/modules/inventory/cylinders/components/cylinder-resume-dialog";
+import { CylinderStatusBadge } from "@/modules/inventory/cylinders/components/cylinder-status-badge";
+import { useCreateCylinder, useUpdateCylinder } from "@/modules/inventory/cylinders/mutations";
+import { useCylinder } from "@/modules/inventory/cylinders/queries";
+import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import {
-  JobFormSchema,
-  jobToCloneFormValues,
-  jobToFormValues,
-  type Job,
-  type JobFormValues,
-} from "@/modules/inventory/jobs/schemas";
+  CylinderFormSchema,
+  cylinderToCloneFormValues,
+  cylinderToFormValues,
+  type Cylinder,
+  type CylinderFormValues,
+} from "@/modules/inventory/cylinders/schemas";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { useCan } from "@/shared/providers/session-provider";
@@ -43,12 +43,12 @@ import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 
-export type JobRecordMode = "create" | "view" | "edit";
+export type CylinderRecordMode = "create" | "view" | "edit";
 
-function JobRecordForm({
+function CylinderRecordForm({
   mode,
-  jobId,
-  job,
+  cylinderId,
+  cylinder,
   formValues,
   readOnly,
   canSubmit,
@@ -57,13 +57,13 @@ function JobRecordForm({
   onPauseOpenChange,
   resumeOpen,
   onResumeOpenChange,
-  onJobPaused,
-  onJobResumed,
+  onCylinderPaused,
+  onCylinderResumed,
 }: {
-  mode: JobRecordMode;
-  jobId?: string;
-  job: Job | null;
-  formValues: JobFormValues;
+  mode: CylinderRecordMode;
+  cylinderId?: string;
+  cylinder: Cylinder | null;
+  formValues: CylinderFormValues;
   readOnly: boolean;
   canSubmit: boolean;
   canViewHistory: boolean;
@@ -71,23 +71,23 @@ function JobRecordForm({
   onPauseOpenChange: (open: boolean) => void;
   resumeOpen: boolean;
   onResumeOpenChange: (open: boolean) => void;
-  onJobPaused?: () => void;
-  onJobResumed?: () => void;
+  onCylinderPaused?: () => void;
+  onCylinderResumed?: () => void;
 }) {
   const router = useRouter();
-  const createJob = useCreateJob();
-  const updateJob = useUpdateJob();
+  const createJob = useCreateCylinder();
+  const updateJob = useUpdateCylinder();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm<JobFormValues>({
-    resolver: zodResolver(JobFormSchema),
+  const form = useForm<CylinderFormValues>({
+    resolver: zodResolver(CylinderFormSchema),
     values: formValues,
   });
 
-  useFormResetOnRouteEntry(form, formValues, true, `${mode}-${jobId ?? "new"}`);
+  useFormResetOnRouteEntry(form, formValues, true, `${mode}-${cylinderId ?? "new"}`);
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
-  async function onSubmit(values: JobFormValues) {
+  async function onSubmit(values: CylinderFormValues) {
     if (!canSubmit) {
       return;
     }
@@ -95,16 +95,16 @@ function JobRecordForm({
     try {
       if (mode === "create") {
         const created = await createJob.mutateAsync(values);
-        toast.success("Job created");
-        router.push(jobRoutes.view(created.id));
+        toast.success("Cylinder created");
+        router.push(cylinderRoutes.view(created.id));
         return;
       }
-      if (!jobId) {
+      if (!cylinderId) {
         return;
       }
-      await updateJob.mutateAsync({ id: jobId, values });
-      toast.success("Job updated");
-      router.push(jobRoutes.view(jobId));
+      await updateJob.mutateAsync({ id: cylinderId, values });
+      toast.success("Cylinder updated");
+      router.push(cylinderRoutes.view(cylinderId));
     } catch (error) {
       if (applyFieldErrors(error, form.setError)) {
         return;
@@ -116,31 +116,31 @@ function JobRecordForm({
   return (
     <>
       <Card>
-        {mode === "view" && jobId ? (
+        {mode === "view" && cylinderId ? (
           <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Job</CardTitle>
+            <CardTitle className="text-base">Cylinder</CardTitle>
             {canViewHistory ? (
-              <HistoryHeaderButton href={historyHref("jobs", jobId, job?.job_number ?? null)} />
+              <HistoryHeaderButton href={historyHref("cylinders", cylinderId, cylinder?.cylinder_number ?? null)} />
             ) : null}
           </CardHeader>
         ) : null}
-        <CardContent className={mode === "view" && jobId ? undefined : "pt-6"}>
+        <CardContent className={mode === "view" && cylinderId ? undefined : "pt-6"}>
           <Form {...form}>
             <form
               onSubmit={canSubmit ? form.handleSubmit(onSubmit) : (event) => event.preventDefault()}
               className="flex w-full flex-col gap-4"
             >
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
-              <JobFormFields
+              <CylinderFormFields
                 control={form.control}
                 readOnly={readOnly}
                 setValue={form.setValue}
-                job={mode === "create" ? null : job}
+                cylinder={mode === "create" ? null : cylinder}
               />
               {canSubmit ? (
                 <div className="flex justify-end">
                   <SubmitButton isPending={createJob.isPending || updateJob.isPending}>
-                    {mode === "create" ? "Create job" : "Save changes"}
+                    {mode === "create" ? "Create cylinder" : "Save changes"}
                   </SubmitButton>
                 </div>
               ) : null}
@@ -148,22 +148,22 @@ function JobRecordForm({
           </Form>
         </CardContent>
       </Card>
-      {mode === "view" && job ? (
+      {mode === "view" && cylinder ? (
         <>
-          <RelatedDocumentsCard documents={job.related_documents ?? []} />
-          {jobId ? (
+          <RelatedDocumentsCard documents={cylinder.related_documents ?? []} />
+          {cylinderId ? (
             <>
-              <JobPauseDialog
-                jobId={jobId}
+              <CylinderPauseDialog
+                cylinderId={cylinderId}
                 open={pauseOpen}
                 onOpenChange={onPauseOpenChange}
-                onPaused={onJobPaused}
+                onPaused={onCylinderPaused}
               />
-              <JobResumeDialog
-                jobId={jobId}
+              <CylinderResumeDialog
+                cylinderId={cylinderId}
                 open={resumeOpen}
                 onOpenChange={onResumeOpenChange}
-                onResumed={onJobResumed}
+                onResumed={onCylinderResumed}
               />
             </>
           ) : null}
@@ -173,24 +173,24 @@ function JobRecordForm({
   );
 }
 
-export function JobRecordScreen({
+export function CylinderRecordScreen({
   mode,
-  jobId,
+  cylinderId,
   cloneFromId,
 }: {
-  mode: JobRecordMode;
-  jobId?: string;
+  mode: CylinderRecordMode;
+  cylinderId?: string;
   cloneFromId?: string;
 }) {
   const can = useCan();
-  const { canCreate, canRead, canUpdate } = useCrudPermissions(jobPermissions);
-  const canViewHistory = can(jobPermissions.history);
+  const { canCreate, canRead, canUpdate } = useCrudPermissions(cylinderPermissions);
+  const canViewHistory = can(cylinderPermissions.history);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [resumeOpen, setResumeOpen] = useState(false);
 
-  const jobQuery = useJob(mode === "create" ? null : (jobId ?? null));
-  const cloneSourceQuery = useJob(mode === "create" && cloneFromId ? cloneFromId : null);
-  const job = jobQuery.data;
+  const cylinderQuery = useCylinder(mode === "create" ? null : (cylinderId ?? null));
+  const cloneSourceQuery = useCylinder(mode === "create" && cloneFromId ? cloneFromId : null);
+  const cylinder = cylinderQuery.data;
   const cloneSource = cloneSourceQuery.data;
   const readOnly = mode === "view" || (mode === "create" ? !canCreate : !canUpdate);
   const canSubmit = mode === "create" ? canCreate : mode === "edit" && canUpdate;
@@ -213,7 +213,7 @@ export function JobRecordScreen({
     );
   }
 
-  if (mode !== "create" && jobQuery.isLoading) {
+  if (mode !== "create" && cylinderQuery.isLoading) {
     return (
       <div className="flex flex-col gap-5">
         <Skeleton className="h-8 w-64" />
@@ -222,73 +222,73 @@ export function JobRecordScreen({
     );
   }
 
-  if (mode !== "create" && jobQuery.isError) {
+  if (mode !== "create" && cylinderQuery.isError) {
     return (
-      <DataTableError message={getErrorMessage(jobQuery.error)} onRetry={() => jobQuery.refetch()} />
+      <DataTableError message={getErrorMessage(cylinderQuery.error)} onRetry={() => cylinderQuery.refetch()} />
     );
   }
 
-  if (mode !== "create" && !job) {
-    return <p className="text-muted-foreground text-sm">Job not found.</p>;
+  if (mode !== "create" && !cylinder) {
+    return <p className="text-muted-foreground text-sm">Cylinder not found.</p>;
   }
 
   const formValues =
     mode === "create"
       ? cloneFromId && cloneSource
-        ? jobToCloneFormValues(cloneSource)
-        : jobToFormValues(null)
-      : jobToFormValues(job!);
+        ? cylinderToCloneFormValues(cloneSource)
+        : cylinderToFormValues(null)
+      : cylinderToFormValues(cylinder!);
 
   const formKey =
-    mode === "create" ? `create-${cloneFromId ?? "new"}` : `${job!.id}-${mode}-${job!.updated_at}`;
+    mode === "create" ? `create-${cloneFromId ?? "new"}` : `${cylinder!.id}-${mode}-${cylinder!.updated_at}`;
 
   const title =
     mode === "create"
       ? cloneFromId && cloneSource
-        ? "Clone job"
-        : "New job"
+        ? "Clone cylinder"
+        : "New cylinder"
       : mode === "edit"
-        ? "Edit job"
-        : (job?.job_number ?? "Job");
+        ? "Edit cylinder"
+        : (cylinder?.cylinder_number ?? "Cylinder");
   const createSubtitle =
     cloneFromId && cloneSource
-      ? `Prefilled from ${cloneSource.job_number}. Job image and challan are not copied.`
+      ? `Prefilled from ${cloneSource.cylinder_number}. Cylinder image and challan are not copied.`
       : undefined;
 
   return (
     <div className="flex flex-col gap-5">
       <RecordPageHeader
         title={title}
-        subtitle={mode === "view" ? job?.product_name : createSubtitle}
-        badges={mode === "view" && job ? <JobStatusBadge status={job.status} /> : undefined}
-        listHref={jobRoutes.list}
-        viewHref={jobId ? jobRoutes.view(jobId) : jobRoutes.list}
-        editHref={jobId ? jobRoutes.edit(jobId) : undefined}
-        canUpdate={canUpdate && job?.status !== "RETURNED"}
+        subtitle={mode === "view" ? cylinder?.product_name : createSubtitle}
+        badges={mode === "view" && cylinder ? <CylinderStatusBadge status={cylinder.status} /> : undefined}
+        listHref={cylinderRoutes.list}
+        viewHref={cylinderId ? cylinderRoutes.view(cylinderId) : cylinderRoutes.list}
+        editHref={cylinderId ? cylinderRoutes.edit(cylinderId) : undefined}
+        canUpdate={canUpdate && cylinder?.status !== "RETURNED"}
         mode={mode === "edit" ? "edit" : "view"}
         splitSecondaryActionsOnMobile={mode === "view"}
         extraActions={
-          mode === "view" && job ? (
+          mode === "view" && cylinder ? (
             <>
               {canCreate && canRead ? (
-                <JobHeaderCreateActions cloneHref={jobRoutes.clone(job.id)} showNewJob={false} />
+                <CylinderHeaderCreateActions cloneHref={cylinderRoutes.clone(cylinder.id)} showNewCylinder={false} />
               ) : null}
               {canUpdate ? (
                 <>
-                  {job.status !== "PAUSED" &&
-                  job.status !== "RETURNED" &&
-                  job.status !== "COMPLETED" ? (
+                  {cylinder.status !== "PAUSED" &&
+                  cylinder.status !== "RETURNED" &&
+                  cylinder.status !== "COMPLETED" ? (
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className={jobSecondaryHeaderActionClass}
+                      className={cylinderSecondaryHeaderActionClass}
                       onClick={() => setPauseOpen(true)}
                     >
                       <PauseLabel />
                     </Button>
                   ) : null}
-                  {job.status === "PAUSED" ? (
+                  {cylinder.status === "PAUSED" ? (
                     <Button type="button" size="sm" onClick={() => setResumeOpen(true)}>
                       <ResumeLabel />
                     </Button>
@@ -299,11 +299,11 @@ export function JobRecordScreen({
           ) : null
         }
       />
-      <JobRecordForm
+      <CylinderRecordForm
         key={formKey}
         mode={mode}
-        jobId={jobId}
-        job={mode === "create" ? null : job!}
+        cylinderId={cylinderId}
+        cylinder={mode === "create" ? null : cylinder!}
         formValues={formValues}
         readOnly={readOnly}
         canSubmit={Boolean(canSubmit)}
@@ -312,8 +312,8 @@ export function JobRecordScreen({
         onPauseOpenChange={setPauseOpen}
         resumeOpen={resumeOpen}
         onResumeOpenChange={setResumeOpen}
-        onJobPaused={() => void jobQuery.refetch()}
-        onJobResumed={() => void jobQuery.refetch()}
+        onCylinderPaused={() => void cylinderQuery.refetch()}
+        onCylinderResumed={() => void cylinderQuery.refetch()}
       />
     </div>
   );

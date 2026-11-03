@@ -21,21 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
-import { formatDate, formatDecimal } from "@/shared/lib/format";
+import { formatDate, formatDateTime, formatDecimal } from "@/shared/lib/format";
 
 function qty(value: string | number | null | undefined) {
   if (value == null) {
     return "";
   }
   return String(value);
-}
-
-function formatTimestamp(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
 }
 
 const MATERIAL_EDIT_STOCK_NOTES = new Set([
@@ -271,7 +263,7 @@ export function MaterialHistoryCard({
                 ledgerEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="whitespace-nowrap text-sm">
-                      {formatTimestamp(entry.timestamp)}
+                      {formatDateTime(entry.timestamp)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{stockDirectionLabel(entry)}</Badge>

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
-import { JobRecordScreen } from "@/modules/inventory/jobs/components/job-record-screen";
-import { jobPermissions } from "@/modules/inventory/permissions";
+import { CylinderRecordScreen } from "@/modules/inventory/cylinders/components/cylinder-record-screen";
+import { cylinderPermissions } from "@/modules/inventory/permissions";
 import { PermissionGate } from "@/shared/auth/guards";
 
 const CLONE_ID_PATTERN =
@@ -14,7 +14,7 @@ function parseCloneFromId(raw: string | string[] | undefined): string | undefine
   return CLONE_ID_PATTERN.test(raw) ? raw : undefined;
 }
 
-export default async function NewJobPage({
+export default async function NewCylinderPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -23,9 +23,9 @@ export default async function NewJobPage({
   const cloneFromId = parseCloneFromId(params.clone);
 
   return (
-    <PermissionGate permission={jobPermissions.create}>
+    <PermissionGate permission={cylinderPermissions.create}>
       <Suspense fallback={null}>
-        <JobRecordScreen mode="create" cloneFromId={cloneFromId} />
+        <CylinderRecordScreen mode="create" cloneFromId={cloneFromId} />
       </Suspense>
     </PermissionGate>
   );

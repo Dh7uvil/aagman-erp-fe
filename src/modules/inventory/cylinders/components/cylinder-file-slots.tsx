@@ -5,12 +5,12 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
-  jobChallanPermissions,
-  jobImagePermissions,
+  cylinderChallanPermissions,
+  cylinderImagePermissions,
 } from "@/modules/inventory/permissions";
-import { useDeleteJobFile, useUploadJobFile } from "@/modules/inventory/jobs/mutations";
-import { jobsApi } from "@/modules/inventory/jobs/api";
-import type { Job } from "@/modules/inventory/jobs/schemas";
+import { useDeleteCylinderFile, useUploadCylinderFile } from "@/modules/inventory/cylinders/mutations";
+import { cylindersApi } from "@/modules/inventory/cylinders/api";
+import type { Cylinder } from "@/modules/inventory/cylinders/schemas";
 import { MAX_ATTACHMENT_BYTES } from "@/config/constants";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { Button } from "@/shared/components/ui/button";
@@ -35,7 +35,7 @@ function formatFileSize(bytes: number | null | undefined): string | null {
 
 function FileSlot({
   title,
-  jobId,
+  cylinderId,
   slot,
   meta,
   permissions,
@@ -43,9 +43,9 @@ function FileSlot({
   enableFilePreview = false,
 }: {
   title: string;
-  jobId: string;
-  slot: "job_image" | "challan";
-  meta: Job["job_image"];
+  cylinderId: string;
+  slot: "cylinder_image" | "challan";
+  meta: Cylinder["cylinder_image"];
   permissions: {
     read: string;
     create: string;
@@ -59,8 +59,8 @@ function FileSlot({
   const [dragOver, setDragOver] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const { canRead, canCreate, canUpdate, canDelete } = useCrudPermissions(permissions);
-  const upload = useUploadJobFile();
-  const remove = useDeleteJobFile();
+  const upload = useUploadCylinderFile();
+  const remove = useDeleteCylinderFile();
   if (!canRead) {
     return null;
   }
@@ -70,7 +70,7 @@ function FileSlot({
   const isPdf = meta?.content_type === "application/pdf";
   const sizeLabel = formatFileSize(meta?.size_bytes);
   const pending = upload.isPending || remove.isPending;
-  const fileUrl = jobsApi.fileUrl(jobId, slot);
+  const fileUrl = cylindersApi.fileUrl(cylinderId, slot);
   const canPreviewFile = enableFilePreview && hasFile && (isImage || isPdf);
 
   function openPreview(event?: React.MouseEvent) {
@@ -90,7 +90,7 @@ function FileSlot({
       return;
     }
     try {
-      await upload.mutateAsync({ id: jobId, slot, file });
+      await upload.mutateAsync({ id: cylinderId, slot, file });
       toast.success(`${title} uploaded`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -99,7 +99,7 @@ function FileSlot({
 
   async function onDelete() {
     try {
-      await remove.mutateAsync({ id: jobId, slot });
+      await remove.mutateAsync({ id: cylinderId, slot });
       toast.success(`${title} removed`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -317,24 +317,24 @@ function FileSlot({
   );
 }
 
-export function JobFileSlots({ job }: { job: Job }) {
+export function CylinderFileSlots({ cylinder }: { cylinder: Cylinder }) {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
       <FileSlot
-        title="Job image"
-        jobId={job.id}
-        slot="job_image"
-        meta={job.job_image}
-        permissions={jobImagePermissions}
+        title="Cylinder image"
+        cylinderId={cylinder.id}
+        slot="cylinder_image"
+        meta={cylinder.cylinder_image}
+        permissions={cylinderImagePermissions}
         emptyIcon={ImageIcon}
         enableFilePreview
       />
       <FileSlot
         title="Challan"
-        jobId={job.id}
+        cylinderId={cylinder.id}
         slot="challan"
-        meta={job.challan}
-        permissions={jobChallanPermissions}
+        meta={cylinder.challan}
+        permissions={cylinderChallanPermissions}
         emptyIcon={FileText}
         enableFilePreview
       />
@@ -342,11 +342,11 @@ export function JobFileSlots({ job }: { job: Job }) {
   );
 }
 
-export function JobFileSlotsPlaceholder() {
+export function CylinderFileSlotsPlaceholder() {
   return (
     <div className="border-border bg-muted/20 text-muted-foreground flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center">
       <Upload className="size-6 opacity-60" aria-hidden />
-      <p className="text-sm">Save the job first to upload job image and challan.</p>
+      <p className="text-sm">Save the cylinder first to upload cylinder image and challan.</p>
     </div>
   );
 }

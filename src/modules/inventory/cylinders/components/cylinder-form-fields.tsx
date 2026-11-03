@@ -5,16 +5,16 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Control, UseFormSetValue } from "react-hook-form";
 import { useFieldArray, useWatch } from "react-hook-form";
 
-import { syncCountToRows } from "@/modules/inventory/jobs/lib/sync-count-rows";
+import { syncCountToRows } from "@/modules/inventory/cylinders/lib/sync-count-rows";
 import {
-  JobFileSlots,
-  JobFileSlotsPlaceholder,
-} from "@/modules/inventory/jobs/components/job-file-slots";
+  CylinderFileSlots,
+  CylinderFileSlotsPlaceholder,
+} from "@/modules/inventory/cylinders/components/cylinder-file-slots";
 import {
-  jobFormStatusOptions,
-  type Job,
-  type JobFormValues,
-} from "@/modules/inventory/jobs/schemas";
+  cylinderFormStatusOptions,
+  type Cylinder,
+  type CylinderFormValues,
+} from "@/modules/inventory/cylinders/schemas";
 import { CompanyQuickCreateDialog } from "@/modules/users-management/companies/components/company-quick-create-dialog";
 import { companyPermissions } from "@/modules/users-management/companies/permissions";
 import { useCompanies } from "@/modules/users-management/companies/queries";
@@ -40,9 +40,9 @@ import {
 import { Textarea } from "@/shared/components/ui/textarea";
 import { formatFixedDecimal, multiplyDecimals } from "@/shared/lib/format";
 import { useCan } from "@/shared/providers/session-provider";
-import { jobPricePermissions } from "@/modules/inventory/permissions";
+import { cylinderPricePermissions } from "@/modules/inventory/permissions";
 
-function JobFormSection({ title, children }: { title?: string; children: ReactNode }) {
+function CylinderFormSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3 border-b border-border pb-5 last:border-b-0 last:pb-0">
       {title ? <h3 className="text-sm font-semibold tracking-tight">{title}</h3> : null}
@@ -62,19 +62,19 @@ function colorLinesGridClass(count: number): string {
   return "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3";
 }
 
-export function JobFormFields({
+export function CylinderFormFields({
   control,
   readOnly,
   setValue,
-  job,
+  cylinder,
 }: {
-  control: Control<JobFormValues>;
+  control: Control<CylinderFormValues>;
   readOnly?: boolean;
-  setValue: UseFormSetValue<JobFormValues>;
-  job?: Job | null;
+  setValue: UseFormSetValue<CylinderFormValues>;
+  cylinder?: Cylinder | null;
 }) {
   const can = useCan();
-  const canViewPrice = can(jobPricePermissions.read);
+  const canViewPrice = can(cylinderPricePermissions.read);
   const companiesQuery = useCompanies({ page: 1, page_size: 200 });
   const companies = companiesQuery.data?.data ?? [];
   const canCreateCompany = can(companyPermissions.create);
@@ -87,7 +87,7 @@ export function JobFormFields({
   const colorLines = useFieldArray({ control, name: "color_lines" });
   const sizeLinesValues = useWatch({ control, name: "size_lines" });
   const statusValue = useWatch({ control, name: "status" });
-  const statusOptions = jobFormStatusOptions(job?.status ?? statusValue);
+  const statusOptions = cylinderFormStatusOptions(cylinder?.status ?? statusValue);
 
   function copyFirstCylinderDimensionsToAll() {
     const lines = sizeLinesValues ?? [];
@@ -143,7 +143,7 @@ export function JobFormFields({
 
   return (
     <div className="flex flex-col gap-5">
-      <JobFormSection>
+      <CylinderFormSection>
         <FormGrid columns={3}>
           <FormField
             control={control}
@@ -211,9 +211,9 @@ export function JobFormFields({
             )}
           />
         </FormGrid>
-      </JobFormSection>
+      </CylinderFormSection>
 
-      <JobFormSection title="Cylinders">
+      <CylinderFormSection title="Cylinders">
         <FormGrid columns={3}>
           <FormField
             control={control}
@@ -358,9 +358,9 @@ export function JobFormFields({
             </div>
           ))}
         </div>
-      </JobFormSection>
+      </CylinderFormSection>
 
-      <JobFormSection title="Colours">
+      <CylinderFormSection title="Colours">
         <FormField
           control={control}
           name="color_count"
@@ -414,9 +414,9 @@ export function JobFormFields({
 
         <div className="flex flex-col gap-3 border-t border-border pt-5">
           <p className="text-sm font-medium">Documents</p>
-          {job ? <JobFileSlots job={job} /> : <JobFileSlotsPlaceholder />}
+          {cylinder ? <CylinderFileSlots cylinder={cylinder} /> : <CylinderFileSlotsPlaceholder />}
         </div>
-      </JobFormSection>
+      </CylinderFormSection>
 
       <CompanyQuickCreateDialog
         open={companyDialogOpen}
