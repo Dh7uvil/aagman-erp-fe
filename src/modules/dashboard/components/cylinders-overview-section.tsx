@@ -93,7 +93,7 @@ export function CylindersOverviewSection({ rangeParams }: { rangeParams: Dashboa
       <div
         className={
           canViewPrice
-            ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+            ? "grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5"
             : "grid grid-cols-2 gap-3 lg:grid-cols-4"
         }
       >

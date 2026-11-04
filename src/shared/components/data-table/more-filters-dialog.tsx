@@ -52,7 +52,7 @@ export function MoreFiltersDialog({
   draftCount,
   description,
   title = "More filters",
-  contentClassName = "sm:max-w-lg",
+  contentClassName = "max-w-[min(32rem,calc(100vw-1.5rem))]",
   children,
   onOpen,
   onApply,

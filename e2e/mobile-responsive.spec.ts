@@ -66,6 +66,13 @@ async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 30_000 });
 }
 
+async function expectPageFitsViewport(page: import("@playwright/test").Page) {
+  const fitsViewport = await page.evaluate(
+    () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+  );
+  expect(fitsViewport).toBe(true);
+}
+
 test.describe("mobile list views", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
@@ -79,10 +86,7 @@ test.describe("mobile list views", () => {
       "true",
     );
 
-    const fitsViewport = await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-    );
-    expect(fitsViewport).toBe(true);
+    await expectPageFitsViewport(page);
   });
 
   test("list view toggle switches to table and persists after reload", async ({ page }) => {
@@ -132,10 +136,25 @@ test.describe("mobile list views", () => {
       "aria-pressed",
       "true",
     );
-    const fitsViewport = await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-    );
-    expect(fitsViewport).toBe(true);
+    await expectPageFitsViewport(page);
+  });
+
+  test("new ink form fits viewport with stacked line fields", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/inks/new");
+    await expect(page.getByRole("heading", { name: "New ink sheet" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("new material form fits viewport with stacked size lines", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/materials/new");
+    await expect(page.getByRole("heading", { name: "New material" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
   });
 });
 
@@ -147,14 +166,61 @@ test.describe("tablet viewport", () => {
     await expect(page.getByText("Secure access management")).toHaveCount(0);
   });
 
-  test("cylinders list table fits default columns at tablet width", async ({ page }) => {
+  test("cylinders list shows table without horizontal page overflow", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/inventory/cylinders");
-    await page.getByRole("button", { name: "Table view" }).click();
+    await expect(page.getByRole("heading", { name: "Cylinders" })).toBeVisible();
     await expect(page.locator('[data-slot="table"]')).toBeVisible();
-    const fitsViewport = await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-    );
-    expect(fitsViewport).toBe(true);
+    await expectPageFitsViewport(page);
+  });
+
+  test("users list fits viewport at tablet width", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/administration/users");
+    await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
+    await expect(page.locator('[data-slot="table"]')).toBeVisible();
+    await expectPageFitsViewport(page);
+  });
+
+  test("permissions matrix fits viewport at tablet width", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/administration/permissions");
+    await expect(page.getByRole("heading", { name: "Permissions" })).toBeVisible();
+    await expectPageFitsViewport(page);
+  });
+
+  test("new ink form fits viewport at tablet width", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/inks/new");
+    await expectPageFitsViewport(page);
+  });
+
+  test("new user dialog stays within the viewport", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/administration/users");
+    await page.getByRole("button", { name: "New User" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box).not.toBeNull();
+    if (box) {
+      expect(box.x).toBeGreaterThanOrEqual(-1);
+      expect(box.x + box.width).toBeLessThanOrEqual(768 + 1);
+    }
+  });
+});
+
+test.describe("desktop ink line grid", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test("ink create page fits viewport while line grid scrolls internally", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/inks/new");
+    await expectPageFitsViewport(page);
+    const hasWideLineScroller = await page.evaluate(() => {
+      const scrollers = Array.from(document.querySelectorAll(".overflow-x-auto"));
+      return scrollers.some((el) => el.scrollWidth > el.clientWidth + 1);
+    });
+    expect(hasWideLineScroller).toBe(true);
   });
 });

@@ -131,7 +131,7 @@ export function ColumnsDialog<T>({
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-80 p-0"
+          className="w-80 max-w-[calc(100vw-2rem)] p-0"
           onPointerDownOutside={(event) => {
             if (draggingId) {
               event.preventDefault();

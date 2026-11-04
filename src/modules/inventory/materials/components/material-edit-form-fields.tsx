@@ -61,28 +61,28 @@ function unitIdForCode(units: { id: string; code: string }[], code: string): str
 
 /** Micron [| price | per] | size | unit | rolls | qty | unit | active | delete */
 const SIZE_LINE_GRID =
-  "sm:grid-cols-[minmax(7.5rem,1.15fr)_minmax(5rem,0.95fr)_minmax(7.25rem,1.15fr)_minmax(4.5rem,0.85fr)_minmax(4.5rem,0.85fr)_minmax(7.25rem,1.15fr)_3.25rem_2.25rem] sm:items-stretch";
+  "lg:grid-cols-[minmax(7.5rem,1.15fr)_minmax(5rem,0.95fr)_minmax(7.25rem,1.15fr)_minmax(4.5rem,0.85fr)_minmax(4.5rem,0.85fr)_minmax(7.25rem,1.15fr)_3.25rem_2.25rem] lg:items-stretch";
 const SIZE_LINE_GRID_WITH_PRICE =
-  "sm:grid-cols-[minmax(7.5rem,1.1fr)_minmax(4.25rem,0.75fr)_minmax(8.75rem,1fr)_minmax(4.75rem,0.8fr)_minmax(7rem,1fr)_minmax(4.25rem,0.8fr)_minmax(4.25rem,0.8fr)_minmax(7rem,1fr)_3.25rem_2.25rem] sm:items-stretch";
+  "lg:grid-cols-[minmax(7.5rem,1.1fr)_minmax(4.25rem,0.75fr)_minmax(8.75rem,1fr)_minmax(4.75rem,0.8fr)_minmax(7rem,1fr)_minmax(4.25rem,0.8fr)_minmax(4.25rem,0.8fr)_minmax(7rem,1fr)_3.25rem_2.25rem] lg:items-stretch";
 
 function sizeLineGridClass(canViewPrice: boolean) {
   const cols = canViewPrice ? SIZE_LINE_GRID_WITH_PRICE : SIZE_LINE_GRID;
-  return `sm:grid ${cols}`;
+  return `lg:grid ${cols}`;
 }
 
 function sizeLineTableMinWidth(canViewPrice: boolean) {
-  return canViewPrice ? "sm:min-w-[60rem]" : "sm:min-w-[46rem]";
+  return canViewPrice ? "lg:min-w-[60rem]" : "lg:min-w-[46rem]";
 }
 
 const SIZE_LINE_HEADER =
-  "flex items-center px-1 py-2 text-xs font-medium text-muted-foreground sm:px-1.5";
+  "flex items-center px-1 py-2 text-xs font-medium text-muted-foreground lg:px-1.5";
 const SIZE_LINE_CELL =
-  "flex min-h-0 min-w-0 w-full flex-col justify-center space-y-0 overflow-hidden sm:px-1.5 sm:py-2 [&_[data-slot=form-control]]:min-w-0";
+  "flex min-h-0 min-w-0 w-full flex-col justify-center space-y-0 overflow-hidden lg:px-1.5 lg:py-2 [&_[data-slot=form-control]]:min-w-0";
 /** Unit / Per columns: tighter horizontal inset so selects align with numeric fields */
 const SIZE_LINE_UNIT_CELL =
-  "flex min-h-0 min-w-0 w-full flex-col justify-center space-y-0 overflow-hidden sm:px-1 sm:py-2 [&_[data-slot=form-control]]:min-w-0";
+  "flex min-h-0 min-w-0 w-full flex-col justify-center space-y-0 overflow-hidden lg:px-1 lg:py-2 [&_[data-slot=form-control]]:min-w-0";
 /** Vertical rule after Per, size unit, rolls, and qty unit (desktop grid only) */
-const SIZE_LINE_COL_DIVIDER = "sm:self-stretch sm:border-r-2 sm:border-border";
+const SIZE_LINE_COL_DIVIDER = "lg:self-stretch lg:border-r-2 lg:border-border";
 
 function MaterialFormSection({
   title,
@@ -534,14 +534,14 @@ export function MaterialEditFormFields({
             return (
               <div
                 key={fieldItem.id}
-                className={`grid grid-cols-1 gap-4 overflow-hidden rounded-md border bg-card p-4 shadow-sm ${sizeLineGridClass(canViewPrice)} sm:gap-0 sm:p-0`}
+                className={`grid grid-cols-1 gap-4 overflow-hidden rounded-md border bg-card p-4 shadow-sm ${sizeLineGridClass(canViewPrice)} lg:gap-0 lg:p-0`}
               >
                 <FormField
                   control={control}
                   name={`size_lines.${index}.parent_id`}
                   render={({ field }) => (
                     <FormItem className={SIZE_LINE_CELL}>
-                      <FormLabel className="sm:sr-only">Micron</FormLabel>
+                      <FormLabel className="lg:sr-only">Micron</FormLabel>
                       <FormControl>
                         <MasterSelect
                           compact
@@ -581,7 +581,7 @@ export function MaterialEditFormFields({
                       name={`size_lines.${index}.price_per_unit`}
                       render={({ field }) => (
                         <FormItem className={SIZE_LINE_CELL}>
-                          <FormLabel className="sm:sr-only">Price</FormLabel>
+                          <FormLabel className="lg:sr-only">Price</FormLabel>
                           <FormControl>
                             <DecimalInput
                               kind="money"
@@ -604,7 +604,7 @@ export function MaterialEditFormFields({
                       name={`size_lines.${index}.price_unit_id`}
                       render={({ field }) => (
                         <FormItem className={`${SIZE_LINE_UNIT_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
-                          <FormLabel className="sm:sr-only">Price unit</FormLabel>
+                          <FormLabel className="lg:sr-only">Price unit</FormLabel>
                           <FormControl>
                             <MasterSelect
                               compact
@@ -642,7 +642,7 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.size`}
                   render={({ field }) => (
                     <FormItem className={SIZE_LINE_CELL}>
-                      <FormLabel className="sm:sr-only">Size</FormLabel>
+                      <FormLabel className="lg:sr-only">Size</FormLabel>
                       <FormControl>
                         <DecimalInput
                           kind="quantity"
@@ -661,7 +661,7 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.size_unit_id`}
                   render={({ field }) => (
                     <FormItem className={`${SIZE_LINE_UNIT_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
-                      <FormLabel className="sm:sr-only">Size unit</FormLabel>
+                      <FormLabel className="lg:sr-only">Size unit</FormLabel>
                       <FormControl>
                         <MasterSelect
                           compact
@@ -694,7 +694,7 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.opening_rolls`}
                   render={({ field }) => (
                     <FormItem className={`${SIZE_LINE_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
-                      <FormLabel className={isIncrementRow ? "sr-only" : "sm:sr-only"}>
+                      <FormLabel className={isIncrementRow ? "sr-only" : "lg:sr-only"}>
                         {isIncrementRow ? "Add rolls" : "No. of rolls"}
                       </FormLabel>
                       <FormControl>
@@ -714,7 +714,7 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.quantity_available`}
                   render={({ field }) => (
                     <FormItem className={SIZE_LINE_CELL}>
-                      <FormLabel className={isIncrementRow ? "sr-only" : "sm:sr-only"}>
+                      <FormLabel className={isIncrementRow ? "sr-only" : "lg:sr-only"}>
                         {isIncrementRow ? "Add qty (kg)" : "Qty available"}
                       </FormLabel>
                       <FormControl>
@@ -734,7 +734,7 @@ export function MaterialEditFormFields({
                   name={`size_lines.${index}.unit_id`}
                   render={({ field }) => (
                     <FormItem className={`${SIZE_LINE_UNIT_CELL} ${SIZE_LINE_COL_DIVIDER}`}>
-                      <FormLabel className="sm:sr-only">Qty unit</FormLabel>
+                      <FormLabel className="lg:sr-only">Qty unit</FormLabel>
                       <FormControl>
                         <MasterSelect
                           compact
@@ -762,13 +762,13 @@ export function MaterialEditFormFields({
                     </FormItem>
                   )}
                 />
-                <div className="flex items-center justify-between gap-2 sm:contents">
+                <div className="flex items-center justify-between gap-2 lg:contents">
                   <FormField
                     control={control}
                     name={`size_lines.${index}.is_active`}
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center gap-2 space-y-0 sm:justify-center sm:px-1 sm:py-2">
-                        <FormLabel className="text-sm font-normal sm:sr-only">Active</FormLabel>
+                      <FormItem className="flex flex-row items-center gap-2 space-y-0 lg:justify-center lg:px-1 lg:py-2">
+                        <FormLabel className="text-sm font-normal lg:sr-only">Active</FormLabel>
                         <FormControl>
                           <Switch
                             checked={field.value}
@@ -779,7 +779,7 @@ export function MaterialEditFormFields({
                       </FormItem>
                     )}
                   />
-                  <div className="flex shrink-0 items-center sm:justify-center sm:px-1 sm:py-2">
+                  <div className="flex shrink-0 items-center lg:justify-center lg:px-1 lg:py-2">
                     {showRemove ? (
                       <Button
                         type="button"

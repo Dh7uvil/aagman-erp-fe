@@ -167,7 +167,7 @@ export function DepartmentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent nested={nested} className="sm:max-w-2xl">
+      <DialogContent nested={nested} className="max-w-[min(42rem,calc(100vw-1.5rem))]">
         <FormDialogHeader
           title={formDialogTitle("Department", mode)}
           entity="Department"

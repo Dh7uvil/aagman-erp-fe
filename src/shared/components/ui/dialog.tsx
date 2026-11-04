@@ -117,8 +117,8 @@ function DialogContent({
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed z-50 grid w-full gap-4 overflow-y-auto border shadow-lg duration-200",
           mobileSheet
-            ? "top-auto bottom-0 left-0 max-h-[85dvh] translate-x-0 translate-y-0 rounded-t-xl rounded-b-none border-b-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom max-sm:max-w-none sm:top-[50%] sm:left-[50%] sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-6 sm:pb-6"
-            : "top-[50%] left-[50%] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-1.5rem)] translate-x-[-50%] translate-y-[-50%] rounded-lg p-6 sm:max-w-lg",
+            ? "top-auto bottom-0 left-0 max-h-[85dvh] translate-x-0 translate-y-0 rounded-t-xl rounded-b-none border-b-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom max-sm:max-w-none sm:top-[50%] sm:left-[50%] sm:max-h-[calc(100dvh-2rem)] sm:max-w-[min(32rem,calc(100vw-1.5rem))] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-6 sm:pb-6"
+            : "top-[50%] left-[50%] max-h-[calc(100dvh-2rem)] w-full max-w-[min(32rem,calc(100vw-1.5rem))] translate-x-[-50%] translate-y-[-50%] rounded-lg p-6",
           nested && "z-[60]",
           className,
         )}

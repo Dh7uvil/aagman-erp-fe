@@ -452,7 +452,7 @@ export function UsersTableFilters({
         extraCount={extraCount}
         draftCount={extraFilterCount(draftExtra)}
         description="Narrow the user list by employee, branch, and login details."
-        contentClassName="sm:max-w-2xl"
+        contentClassName="max-w-[min(42rem,calc(100vw-1.5rem))]"
         onOpen={() => setDraftExtra(extraFilters)}
         onApply={() => setParams({ filters: extraToUrlPatch(draftExtra) })}
         onClearDraft={() => setDraftExtra(EMPTY_EXTRA)}

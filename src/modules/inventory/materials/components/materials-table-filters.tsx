@@ -220,7 +220,7 @@ export function MaterialsTableMoreFilters() {
         extraCount={extraCount}
         draftCount={extraFilterCount(draftExtra)}
         description="Filter materials by size, stock levels, and status."
-        contentClassName="sm:max-w-lg"
+        contentClassName="max-w-[min(32rem,calc(100vw-1.5rem))]"
         onOpen={() => setDraftExtra(extraFilters)}
         onApply={() => setParams({ filters: extraToUrlPatch(draftExtra) })}
         onClearDraft={() => setDraftExtra(EMPTY_EXTRA)}

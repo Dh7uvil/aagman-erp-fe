@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             id="main-content"
             className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-6 [scroll-padding-top:6rem] [scroll-padding-bottom:max(2rem,env(safe-area-inset-bottom))] max-md:[scroll-padding-top:0.75rem] max-md:[scroll-padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]"
           >
-            <div className="w-full min-h-min">{children}</div>
+            <div className="min-h-min w-full min-w-0">{children}</div>
             <MainScrollManager />
             <MobileFormViewportManager />
           </main>

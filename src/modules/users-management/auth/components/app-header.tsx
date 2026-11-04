@@ -43,20 +43,25 @@ export function AppHeader({
 
   return (
     <TooltipProvider>
-      <header className="bg-card border-border flex h-14 shrink-0 items-center gap-2 border-b px-3 pt-[env(safe-area-inset-top,0px)] md:gap-3 md:px-4">
+      <header className="bg-card border-border flex h-14 min-w-0 shrink-0 items-center gap-2 border-b px-3 pt-[env(safe-area-inset-top,0px)] md:gap-3 md:px-4">
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
-          className="md:hidden"
+          className="shrink-0 md:hidden"
           onClick={onMobileMenuOpen}
           aria-label="Open navigation"
         >
           <Menu className="size-4" />
         </Button>
-        <AppBreadcrumb />
-        <div className="flex-1" />
-        <CommandSearchTrigger onOpen={onSearchOpen} className="hidden w-44 md:inline-flex" />
+        <div className="min-w-0 flex-1 overflow-hidden lg:flex-initial lg:overflow-visible">
+          <AppBreadcrumb />
+        </div>
+        <div className="min-w-0 flex-1" />
+        <CommandSearchTrigger
+          onOpen={onSearchOpen}
+          className="hidden min-w-0 max-w-[8.5rem] shrink md:inline-flex lg:w-44 lg:max-w-none"
+        />
         <Button
           type="button"
           variant="ghost"

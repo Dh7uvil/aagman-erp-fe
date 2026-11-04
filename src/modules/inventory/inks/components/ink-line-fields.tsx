@@ -36,29 +36,29 @@ import { setFormValueFromQuickCreate } from "@/shared/lib/form-quick-create";
 const INK_LINE_HEADER =
   "flex min-h-10 items-center px-2 py-2 text-xs font-medium text-muted-foreground";
 const INK_LINE_CELL =
-  "min-h-10 gap-0 content-center sm:px-2 sm:py-2 [&_[data-slot=form-control]]:min-w-[5rem] [&_[data-slot=form-control]]:items-center";
+  "min-h-10 gap-0 content-center lg:px-2 lg:py-2 [&_[data-slot=form-control]]:min-w-[5rem] [&_[data-slot=form-control]]:items-center";
 const INK_LINE_NUMERIC_CELL =
-  "min-h-10 gap-0 content-center sm:px-2 sm:py-2 [&_[data-slot=form-control]]:min-w-[7rem] [&_[data-slot=form-control]]:items-center [&_input]:w-full";
+  "min-h-10 gap-0 content-center lg:px-2 lg:py-2 [&_[data-slot=form-control]]:min-w-[7rem] [&_[data-slot=form-control]]:items-center [&_input]:w-full";
 const INK_LINE_UNIT_CELL =
-  "min-h-10 gap-0 content-center sm:px-2 sm:py-2 [&_[data-slot=form-control]]:min-w-[5.5rem] [&_[data-slot=form-control]]:items-center";
-const INK_LINE_COL_DIVIDER = "sm:self-stretch sm:border-r-2 sm:border-border";
+  "min-h-10 gap-0 content-center lg:px-2 lg:py-2 [&_[data-slot=form-control]]:min-w-[5.5rem] [&_[data-slot=form-control]]:items-center";
+const INK_LINE_COL_DIVIDER = "lg:self-stretch lg:border-r-2 lg:border-border";
 const INK_LINE_HEX_CELL =
-  "min-h-10 min-w-[7.5rem] gap-0 content-center overflow-visible whitespace-nowrap sm:px-2 sm:py-2";
+  "min-h-10 min-w-0 gap-0 content-center overflow-visible whitespace-nowrap lg:min-w-[7.5rem] lg:px-2 lg:py-2";
 const INK_LINE_READOUT = "flex min-h-10 w-full items-center text-sm font-medium tabular-nums";
 const INK_LINE_DELETE_COL =
-  "sticky right-0 z-30 flex shrink-0 self-stretch items-center justify-center border-l border-border bg-card sm:w-11 sm:px-1 shadow-[-6px_0_10px_-2px_rgba(0,0,0,0.12)]";
+  "sticky right-0 z-30 flex shrink-0 self-stretch items-center justify-center border-l border-border bg-card lg:w-11 lg:px-1 shadow-[-6px_0_10px_-2px_rgba(0,0,0,0.12)]";
 const INK_LINE_DELETE_HEADER =
-  "sticky right-0 z-30 flex min-h-10 shrink-0 items-center border-l border-border bg-muted sm:w-11 shadow-[-6px_0_10px_-2px_rgba(0,0,0,0.08)]";
+  "sticky right-0 z-30 flex min-h-10 shrink-0 items-center border-l border-border bg-muted lg:w-11 shadow-[-6px_0_10px_-2px_rgba(0,0,0,0.08)]";
 
 function inkLineGridClass(canViewPrice: boolean) {
   if (canViewPrice) {
-    return "sm:grid sm:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_minmax(7rem,7.5rem)_minmax(7rem,1.05fr)_2.75rem] sm:items-center";
+    return "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_minmax(7rem,7.5rem)_minmax(7rem,1.05fr)_2.75rem] lg:items-center";
   }
-  return "sm:grid sm:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_2.75rem] sm:items-center";
+  return "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_2.75rem] lg:items-center";
 }
 
 function inkLineTableMinWidth(canViewPrice: boolean) {
-  return canViewPrice ? "min-w-[78rem]" : "min-w-[62rem]";
+  return canViewPrice ? "lg:min-w-[78rem]" : "lg:min-w-[62rem]";
 }
 
 export function InkLineFields({
@@ -139,14 +139,14 @@ export function InkLineFields({
           return (
             <div
               key={field.id}
-              className={`grid grid-cols-1 gap-4 rounded-md border bg-card p-4 shadow-sm ${gridClass} sm:gap-0 sm:p-0`}
+              className={`grid grid-cols-1 gap-4 rounded-md border bg-card p-4 shadow-sm ${gridClass} lg:gap-0 lg:p-0`}
             >
               <FormField
                 control={control}
                 name={`lines.${index}.brand_id`}
                 render={({ field: brandField }) => (
                   <FormItem className={INK_LINE_CELL}>
-                    <FormLabel className="sm:sr-only">Brand</FormLabel>
+                    <FormLabel className="lg:sr-only">Brand</FormLabel>
                     <FormControl>
                       <MasterSelect
                         compact
@@ -177,7 +177,7 @@ export function InkLineFields({
                 name={`lines.${index}.color_id`}
                 render={({ field: colorField }) => (
                   <FormItem className={INK_LINE_CELL}>
-                    <FormLabel className="sm:sr-only">Color</FormLabel>
+                    <FormLabel className="lg:sr-only">Color</FormLabel>
                     <FormControl>
                       <MasterSelect
                         compact
@@ -207,7 +207,7 @@ export function InkLineFields({
                 )}
               />
               <FormItem className={`${INK_LINE_HEX_CELL} ${INK_LINE_COL_DIVIDER}`}>
-                <FormLabel className="sm:sr-only">Hex</FormLabel>
+                <FormLabel className="lg:sr-only">Hex</FormLabel>
                 <InkHexSwatch hex={line?.hex_code || null} className="text-xs" />
               </FormItem>
               <FormField
@@ -215,7 +215,7 @@ export function InkLineFields({
                 name={`lines.${index}.drum_count`}
                 render={({ field: drumField }) => (
                   <FormItem className={INK_LINE_NUMERIC_CELL}>
-                    <FormLabel className="sm:sr-only">No. of drums</FormLabel>
+                    <FormLabel className="lg:sr-only">No. of drums</FormLabel>
                     <FormControl>
                       <DecimalInput kind="quantity" {...drumField} disabled={readOnly} />
                     </FormControl>
@@ -228,7 +228,7 @@ export function InkLineFields({
                 name={`lines.${index}.drum_qty`}
                 render={({ field: qtyField }) => (
                   <FormItem className={INK_LINE_NUMERIC_CELL}>
-                    <FormLabel className="sm:sr-only">Drum qty</FormLabel>
+                    <FormLabel className="lg:sr-only">Drum qty</FormLabel>
                     <FormControl>
                       <DecimalInput kind="quantity" {...qtyField} disabled={readOnly} />
                     </FormControl>
@@ -241,7 +241,7 @@ export function InkLineFields({
                 name={`lines.${index}.drum_unit_id`}
                 render={({ field: unitField }) => (
                   <FormItem className={INK_LINE_UNIT_CELL}>
-                    <FormLabel className="sm:sr-only">Unit</FormLabel>
+                    <FormLabel className="lg:sr-only">Unit</FormLabel>
                     <FormControl>
                       <MasterSelect
                         compact
@@ -268,7 +268,7 @@ export function InkLineFields({
                 )}
               />
               <FormItem className={`${INK_LINE_CELL} ${INK_LINE_COL_DIVIDER}`}>
-                <FormLabel className="sm:sr-only">Total kg</FormLabel>
+                <FormLabel className="lg:sr-only">Total kg</FormLabel>
                 <p className={INK_LINE_READOUT}>
                   {formatDecimal(String(totals.totalQty))} {unitCode}
                 </p>
@@ -280,7 +280,7 @@ export function InkLineFields({
                     name={`lines.${index}.ink_rate`}
                     render={({ field: rateField }) => (
                       <FormItem className={INK_LINE_NUMERIC_CELL}>
-                        <FormLabel className="sm:sr-only">Ink rate</FormLabel>
+                        <FormLabel className="lg:sr-only">Ink rate</FormLabel>
                         <FormControl>
                           <DecimalInput
                             kind="money"
@@ -294,7 +294,7 @@ export function InkLineFields({
                     )}
                   />
                   <FormItem className={`${INK_LINE_CELL} ${INK_LINE_COL_DIVIDER}`}>
-                    <FormLabel className="sm:sr-only">Total rate</FormLabel>
+                    <FormLabel className="lg:sr-only">Total rate</FormLabel>
                     <p className={INK_LINE_READOUT}>
                       {totals.totalRate != null ? formatDecimal(String(totals.totalRate)) : "—"}
                     </p>

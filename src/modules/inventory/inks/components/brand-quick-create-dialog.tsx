@@ -80,7 +80,7 @@ export function BrandQuickCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <FormDialogHeader title="New ink brand" entity="Brand" />
         <Form {...form}>
           <form onSubmit={isolatedFormSubmitHandler(form, onSubmit)} className="flex flex-col gap-4">

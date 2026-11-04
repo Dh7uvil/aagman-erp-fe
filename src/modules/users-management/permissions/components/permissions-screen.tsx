@@ -258,7 +258,7 @@ export function PermissionsScreen() {
         subtitle="Assign catalog permissions to a role"
         actions={
           canSave ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {canResetSuperadmin ? (
                 <Button
                   type="button"
@@ -421,7 +421,7 @@ export function PermissionsScreen() {
         </ul>
       ) : null}
       {!matrixQuery.isLoading && filteredRows.length > 0 && selectedRoleId ? (
-        <div className="hidden md:block">
+        <div className="hidden min-w-0 overflow-x-auto md:block">
         <DataTable
           tableClassName="min-w-full w-max table-fixed border-separate border-spacing-0 [&_th]:border-b [&_td]:border-b [&_th:not(:last-child)]:border-r [&_td:not(:last-child)]:border-r"
           footer={

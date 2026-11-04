@@ -271,7 +271,7 @@ function FieldChanges({ changes }: { changes: EntityHistoryEntry["changes"] }) {
           <FieldChangeCard key={change.field} change={change} />
         ))}
       </div>
-      <div className="hidden overflow-x-auto sm:block">
+      <div className="hidden min-w-0 overflow-x-auto sm:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

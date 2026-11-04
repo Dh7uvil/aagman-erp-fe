@@ -290,7 +290,7 @@ function MaterialStockOutDialogWithPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <FormDialogHeader title="Stock out" entity="Material" />
         <Form {...form}>
           <form
@@ -453,7 +453,7 @@ function MaterialStockOutDialogScoped({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <FormDialogHeader title="Stock out" entity="Material" />
         <Form {...form}>
           <form

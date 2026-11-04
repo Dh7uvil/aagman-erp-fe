@@ -221,7 +221,7 @@ export function InkColorRecordScreen({
       />
       <Card>
         {mode === "view" && colorId && canViewHistory ? (
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <CardHeader className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base">Ink</CardTitle>
             <HistoryHeaderButton href={historyHref("ink-colors", colorId, color?.name ?? null)} />
           </CardHeader>
@@ -247,9 +247,9 @@ export function InkColorRecordScreen({
       </Card>
       {mode === "view" && colorId ? (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Usage across companies</CardTitle>
-            <p className="text-muted-foreground shrink-0 text-sm">
+          <CardHeader className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-4">
+            <CardTitle className="min-w-0 text-base">Usage across companies</CardTitle>
+            <p className="text-muted-foreground min-w-0 shrink-0 text-sm">
               Total Companies with stock :{" "}
               <span className="text-foreground font-semibold tabular-nums">
                 {usageQuery.isLoading ? "…" : (usage?.companies_with_stock ?? "—")}

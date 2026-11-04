@@ -85,7 +85,7 @@ export function SortDialog({
         </Button>
       </ToolbarControl>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent mobileSheet className="sm:max-w-lg">
+        <DialogContent mobileSheet className="max-w-[min(32rem,calc(100vw-1.5rem))]">
           <DialogHeader>
             <DialogTitle>Sort</DialogTitle>
             <DialogDescription>Choose a column and sort order.</DialogDescription>

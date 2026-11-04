@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 
 export function ListPage({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-5">{children}</div>;
+  return <div className="flex min-w-0 flex-col gap-5">{children}</div>;
 }
 
 export function ListPageTable({
@@ -14,7 +14,7 @@ export function ListPageTable({
   className?: string;
 }) {
   return (
-    <div data-slot="list-page-table" className={cn("flex shrink-0 flex-col", className)}>
+    <div data-slot="list-page-table" className={cn("flex min-w-0 shrink-0 flex-col", className)}>
       {children}
     </div>
   );
