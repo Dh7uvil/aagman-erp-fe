@@ -117,7 +117,7 @@ function CylinderRecordForm({
     <>
       <Card>
         {mode === "view" && cylinderId ? (
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <CardHeader className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base">Cylinder</CardTitle>
             {canViewHistory ? (
               <HistoryHeaderButton href={historyHref("cylinders", cylinderId, cylinder?.cylinder_number ?? null)} />

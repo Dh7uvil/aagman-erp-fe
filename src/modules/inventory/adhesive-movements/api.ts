@@ -5,8 +5,10 @@ import {
 import { apiClient } from "@/shared/api/client";
 
 export const adhesiveMovementsApi = {
-  report: async (date: string): Promise<AdhesiveDayReportRow[]> =>
+  report: async (startDate: string, endDate: string): Promise<AdhesiveDayReportRow[]> =>
     AdhesiveDayReportSchema.parse(
-      await apiClient.get("/inventory/adhesive-movements/report", { params: { date } }),
+      await apiClient.get("/inventory/adhesive-movements/report", {
+        params: { start_date: startDate, end_date: endDate },
+      }),
     ),
 };

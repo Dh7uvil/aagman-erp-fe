@@ -183,7 +183,7 @@ export function SolventRecordScreen({ mode, sheetId }: { mode: SolventRecordMode
 
       <Card>
         {mode === "view" && sheetId && canViewHistory ? (
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <CardHeader className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base">Solvent sheet</CardTitle>
             {sheet?.lines.length ? (
               <SolventSheetMovementsHeaderButton lines={sheet.lines} />

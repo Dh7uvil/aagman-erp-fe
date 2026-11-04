@@ -182,7 +182,7 @@ export function InkRecordScreen({ mode, sheetId }: { mode: InkRecordMode; sheetI
 
       <Card>
         {mode === "view" && sheetId && canViewHistory ? (
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <CardHeader className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base">Ink sheet</CardTitle>
             {sheet?.lines.length ? <InkSheetMovementsHeaderButton lines={sheet.lines} /> : null}
           </CardHeader>

@@ -16,8 +16,7 @@ import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
 import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
-import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
+import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
 import { useListView } from "@/shared/hooks/use-list-view";
 import { useCan } from "@/shared/providers/session-provider";
 
@@ -28,8 +27,9 @@ function todayIsoDate(): string {
 export function AdhesiveMovementsScreen() {
   const can = useCan();
   const canViewPrice = can(adhesivePricePermissions.read);
-  const [reportDate, setReportDate] = useState(todayIsoDate);
-  const reportQuery = useAdhesiveDayReport(reportDate);
+  const [startDate, setStartDate] = useState(todayIsoDate);
+  const [endDate, setEndDate] = useState(todayIsoDate);
+  const reportQuery = useAdhesiveDayReport(startDate, endDate);
   const reportRows = reportQuery.data ?? [];
 
   const columnDefs = useMemo((): Array<DataTableColumn<AdhesiveDayReportRow>> => {
@@ -85,21 +85,26 @@ export function AdhesiveMovementsScreen() {
     <ListPage>
       <PageHeader
         title="Adhesives report"
-        subtitle="Daily in, out, and closing balances for every active adhesive line."
+        subtitle="In and out totals for the selected date range; closing balance as of the end date."
       />
       <DataTableToolbar>
-        <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-          <Label htmlFor="adhesive-report-date" className="text-sm text-muted-foreground">
-            Date
-          </Label>
-          <Input
-            id="adhesive-report-date"
-            type="date"
-            value={reportDate}
-            onChange={(event) => setReportDate(event.target.value)}
-            className="w-full sm:w-auto"
-          />
-        </div>
+        <DateRangeFilter
+          layout="inline"
+          from={startDate}
+          to={endDate}
+          fromId="adhesive-report-start-date"
+          toId="adhesive-report-end-date"
+          fromLabel="Start date"
+          toLabel="End date"
+          onFromChange={setStartDate}
+          onToChange={setEndDate}
+          showToday
+          onToday={() => {
+            const today = todayIsoDate();
+            setStartDate(today);
+            setEndDate(today);
+          }}
+        />
         <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
       </DataTableToolbar>
       <ListView

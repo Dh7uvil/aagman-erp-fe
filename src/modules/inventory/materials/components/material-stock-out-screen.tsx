@@ -162,7 +162,7 @@ export function MaterialStockOutScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-5">
       <PageHeader
         title="Stock out"
         subtitle="Remove rolls and kg from on-hand stock. This creates a stock-out movement in history."

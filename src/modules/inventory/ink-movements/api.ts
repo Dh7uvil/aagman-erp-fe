@@ -2,8 +2,10 @@ import { InkDayReportSchema, type InkDayReportRow } from "@/modules/inventory/in
 import { apiClient } from "@/shared/api/client";
 
 export const inkMovementsApi = {
-  report: async (date: string): Promise<InkDayReportRow[]> =>
+  report: async (startDate: string, endDate: string): Promise<InkDayReportRow[]> =>
     InkDayReportSchema.parse(
-      await apiClient.get("/inventory/ink-movements/report", { params: { date } }),
+      await apiClient.get("/inventory/ink-movements/report", {
+        params: { start_date: startDate, end_date: endDate },
+      }),
     ),
 };

@@ -6,13 +6,14 @@ import { solventMovementsApi } from "@/modules/inventory/solvent-movements/api";
 
 export const solventMovementKeys = {
   all: ["inventory", "solvent-movements"] as const,
-  report: (date: string) => [...solventMovementKeys.all, "report", date] as const,
+  report: (startDate: string, endDate: string) =>
+    [...solventMovementKeys.all, "report", startDate, endDate] as const,
 };
 
-export function useSolventDayReport(date: string, enabled = true) {
+export function useSolventDayReport(startDate: string, endDate: string, enabled = true) {
   return useQuery({
-    queryKey: solventMovementKeys.report(date),
-    queryFn: () => solventMovementsApi.report(date),
-    enabled: enabled && Boolean(date),
+    queryKey: solventMovementKeys.report(startDate, endDate),
+    queryFn: () => solventMovementsApi.report(startDate, endDate),
+    enabled: enabled && Boolean(startDate) && Boolean(endDate),
   });
 }

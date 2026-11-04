@@ -178,7 +178,7 @@ export function CylinderReturnRecordScreen({
       />
       <Card>
         {mode === "view" && returnId ? (
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <CardHeader className="flex min-w-0 flex-row flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base">Cylinder return</CardTitle>
             <HistoryHeaderButton
               href={historyHref("cylinder-returns", returnId, record?.return_number ?? null)}

@@ -5,8 +5,10 @@ import {
 import { apiClient } from "@/shared/api/client";
 
 export const solventMovementsApi = {
-  report: async (date: string): Promise<SolventDayReportRow[]> =>
+  report: async (startDate: string, endDate: string): Promise<SolventDayReportRow[]> =>
     SolventDayReportSchema.parse(
-      await apiClient.get("/inventory/solvent-movements/report", { params: { date } }),
+      await apiClient.get("/inventory/solvent-movements/report", {
+        params: { start_date: startDate, end_date: endDate },
+      }),
     ),
 };

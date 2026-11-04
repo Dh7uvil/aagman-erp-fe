@@ -306,20 +306,20 @@ export function MaterialFormFields({
         }
       >
         <div className="overflow-hidden rounded-md border">
-          <div className="hidden border-b bg-muted/40 sm:grid sm:grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)_minmax(0,1fr)_11rem] sm:items-center">
+          <div className="hidden border-b bg-muted/40 lg:grid lg:grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)_minmax(0,1fr)_11rem] lg:items-center">
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Size</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Size unit</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">No. of rolls</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Qty available</div>
             <div className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Qty unit</div>
           </div>
-          <div className="grid grid-cols-1 gap-4 p-4 sm:grid sm:grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)_minmax(0,1fr)_11rem] sm:items-center sm:gap-0 sm:p-0">
+          <div className="grid grid-cols-1 gap-4 p-4 lg:grid lg:grid-cols-[minmax(0,1fr)_11rem_minmax(0,1fr)_minmax(0,1fr)_11rem] lg:items-center lg:gap-0 lg:p-0">
             <FormField
               control={control}
               name="size"
               render={({ field }) => (
-                <FormItem className="min-w-0 px-0 sm:px-4 sm:py-3">
-                  <FormLabel className="sm:sr-only">Size</FormLabel>
+                <FormItem className="min-w-0 px-0 lg:px-4 lg:py-3">
+                  <FormLabel className="lg:sr-only">Size</FormLabel>
                   <FormControl>
                     <DecimalInput
                       kind="quantity"
@@ -337,8 +337,8 @@ export function MaterialFormFields({
               control={control}
               name="size_unit_id"
               render={({ field }) => (
-                <FormItem className="min-w-0 px-0 sm:px-4 sm:py-3">
-                  <FormLabel className="sm:sr-only">Size unit</FormLabel>
+                <FormItem className="min-w-0 px-0 lg:px-4 lg:py-3">
+                  <FormLabel className="lg:sr-only">Size unit</FormLabel>
                   <FormControl>
                     <MasterSelect
                       value={field.value}
@@ -363,8 +363,8 @@ export function MaterialFormFields({
               control={control}
               name="opening_rolls"
               render={({ field }) => (
-                <FormItem className="min-w-0 px-0 sm:px-4 sm:py-3">
-                  <FormLabel className="sm:sr-only">No. of rolls</FormLabel>
+                <FormItem className="min-w-0 px-0 lg:px-4 lg:py-3">
+                  <FormLabel className="lg:sr-only">No. of rolls</FormLabel>
                   <FormControl>
                     <DecimalInput
                       kind="quantity"
@@ -381,8 +381,8 @@ export function MaterialFormFields({
               control={control}
               name="quantity_available"
               render={({ field }) => (
-                <FormItem className="min-w-0 px-0 sm:px-4 sm:py-3">
-                  <FormLabel className="sm:sr-only">Qty available</FormLabel>
+                <FormItem className="min-w-0 px-0 lg:px-4 lg:py-3">
+                  <FormLabel className="lg:sr-only">Qty available</FormLabel>
                   <FormControl>
                     <DecimalInput
                       kind="quantity"
@@ -399,8 +399,8 @@ export function MaterialFormFields({
               control={control}
               name="unit_id"
               render={({ field }) => (
-                <FormItem className="min-w-0 px-0 sm:px-4 sm:py-3">
-                  <FormLabel className="sm:sr-only">Qty unit</FormLabel>
+                <FormItem className="min-w-0 px-0 lg:px-4 lg:py-3">
+                  <FormLabel className="lg:sr-only">Qty unit</FormLabel>
                   <FormControl>
                     <MasterSelect
                       value={field.value}

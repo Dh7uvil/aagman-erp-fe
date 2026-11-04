@@ -130,11 +130,11 @@ function PageHeaderActions({ actions }: { actions: ReactNode }) {
     <>
       <div
         data-page-actions
-        className={cn("hidden shrink-0 flex-wrap items-center gap-2 sm:flex")}
+        className={cn("hidden shrink-0 flex-wrap items-center gap-2 md:flex")}
       >
         {actions}
       </div>
-      <div className="flex shrink-0 items-center justify-end gap-2 sm:hidden">
+      <div className="flex shrink-0 items-center justify-end gap-2 md:hidden">
         {renderHeaderButtons(persistActions)}
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
@@ -188,7 +188,7 @@ export function PageHeader({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-foreground text-lg font-semibold tracking-tight">{title}</h1>
+            <h1 className="text-foreground min-w-0 text-lg font-semibold tracking-tight">{title}</h1>
             {code && code !== title ? (
               <PageHeaderCode code={code} codeLabel={codeLabel} codeTooltip={codeTooltip} />
             ) : null}

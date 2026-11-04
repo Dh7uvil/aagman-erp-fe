@@ -359,7 +359,7 @@ export function PermissionsScreen() {
         />
       ) : null}
       {!matrixQuery.isLoading && filteredRows.length > 0 && selectedRoleId ? (
-        <ul className="flex flex-col gap-2.5 md:hidden">
+        <ul className="flex flex-col gap-2.5 lg:hidden">
           {filteredRows.map((row) => (
             <li key={`${row.module}-${row.resource}`}>
               <Card className="overflow-hidden py-0">
@@ -421,7 +421,7 @@ export function PermissionsScreen() {
         </ul>
       ) : null}
       {!matrixQuery.isLoading && filteredRows.length > 0 && selectedRoleId ? (
-        <div className="hidden min-w-0 overflow-x-auto md:block">
+        <div className="hidden min-w-0 overflow-x-auto lg:block">
         <DataTable
           tableClassName="min-w-full w-max table-fixed border-separate border-spacing-0 [&_th]:border-b [&_td]:border-b [&_th:not(:last-child)]:border-r [&_td:not(:last-child)]:border-r"
           footer={
