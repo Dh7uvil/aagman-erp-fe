@@ -28,6 +28,7 @@ export const AuditLogSchema = z.object({
   action: z.string(),
   entity_type: z.string(),
   entity_id: z.string().uuid().nullable(),
+  entity_label: z.string().nullable().optional(),
   module: z.string(),
   ip_address: z.string().nullable(),
   status: z.string(),
@@ -56,6 +57,7 @@ export const AuditLogSummarySchema = z.object({
   unique_users: z.number().int().nonnegative(),
   failed_attempts: z.number().int().nonnegative(),
   admin_actions: z.number().int().nonnegative(),
+  modules: z.array(z.string()).optional(),
 });
 export type AuditLogSummary = z.infer<typeof AuditLogSummarySchema>;
 

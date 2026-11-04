@@ -9,6 +9,7 @@ export const dashboardKeys = {
   all: ["dashboard"] as const,
   cylinders: (params: DashboardRangeParams) => [...dashboardKeys.all, "cylinders", params] as const,
   materials: (params: DashboardRangeParams) => [...dashboardKeys.all, "materials", params] as const,
+  inks: (params: DashboardRangeParams) => [...dashboardKeys.all, "inks", params] as const,
 };
 
 export function useCylindersDashboard(params: DashboardRangeParams, enabled = true) {
@@ -23,6 +24,14 @@ export function useMaterialsDashboard(params: DashboardRangeParams, enabled = tr
   return useQuery({
     queryKey: dashboardKeys.materials(params),
     queryFn: () => dashboardApi.materials(params),
+    enabled,
+  });
+}
+
+export function useInksDashboard(params: DashboardRangeParams, enabled = true) {
+  return useQuery({
+    queryKey: dashboardKeys.inks(params),
+    queryFn: () => dashboardApi.inks(params),
     enabled,
   });
 }

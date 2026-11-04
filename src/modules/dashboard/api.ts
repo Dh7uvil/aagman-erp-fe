@@ -1,8 +1,10 @@
 import {
   CylindersDashboardSchema,
+  InksDashboardSchema,
   MaterialsDashboardSchema,
   type DashboardRangeParams,
   type CylindersDashboard,
+  type InksDashboard,
   type MaterialsDashboard,
 } from "@/modules/dashboard/schemas";
 import { apiClient } from "@/shared/api/client";
@@ -22,5 +24,9 @@ export const dashboardApi = {
   materials: async (params: DashboardRangeParams = {}): Promise<MaterialsDashboard> =>
     MaterialsDashboardSchema.parse(
       await apiClient.get("/inventory/dashboard/materials", { params: rangeQuery(params) }),
+    ),
+  inks: async (params: DashboardRangeParams = {}): Promise<InksDashboard> =>
+    InksDashboardSchema.parse(
+      await apiClient.get("/inventory/dashboard/inks", { params: rangeQuery(params) }),
     ),
 };

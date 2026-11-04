@@ -110,6 +110,46 @@ export const MaterialsDashboardSchema = z.object({
 
 export type MaterialsDashboard = z.infer<typeof MaterialsDashboardSchema>;
 
+export const StockByCompanySchema = z.object({
+  company_name: z.string(),
+  total_qty: DecimalStringSchema,
+});
+
+export const TopConsumedInkLineSchema = z.object({
+  ink_line_id: z.string(),
+  name: z.string(),
+  out_qty: DecimalStringSchema,
+});
+
+export const InkDeadStockItemSchema = z.object({
+  ink_line_id: z.string(),
+  name: z.string(),
+  total_qty: DecimalStringSchema,
+  days_idle: z.number(),
+  last_activity_date: z.string(),
+});
+
+export const InksDashboardKpisSchema = z.object({
+  active_lines: z.number(),
+  total_qty_on_hand: DecimalStringSchema,
+  out_of_stock_lines: z.number(),
+  stock_value: DecimalStringSchema.nullable(),
+  valued_line_count: z.number(),
+  dead_stock_lines: z.number(),
+});
+
+export const InksDashboardSchema = z.object({
+  date_from: z.string(),
+  date_to: z.string(),
+  kpis: InksDashboardKpisSchema,
+  movement_buckets: z.array(MovementActivityBucketSchema),
+  stock_by_company: z.array(StockByCompanySchema),
+  top_consumed: z.array(TopConsumedInkLineSchema),
+  dead_stock: z.array(InkDeadStockItemSchema),
+});
+
+export type InksDashboard = z.infer<typeof InksDashboardSchema>;
+
 export type DashboardRangeDays = 7 | 30 | 90;
 
 export function dashboardRangeParams(days: DashboardRangeDays): DashboardRangeParams {

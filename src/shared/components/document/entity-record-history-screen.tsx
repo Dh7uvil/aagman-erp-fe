@@ -6,6 +6,8 @@ import { useMemo } from "react";
 
 import { useCylinderReturnHistory } from "@/modules/inventory/cylinder-returns/queries";
 import { useCylinder, useCylinderHistory } from "@/modules/inventory/cylinders/queries";
+import { useInkColorHistory } from "@/modules/inventory/ink-colors/queries";
+import { useInk, useInkHistory } from "@/modules/inventory/inks/queries";
 import { MaterialHistoryCard } from "@/modules/inventory/materials/components/material-history-card";
 import { materialHistoryBreadcrumbCrumbs } from "@/modules/inventory/materials/material-breadcrumb";
 import { useMaterial } from "@/modules/inventory/materials/queries";
@@ -15,7 +17,11 @@ import {
 } from "@/modules/inventory/materials/queries";
 import { inventoryPricePermissions } from "@/modules/inventory/permissions";
 import { useCan } from "@/shared/providers/session-provider";
-import { EntityHistoryCard } from "@/shared/components/document/entity-history-card";
+import {
+  EntityHistoryCard,
+  resolveInkAttachmentUrl,
+} from "@/shared/components/document/entity-history-card";
+import type { EntityHistoryEntry } from "@/modules/inventory/cylinders/schemas";
 import {
   useSetBreadcrumbRecord,
   useSetBreadcrumbTrail,
@@ -88,6 +94,32 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
     );
   }
 
+  if (resource === "ink-colors") {
+    return (
+      <InkColorRecordHistory
+        id={id}
+        viewHref={viewHref}
+        code={code}
+        pageTitle={pageTitle}
+        recordLabel="Ink"
+        supportsAttachments={spec.supportsAttachments}
+      />
+    );
+  }
+
+  if (resource === "inks") {
+    return (
+      <InkSheetRecordHistory
+        id={id}
+        viewHref={viewHref}
+        code={code}
+        pageTitle={pageTitle}
+        recordLabel="Ink sheet"
+        supportsAttachments={spec.supportsAttachments}
+      />
+    );
+  }
+
   return (
     <p className="text-muted-foreground p-6 text-sm">History is not available for this record.</p>
   );
@@ -104,6 +136,7 @@ function RecordHistoryLayout({
   onRetry,
   cylinderId,
   cylinder,
+  resolveAttachmentUrl,
   supportsAttachments,
 }: {
   viewHref: string;
@@ -116,6 +149,7 @@ function RecordHistoryLayout({
   onRetry?: () => void;
   cylinderId?: string;
   cylinder?: ReturnType<typeof useCylinder>["data"];
+  resolveAttachmentUrl?: (entry: EntityHistoryEntry) => string | null;
   supportsAttachments: boolean;
 }) {
   const subtitle = code ? (recordLabel ? `${recordLabel} · ${code}` : code) : recordLabel;
@@ -144,6 +178,7 @@ function RecordHistoryLayout({
         onRetry={onRetry}
         cylinderId={cylinderId}
         cylinder={cylinder}
+        resolveAttachmentUrl={resolveAttachmentUrl}
         supportsAttachments={supportsAttachments}
       />
     </div>
@@ -262,6 +297,74 @@ function CylinderReturnRecordHistory({
       isLoading={historyQuery.isLoading}
       isError={historyQuery.isError}
       onRetry={() => void historyQuery.refetch()}
+      supportsAttachments={supportsAttachments}
+    />
+  );
+}
+
+function InkColorRecordHistory({
+  id,
+  viewHref,
+  code,
+  pageTitle,
+  recordLabel,
+  supportsAttachments,
+}: {
+  id: string;
+  viewHref: string;
+  code: string | null;
+  pageTitle: string;
+  recordLabel: string;
+  supportsAttachments: boolean;
+}) {
+  const historyQuery = useInkColorHistory(id);
+  return (
+    <RecordHistoryLayout
+      viewHref={viewHref}
+      code={code}
+      pageTitle={pageTitle}
+      recordLabel={recordLabel}
+      entries={historyQuery.data}
+      isLoading={historyQuery.isLoading}
+      isError={historyQuery.isError}
+      onRetry={() => void historyQuery.refetch()}
+      supportsAttachments={supportsAttachments}
+    />
+  );
+}
+
+function InkSheetRecordHistory({
+  id,
+  viewHref,
+  code,
+  pageTitle,
+  recordLabel,
+  supportsAttachments,
+}: {
+  id: string;
+  viewHref: string;
+  code: string | null;
+  pageTitle: string;
+  recordLabel: string;
+  supportsAttachments: boolean;
+}) {
+  const historyQuery = useInkHistory(id);
+  const sheetQuery = useInk(id);
+  const resolveAttachmentUrl = useMemo(
+    () => (entry: EntityHistoryEntry) => resolveInkAttachmentUrl(id, entry, sheetQuery.data),
+    [id, sheetQuery.data],
+  );
+  return (
+    <RecordHistoryLayout
+      viewHref={viewHref}
+      code={code}
+      pageTitle={pageTitle}
+      recordLabel={recordLabel}
+      entries={historyQuery.data}
+      isLoading={historyQuery.isLoading || sheetQuery.isLoading}
+      isError={historyQuery.isError}
+      onRetry={() => void historyQuery.refetch()}
+      resolveAttachmentUrl={resolveAttachmentUrl}
       supportsAttachments={supportsAttachments}
     />
   );

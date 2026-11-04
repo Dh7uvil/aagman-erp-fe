@@ -1,5 +1,7 @@
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
 import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
+import { inkColorRoutes } from "@/modules/inventory/ink-colors/routes";
+import { inkRoutes } from "@/modules/inventory/inks/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 
 export const MASTER_HISTORY_PAGE_TITLE = "History";
@@ -30,6 +32,18 @@ const HISTORY_RESOURCES = [
     listHref: materialRoutes.list,
     label: "Materials",
     supportsAttachments: false,
+  },
+  {
+    slug: "ink-colors",
+    listHref: inkColorRoutes.list,
+    label: "Ink master",
+    supportsAttachments: false,
+  },
+  {
+    slug: "inks",
+    listHref: inkRoutes.list,
+    label: "Ink sheets",
+    supportsAttachments: true,
   },
 ] as const satisfies readonly HistoryResourceSpec[];
 

@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 
 import { cylindersApi } from "@/modules/inventory/cylinders/api";
 import type { Cylinder, EntityHistoryEntry } from "@/modules/inventory/cylinders/schemas";
+import { inksApi } from "@/modules/inventory/inks/api";
+import type { InkSheet } from "@/modules/inventory/inks/schemas";
 import {
   formatAuditValue,
   humanizeAuditField,
@@ -48,6 +50,12 @@ function attachmentSlotLabel(slot: string | null | undefined): string {
   if (slot === "challan") {
     return "Challan";
   }
+  if (slot === "product_image") {
+    return "Product image";
+  }
+  if (slot === "ink_image") {
+    return "Ink image";
+  }
   return slot ? titleCase(slot.replace(/_/g, " ")) : "Attachment";
 }
 
@@ -83,6 +91,34 @@ function resolveCylinderAttachmentUrl(
   const meta = slot === "cylinder_image" ? cylinder.cylinder_image : cylinder.challan;
   if (meta?.filename === entry.summary) {
     return cylindersApi.fileUrl(cylinderId, slot);
+  }
+  return null;
+}
+
+export function resolveInkAttachmentUrl(
+  sheetId: string | undefined,
+  entry: EntityHistoryEntry,
+  sheet: InkSheet | null | undefined,
+): string | null {
+  if (!sheetId) {
+    return null;
+  }
+  if (entry.storage_key) {
+    return inksApi.historyAttachmentUrl(sheetId, entry.id);
+  }
+  if (entry.attachment_deleted) {
+    return null;
+  }
+  const slot = entry.attachment_slot;
+  if (!sheet || !slot || !entry.summary) {
+    return null;
+  }
+  if (slot !== "product_image" && slot !== "ink_image") {
+    return null;
+  }
+  const meta = slot === "product_image" ? sheet.product_image : sheet.ink_image;
+  if (meta?.filename === entry.summary) {
+    return inksApi.fileUrl(sheetId, slot);
   }
   return null;
 }
@@ -517,10 +553,12 @@ function AttachmentsTimelineGrid({
   entries,
   cylinderId,
   cylinder,
+  resolveAttachmentUrl,
 }: {
   entries: EntityHistoryEntry[];
   cylinderId?: string;
   cylinder?: Cylinder | null;
+  resolveAttachmentUrl?: (entry: EntityHistoryEntry) => string | null;
 }) {
   const groups = groupHistoryByDay(entries);
 
@@ -541,7 +579,10 @@ function AttachmentsTimelineGrid({
                 <AttachmentHistoryCard
                   key={entry.id}
                   entry={entry}
-                  fileUrl={resolveCylinderAttachmentUrl(cylinderId, entry, cylinder)}
+                  fileUrl={
+                    resolveAttachmentUrl?.(entry) ??
+                    resolveCylinderAttachmentUrl(cylinderId, entry, cylinder)
+                  }
                 />
               ))}
             </div>
@@ -586,6 +627,7 @@ export function EntityHistoryCard({
   className,
   cylinderId,
   cylinder,
+  resolveAttachmentUrl,
   supportsAttachments = true,
 }: {
   title?: string;
@@ -598,6 +640,8 @@ export function EntityHistoryCard({
   /** When set, attachment previews resolve via cylinder history file URLs. */
   cylinderId?: string;
   cylinder?: Cylinder | null;
+  /** Overrides default cylinder attachment URL resolution (e.g. ink sheets). */
+  resolveAttachmentUrl?: (entry: EntityHistoryEntry) => string | null;
   /** Records without file uploads hide the Attachments tab entirely. */
   supportsAttachments?: boolean;
 }) {
@@ -659,11 +703,16 @@ export function EntityHistoryCard({
             </TabsContent>
             <TabsContent value="attachments" className="pt-4">
               {attachmentEntries.length > 0 ? (
-                <AttachmentsTimelineGrid entries={attachmentEntries} cylinderId={cylinderId} cylinder={cylinder} />
+                <AttachmentsTimelineGrid
+                  entries={attachmentEntries}
+                  cylinderId={cylinderId}
+                  cylinder={cylinder}
+                  resolveAttachmentUrl={resolveAttachmentUrl}
+                />
               ) : (
                 <DataTableEmpty
                   title="No attachments yet"
-                  message="Cylinder image and challan uploads will appear here."
+                  message="File uploads for this record will appear here."
                 />
               )}
             </TabsContent>

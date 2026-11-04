@@ -14,15 +14,22 @@ import {
   Package,
   ArrowLeftRight,
   Ruler,
+  Droplets,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
 import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
+import { inkColorRoutes } from "@/modules/inventory/ink-colors/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
+import { inkRoutes } from "@/modules/inventory/inks/routes";
 import {
   cylinderReturnPermissions,
   cylinderPermissions,
+  inkColorPermissions,
+  inkPermissions,
+  inksReportPermissions,
   materialPermissions,
   materialsReportPermissions,
   unitPermissions,
@@ -116,6 +123,27 @@ export const navigation: NavigationGroup[] = [
         permission: cylinderReturnPermissions.read,
         icon: ClipboardList,
         subsection: "Operations",
+      },
+      {
+        label: "Ink master",
+        href: inkColorRoutes.list,
+        permission: inkColorPermissions.read,
+        icon: Palette,
+        subsection: "Inks",
+      },
+      {
+        label: "Inks",
+        href: inkRoutes.list,
+        permission: inkPermissions.read,
+        icon: Droplets,
+        subsection: "Inks",
+      },
+      {
+        label: "Inks report",
+        href: inkRoutes.report,
+        permission: inksReportPermissions.read,
+        icon: ArrowLeftRight,
+        subsection: "Inks",
       },
     ],
   },

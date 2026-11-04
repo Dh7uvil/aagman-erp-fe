@@ -66,3 +66,35 @@ export const cylinderReturnPermissions = {
   update: permissionsByModule.inventory.cylinder_return.update,
   delete: permissionsByModule.inventory.cylinder_return.delete,
 } as const satisfies Record<string, CatalogPermission>;
+
+export const inkColorPermissions = {
+  read: permissionsByModule.inventory.ink_color.read,
+  create: permissionsByModule.inventory.ink_color.create,
+  update: permissionsByModule.inventory.ink_color.update,
+  delete: permissionsByModule.inventory.ink_color.delete,
+  history: permissionsByModule.inventory.ink_color.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const inkPermissions = {
+  read: permissionsByModule.inventory.ink.read,
+  create: permissionsByModule.inventory.ink.create,
+  update: permissionsByModule.inventory.ink.update,
+  delete: permissionsByModule.inventory.ink.delete,
+  viewPrice: permissionsByModule.inventory.ink.view_price,
+  history: permissionsByModule.inventory.ink.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const inksReportPermissions = {
+  read: permissionsByModule.inventory.inks_report.read,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const inkPricePermissions = {
+  read: permissionsByModule.inventory.ink.view_price,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const inkImagePermissions = {
+  read: permissionsByModule.inventory.ink_image.read,
+  create: permissionsByModule.inventory.ink_image.create,
+  update: permissionsByModule.inventory.ink_image.update,
+  delete: permissionsByModule.inventory.ink_image.delete,
+} as const satisfies Record<string, CatalogPermission>;
