@@ -24,6 +24,9 @@ import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import { adhesiveCodeRoutes } from "@/modules/inventory/adhesive-codes/routes";
 import { adhesiveMasterIcon, adhesivesIcon } from "@/modules/inventory/adhesives/icons";
 import { adhesiveRoutes } from "@/modules/inventory/adhesives/routes";
+import { solventNameRoutes } from "@/modules/inventory/solvent-names/routes";
+import { solventMasterIcon, solventsIcon } from "@/modules/inventory/solvents/icons";
+import { solventRoutes } from "@/modules/inventory/solvents/routes";
 import { inkColorRoutes } from "@/modules/inventory/ink-colors/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import { inkRoutes } from "@/modules/inventory/inks/routes";
@@ -31,6 +34,9 @@ import {
   adhesiveCodePermissions,
   adhesivePermissions,
   adhesivesReportPermissions,
+  solventNamePermissions,
+  solventPermissions,
+  solventsReportPermissions,
   cylinderReturnPermissions,
   cylinderPermissions,
   inkColorPermissions,
@@ -171,6 +177,27 @@ export const navigation: NavigationGroup[] = [
         permission: adhesivesReportPermissions.read,
         icon: ArrowLeftRight,
         subsection: "Adhesives",
+      },
+      {
+        label: "Solvent master",
+        href: solventNameRoutes.list,
+        permission: solventNamePermissions.read,
+        icon: solventMasterIcon,
+        subsection: "Solvents",
+      },
+      {
+        label: "Solvents",
+        href: solventRoutes.list,
+        permission: solventPermissions.read,
+        icon: solventsIcon,
+        subsection: "Solvents",
+      },
+      {
+        label: "Solvents report",
+        href: solventRoutes.report,
+        permission: solventsReportPermissions.read,
+        icon: ArrowLeftRight,
+        subsection: "Solvents",
       },
     ],
   },

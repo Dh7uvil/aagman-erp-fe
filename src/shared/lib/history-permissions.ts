@@ -1,6 +1,8 @@
 import {
   adhesiveCodePermissions,
   adhesivePermissions,
+  solventNamePermissions,
+  solventPermissions,
   cylinderPermissions,
   inkColorPermissions,
   inkPermissions,
@@ -27,6 +29,12 @@ export function historyPermissionForResource(resource: HistoryResource): Catalog
       return adhesivePermissions.history;
     case "adhesive-lines":
       return adhesivePermissions.history;
+    case "solvent-names":
+      return solventNamePermissions.history;
+    case "solvents":
+      return solventPermissions.history;
+    case "solvent-lines":
+      return solventPermissions.history;
     default:
       return undefined;
   }

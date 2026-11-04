@@ -11,6 +11,7 @@ export const dashboardKeys = {
   materials: (params: DashboardRangeParams) => [...dashboardKeys.all, "materials", params] as const,
   inks: (params: DashboardRangeParams) => [...dashboardKeys.all, "inks", params] as const,
   adhesives: (params: DashboardRangeParams) => [...dashboardKeys.all, "adhesives", params] as const,
+  solvents: (params: DashboardRangeParams) => [...dashboardKeys.all, "solvents", params] as const,
 };
 
 export function useCylindersDashboard(params: DashboardRangeParams, enabled = true) {
@@ -41,6 +42,14 @@ export function useAdhesivesDashboard(params: DashboardRangeParams, enabled = tr
   return useQuery({
     queryKey: dashboardKeys.adhesives(params),
     queryFn: () => dashboardApi.adhesives(params),
+    enabled,
+  });
+}
+
+export function useSolventsDashboard(params: DashboardRangeParams, enabled = true) {
+  return useQuery({
+    queryKey: dashboardKeys.solvents(params),
+    queryFn: () => dashboardApi.solvents(params),
     enabled,
   });
 }

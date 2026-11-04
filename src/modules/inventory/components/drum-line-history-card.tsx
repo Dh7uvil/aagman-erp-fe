@@ -127,7 +127,7 @@ export function DrumLineHistoryCard({
   loading?: boolean;
   canViewPrice: boolean;
   /** Second line dimension: adhesive code or ink color. */
-  detailLabel: "Code" | "Color";
+  detailLabel: "Code" | "Color" | "Name";
 }) {
   if (loading) {
     return <Skeleton className="h-96 w-full" />;

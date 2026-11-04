@@ -175,6 +175,31 @@ export const AdhesivesDashboardSchema = z.object({
 
 export type AdhesivesDashboard = z.infer<typeof AdhesivesDashboardSchema>;
 
+export const TopConsumedSolventLineSchema = z.object({
+  solvent_line_id: z.string(),
+  name: z.string(),
+  out_qty: DecimalStringSchema,
+});
+
+export const SolventsDashboardKpisSchema = z.object({
+  active_lines: z.number(),
+  total_qty_on_hand: DecimalStringSchema,
+  out_of_stock_lines: z.number(),
+  stock_value: DecimalStringSchema.nullable(),
+  valued_line_count: z.number(),
+});
+
+export const SolventsDashboardSchema = z.object({
+  date_from: z.string(),
+  date_to: z.string(),
+  kpis: SolventsDashboardKpisSchema,
+  movement_buckets: z.array(MovementActivityBucketSchema),
+  stock_by_company: z.array(StockByCompanySchema),
+  top_consumed: z.array(TopConsumedSolventLineSchema),
+});
+
+export type SolventsDashboard = z.infer<typeof SolventsDashboardSchema>;
+
 export type DashboardRangeDays = 7 | 30 | 90;
 
 export function dashboardRangeParams(days: DashboardRangeDays): DashboardRangeParams {

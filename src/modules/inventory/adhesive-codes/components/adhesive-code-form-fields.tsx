@@ -21,7 +21,7 @@ export function AdhesiveCodeFormFields({
   readOnly: boolean;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-4">
       <FormField
         control={control}
         name="code"
@@ -39,7 +39,7 @@ export function AdhesiveCodeFormFields({
         control={control}
         name="is_active"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-2 space-y-0 sm:col-span-2">
+          <FormItem className="flex flex-row items-center gap-2 space-y-0 pb-2">
             <FormLabel className="text-sm font-normal">Active</FormLabel>
             <FormControl>
               <Switch checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />

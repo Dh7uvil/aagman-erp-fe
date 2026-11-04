@@ -75,7 +75,6 @@ export function AdhesivesOverviewSection({ rangeParams }: { rangeParams: Dashboa
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Adhesives & stock</h2>
         <p className="text-muted-foreground text-sm">
           On-hand adhesive inventory, movement, and consumption for the selected period.
         </p>

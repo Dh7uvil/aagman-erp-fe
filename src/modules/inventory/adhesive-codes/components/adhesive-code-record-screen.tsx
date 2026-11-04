@@ -261,7 +261,7 @@ export function AdhesiveCodeRecordScreen({
 
   const title =
     mode === "create"
-      ? "New adhesive code"
+      ? "New adhesive"
       : mode === "edit"
         ? "Edit adhesive code"
         : (code?.code ?? "Adhesive code");
@@ -303,7 +303,7 @@ export function AdhesiveCodeRecordScreen({
               {canSubmit ? (
                 <div className="flex justify-end">
                   <SubmitButton isPending={pending}>
-                    {mode === "create" ? "Add code" : "Save changes"}
+                    {mode === "create" ? "Add adhesive" : "Save changes"}
                   </SubmitButton>
                 </div>
               ) : null}

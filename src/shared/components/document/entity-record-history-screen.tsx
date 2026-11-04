@@ -13,6 +13,13 @@ import {
   useAdhesiveLineHistorySummary,
 } from "@/modules/inventory/adhesives/queries";
 import { adhesiveRoutes } from "@/modules/inventory/adhesives/routes";
+import { useSolventNameHistory } from "@/modules/inventory/solvent-names/queries";
+import {
+  useSolvent,
+  useSolventLineHistory,
+  useSolventLineHistorySummary,
+} from "@/modules/inventory/solvents/queries";
+import { solventRoutes } from "@/modules/inventory/solvents/routes";
 import { useInkColorHistory } from "@/modules/inventory/ink-colors/queries";
 import {
   useInk,
@@ -34,6 +41,7 @@ import {
 } from "@/modules/inventory/materials/queries";
 import {
   adhesivePricePermissions,
+  solventPricePermissions,
   inkPricePermissions,
   inventoryPricePermissions,
 } from "@/modules/inventory/permissions";
@@ -68,6 +76,7 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
   useSetBreadcrumbRecord(
     resource === "materials" ||
       resource === "adhesive-lines" ||
+      resource === "solvent-lines" ||
       resource === "ink-lines"
       ? null
       : code || spec?.label || "Details",
@@ -124,6 +133,10 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
     return <AdhesiveLineMovementsHistory id={id} pageTitle={pageTitle} subtitle={code} />;
   }
 
+  if (resource === "solvent-lines") {
+    return <SolventLineMovementsHistory id={id} pageTitle={pageTitle} subtitle={code} />;
+  }
+
   if (resource === "ink-lines") {
     return <InkLineMovementsHistory id={id} pageTitle={pageTitle} subtitle={code} />;
   }
@@ -160,6 +173,23 @@ export function EntityRecordHistoryScreen({ resource, id }: { resource: string; 
 
   if (resource === "adhesives") {
     return <AdhesiveSheetHistoryGateway id={id} viewHref={viewHref} pageTitle={pageTitle} />;
+  }
+
+  if (resource === "solvent-names") {
+    return (
+      <SolventNameRecordHistory
+        id={id}
+        viewHref={viewHref}
+        code={code}
+        pageTitle={pageTitle}
+        recordLabel="Solvent name"
+        supportsAttachments={spec.supportsAttachments}
+      />
+    );
+  }
+
+  if (resource === "solvents") {
+    return <SolventSheetHistoryGateway id={id} viewHref={viewHref} pageTitle={pageTitle} />;
   }
 
   return (
@@ -273,7 +303,7 @@ function DrumLineMovementsHistory({
   pageTitle: string;
   subtitle?: string | null;
   viewHref: string;
-  detailLabel: "Code" | "Color";
+  detailLabel: "Code" | "Color" | "Name";
   historyQuery: { data?: DrumLineHistoryEntry[]; isLoading: boolean };
   summaryQuery: { data?: DrumLineHistorySummary; isLoading: boolean };
   canViewPrice: boolean;
@@ -332,6 +362,36 @@ function AdhesiveLineMovementsHistory({
       subtitle={subtitle}
       viewHref={viewHref}
       detailLabel="Code"
+      historyQuery={historyQuery}
+      summaryQuery={summaryQuery}
+      canViewPrice={canViewPrice}
+    />
+  );
+}
+
+function SolventLineMovementsHistory({
+  id,
+  pageTitle,
+  subtitle,
+}: {
+  id: string;
+  pageTitle: string;
+  subtitle?: string | null;
+}) {
+  const can = useCan();
+  const canViewPrice = can(solventPricePermissions.read);
+  const historyQuery = useSolventLineHistory(id);
+  const summaryQuery = useSolventLineHistorySummary(id);
+  const viewHref = summaryQuery.data
+    ? solventRoutes.view(summaryQuery.data.sheet_id)
+    : solventRoutes.list;
+
+  return (
+    <DrumLineMovementsHistory
+      pageTitle={pageTitle}
+      subtitle={subtitle}
+      viewHref={viewHref}
+      detailLabel="Name"
       historyQuery={historyQuery}
       summaryQuery={summaryQuery}
       canViewPrice={canViewPrice}
@@ -512,6 +572,37 @@ function AdhesiveCodeRecordHistory({
   );
 }
 
+function SolventNameRecordHistory({
+  id,
+  viewHref,
+  code,
+  pageTitle,
+  recordLabel,
+  supportsAttachments,
+}: {
+  id: string;
+  viewHref: string;
+  code: string | null;
+  pageTitle: string;
+  recordLabel: string;
+  supportsAttachments: boolean;
+}) {
+  const historyQuery = useSolventNameHistory(id);
+  return (
+    <RecordHistoryLayout
+      viewHref={viewHref}
+      code={code}
+      pageTitle={pageTitle}
+      recordLabel={recordLabel}
+      entries={historyQuery.data}
+      isLoading={historyQuery.isLoading}
+      isError={historyQuery.isError}
+      onRetry={() => void historyQuery.refetch()}
+      supportsAttachments={supportsAttachments}
+    />
+  );
+}
+
 function DrumLineSheetHistoryGateway<Line extends { id: string }>({
   pageTitle,
   viewHref,
@@ -527,7 +618,7 @@ function DrumLineSheetHistoryGateway<Line extends { id: string }>({
     isError: boolean;
     refetch: () => void;
   };
-  lineResource: "ink-lines" | "adhesive-lines";
+  lineResource: "ink-lines" | "adhesive-lines" | "solvent-lines";
   lineLabel: (line: Line) => string;
 }) {
   const router = useRouter();
@@ -650,6 +741,31 @@ function AdhesiveSheetHistoryGateway({
         const brand = line.brand_name?.trim() || "—";
         const code = line.code?.trim() || "—";
         return `${brand} · ${code}`;
+      }}
+    />
+  );
+}
+
+function SolventSheetHistoryGateway({
+  id,
+  viewHref,
+  pageTitle,
+}: {
+  id: string;
+  viewHref: string;
+  pageTitle: string;
+}) {
+  const sheetQuery = useSolvent(id);
+  return (
+    <DrumLineSheetHistoryGateway
+      pageTitle={pageTitle}
+      viewHref={viewHref}
+      sheetQuery={sheetQuery}
+      lineResource="solvent-lines"
+      lineLabel={(line) => {
+        const brand = line.brand_name?.trim() || "—";
+        const name = line.name?.trim() || "—";
+        return `${brand} · ${name}`;
       }}
     />
   );

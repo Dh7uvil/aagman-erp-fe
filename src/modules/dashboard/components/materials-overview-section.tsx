@@ -86,7 +86,6 @@ export function MaterialsOverviewSection({ rangeParams }: { rangeParams: Dashboa
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Materials & stock</h2>
         <p className="text-muted-foreground text-sm">
           On-hand inventory, movement, and consumption signals for the selected period.
         </p>

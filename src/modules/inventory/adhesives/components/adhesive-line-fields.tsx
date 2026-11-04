@@ -213,7 +213,7 @@ export function AdhesiveLineFields({
                         onValueChange={colorField.onChange}
                         disabled={readOnly}
                         placeholder="Code"
-                        createLabel={canCreateCode ? "New code" : undefined}
+                        createLabel={canCreateCode ? "New adhesive" : undefined}
                         onCreate={
                           canCreateCode
                             ? () => {

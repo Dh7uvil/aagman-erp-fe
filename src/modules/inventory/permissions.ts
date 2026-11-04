@@ -123,3 +123,28 @@ export const adhesivesReportPermissions = {
 export const adhesivePricePermissions = {
   read: permissionsByModule.inventory.adhesive.view_price,
 } as const satisfies Record<string, CatalogPermission>;
+
+export const solventNamePermissions = {
+  read: permissionsByModule.inventory.solvent_name.read,
+  create: permissionsByModule.inventory.solvent_name.create,
+  update: permissionsByModule.inventory.solvent_name.update,
+  delete: permissionsByModule.inventory.solvent_name.delete,
+  history: permissionsByModule.inventory.solvent_name.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const solventPermissions = {
+  read: permissionsByModule.inventory.solvent.read,
+  create: permissionsByModule.inventory.solvent.create,
+  update: permissionsByModule.inventory.solvent.update,
+  delete: permissionsByModule.inventory.solvent.delete,
+  viewPrice: permissionsByModule.inventory.solvent.view_price,
+  history: permissionsByModule.inventory.solvent.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const solventsReportPermissions = {
+  read: permissionsByModule.inventory.solvents_report.read,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const solventPricePermissions = {
+  read: permissionsByModule.inventory.solvent.view_price,
+} as const satisfies Record<string, CatalogPermission>;

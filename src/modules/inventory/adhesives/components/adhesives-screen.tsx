@@ -296,7 +296,7 @@ export function AdhesivesScreen() {
               <Button asChild>
                 <Link href={adhesiveRoutes.new}>
                   <Plus className="size-4" />
-                  Add adhesive sheet
+                  Add adhesive
                 </Link>
               </Button>
             ) : null}

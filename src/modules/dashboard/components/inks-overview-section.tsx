@@ -85,7 +85,6 @@ export function InksOverviewSection({ rangeParams }: { rangeParams: DashboardRan
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Inks & stock</h2>
         <p className="text-muted-foreground text-sm">
           On-hand ink inventory, movement, and consumption for the selected period.
         </p>

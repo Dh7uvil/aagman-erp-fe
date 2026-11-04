@@ -2,6 +2,8 @@ import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/route
 import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
 import { adhesiveCodeRoutes } from "@/modules/inventory/adhesive-codes/routes";
 import { adhesiveRoutes } from "@/modules/inventory/adhesives/routes";
+import { solventNameRoutes } from "@/modules/inventory/solvent-names/routes";
+import { solventRoutes } from "@/modules/inventory/solvents/routes";
 import { inkColorRoutes } from "@/modules/inventory/ink-colors/routes";
 import { inkRoutes } from "@/modules/inventory/inks/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
@@ -69,6 +71,24 @@ const HISTORY_RESOURCES = [
     slug: "adhesive-lines",
     listHref: adhesiveRoutes.list,
     label: "Adhesive lines",
+    supportsAttachments: false,
+  },
+  {
+    slug: "solvent-names",
+    listHref: solventNameRoutes.list,
+    label: "Solvent master",
+    supportsAttachments: false,
+  },
+  {
+    slug: "solvents",
+    listHref: solventRoutes.list,
+    label: "Solvent sheets",
+    supportsAttachments: false,
+  },
+  {
+    slug: "solvent-lines",
+    listHref: solventRoutes.list,
+    label: "Solvent lines",
     supportsAttachments: false,
   },
 ] as const satisfies readonly HistoryResourceSpec[];

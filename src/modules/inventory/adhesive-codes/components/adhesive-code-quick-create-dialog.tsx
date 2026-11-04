@@ -81,7 +81,7 @@ export function AdhesiveCodeQuickCreateDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
-        <FormDialogHeader title="New code" entity="Adhesive master" />
+        <FormDialogHeader title="New adhesive" entity="Adhesive master" />
         <Form {...form}>
           <form onSubmit={isolatedFormSubmitHandler(form, onSubmit)} className="flex flex-col gap-4">
             {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
@@ -113,7 +113,7 @@ export function AdhesiveCodeQuickCreateDialog({
             <FormDialogFooter
               pending={createCode.isPending}
               canSubmit
-              submitLabel="Add code"
+              submitLabel="Add adhesive"
               onClose={() => onOpenChange(false)}
               onSubmit={() => void form.handleSubmit(onSubmit)()}
             />

@@ -130,7 +130,7 @@ export function AdhesiveCodesScreen() {
             <Button asChild>
               <Link href={adhesiveCodeRoutes.new}>
                 <Plus className="size-4" />
-                Add code
+                Add adhesive
               </Link>
             </Button>
           ) : null
