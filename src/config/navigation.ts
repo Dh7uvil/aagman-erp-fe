@@ -21,10 +21,16 @@ import {
 
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
 import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
+import { adhesiveCodeRoutes } from "@/modules/inventory/adhesive-codes/routes";
+import { adhesiveMasterIcon, adhesivesIcon } from "@/modules/inventory/adhesives/icons";
+import { adhesiveRoutes } from "@/modules/inventory/adhesives/routes";
 import { inkColorRoutes } from "@/modules/inventory/ink-colors/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import { inkRoutes } from "@/modules/inventory/inks/routes";
 import {
+  adhesiveCodePermissions,
+  adhesivePermissions,
+  adhesivesReportPermissions,
   cylinderReturnPermissions,
   cylinderPermissions,
   inkColorPermissions,
@@ -144,6 +150,27 @@ export const navigation: NavigationGroup[] = [
         permission: inksReportPermissions.read,
         icon: ArrowLeftRight,
         subsection: "Inks",
+      },
+      {
+        label: "Adhesive master",
+        href: adhesiveCodeRoutes.list,
+        permission: adhesiveCodePermissions.read,
+        icon: adhesiveMasterIcon,
+        subsection: "Adhesives",
+      },
+      {
+        label: "Adhesives",
+        href: adhesiveRoutes.list,
+        permission: adhesivePermissions.read,
+        icon: adhesivesIcon,
+        subsection: "Adhesives",
+      },
+      {
+        label: "Adhesives report",
+        href: adhesiveRoutes.report,
+        permission: adhesivesReportPermissions.read,
+        icon: ArrowLeftRight,
+        subsection: "Adhesives",
       },
     ],
   },

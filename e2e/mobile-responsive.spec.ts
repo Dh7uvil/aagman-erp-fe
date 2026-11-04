@@ -148,6 +148,15 @@ test.describe("mobile list views", () => {
     await expectPageFitsViewport(page);
   });
 
+  test("new adhesive form fits viewport with stacked line fields", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/adhesives/new");
+    await expect(page.getByRole("heading", { name: "New adhesive sheet" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
   test("new material form fits viewport with stacked size lines", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/inventory/materials/new");

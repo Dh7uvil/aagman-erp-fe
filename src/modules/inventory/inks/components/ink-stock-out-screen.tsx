@@ -37,6 +37,7 @@ export function InkStockOutScreen() {
   const [hydrated, setHydrated] = useState(false);
   const [companyId, setCompanyId] = useState("");
   const [sheetId, setSheetId] = useState("");
+  const [selectedBrandId, setSelectedBrandId] = useState("");
 
   useEffect(() => {
     if (hydrated) {
@@ -54,31 +55,54 @@ export function InkStockOutScreen() {
     page_size: 200,
     company_id: companyId || undefined,
   });
-  const sheets = useMemo(() => {
-    const bySheetId = new Map<
-      string,
-      { id: string; company_name: string; line_count: number }
-    >();
-    for (const row of sheetsQuery.data?.data ?? []) {
-      const existing = bySheetId.get(row.ink_sheet_id);
-      if (existing) {
-        existing.line_count += 1;
-      } else {
-        bySheetId.set(row.ink_sheet_id, {
-          id: row.ink_sheet_id,
-          company_name: row.company_name,
-          line_count: 1,
+  const companyLines = useMemo(() => {
+    const rows = sheetsQuery.data?.data ?? [];
+    if (!companyId) {
+      return rows;
+    }
+    return rows.filter((row) => row.company_id === companyId);
+  }, [sheetsQuery.data?.data, companyId]);
+
+  const brandOptions = useMemo(() => {
+    const byBrand = new Map<string, { brand_id: string; brand_name: string; ink_sheet_id: string }>();
+    for (const row of companyLines) {
+      if (!byBrand.has(row.brand_id)) {
+        byBrand.set(row.brand_id, {
+          brand_id: row.brand_id,
+          brand_name: row.brand_name,
+          ink_sheet_id: row.ink_sheet_id,
         });
       }
     }
-    return [...bySheetId.values()];
-  }, [sheetsQuery.data?.data]);
+    return [...byBrand.values()].sort((a, b) => a.brand_name.localeCompare(b.brand_name));
+  }, [companyLines]);
+
+  const defaultLineId = paramOrEmpty(searchParams.get("ink_line_id"));
+
+  useEffect(() => {
+    if (!defaultLineId || companyLines.length === 0) {
+      return;
+    }
+    const row = companyLines.find((line) => line.id === defaultLineId);
+    if (!row) {
+      return;
+    }
+    setSelectedBrandId(row.brand_id);
+    setSheetId(row.ink_sheet_id);
+  }, [companyLines, defaultLineId]);
+
   const sheetQuery = useInk(sheetId || null);
   const sheet = sheetQuery.data;
   const lines = sheet?.lines ?? [];
 
-  const defaultLineId = paramOrEmpty(searchParams.get("ink_line_id"));
-  const schema = useMemo(() => buildInkStockOutFormSchema(lines), [lines]);
+  const brandLines = useMemo(() => {
+    if (!selectedBrandId) {
+      return [];
+    }
+    return lines.filter((line) => line.brand_id === selectedBrandId);
+  }, [lines, selectedBrandId]);
+
+  const schema = useMemo(() => buildInkStockOutFormSchema(brandLines), [brandLines]);
 
   const form = useForm<InkStockOutFormValues>({
     resolver: zodResolver(schema),
@@ -91,20 +115,20 @@ export function InkStockOutScreen() {
   });
 
   useEffect(() => {
-    if (!sheet) {
+    if (!sheet || brandLines.length === 0) {
       return;
     }
-    const lineId =
-      defaultLineId && lines.some((l) => l.id === defaultLineId)
+    const preferredLineId =
+      defaultLineId && brandLines.some((l) => l.id === defaultLineId)
         ? defaultLineId
-        : (lines[0]?.id ?? "");
+        : (brandLines[0]?.id ?? "");
     form.reset({
-      ink_line_id: lineId,
+      ink_line_id: preferredLineId,
       drums: "0",
       quantity: "0",
       note: "",
     });
-  }, [sheet, lines, defaultLineId, form]);
+  }, [sheet, brandLines, defaultLineId, form]);
 
   async function onSubmit(values: InkStockOutFormValues) {
     if (!sheetId) {
@@ -145,7 +169,7 @@ export function InkStockOutScreen() {
       />
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Select ink sheet</CardTitle>
+          <CardTitle className="text-base">Select company and brand</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
@@ -156,22 +180,27 @@ export function InkStockOutScreen() {
               onValueChange={(value) => {
                 setCompanyId(value);
                 setSheetId("");
+                setSelectedBrandId("");
               }}
               placeholder="Select company"
               options={companies.map((c) => ({ value: c.id, label: c.name }))}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Ink sheet</label>
+            <label className="text-sm font-medium">Brand</label>
             <SearchableSelect
               asFormControl={false}
-              value={sheetId}
-              onValueChange={setSheetId}
-              disabled={!companyId || sheets.length === 0}
-              placeholder={companyId ? "Select sheet" : "Choose company first"}
-              options={sheets.map((s) => ({
-                value: s.id,
-                label: `${s.company_name} (${s.line_count} lines)`,
+              value={selectedBrandId}
+              onValueChange={(brandId) => {
+                const option = brandOptions.find((b) => b.brand_id === brandId);
+                setSelectedBrandId(brandId);
+                setSheetId(option?.ink_sheet_id ?? "");
+              }}
+              disabled={!companyId || brandOptions.length === 0}
+              placeholder={companyId ? "Select brand" : "Choose company first"}
+              options={brandOptions.map((b) => ({
+                value: b.brand_id,
+                label: b.brand_name,
               }))}
             />
           </div>
@@ -180,7 +209,7 @@ export function InkStockOutScreen() {
 
       {sheetQuery.isLoading && sheetId ? <Skeleton className="h-64 w-full" /> : null}
 
-      {sheet && lines.length > 0 ? (
+      {sheet && selectedBrandId && brandLines.length > 0 ? (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
             <Card>
@@ -192,7 +221,7 @@ export function InkStockOutScreen() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <InkStockOutFields
-                  lines={lines}
+                  lines={brandLines}
                   form={form}
                   formError={formError}
                   pending={stockOut.isPending}
@@ -204,8 +233,8 @@ export function InkStockOutScreen() {
             </Card>
           </form>
         </Form>
-      ) : sheetId && sheet && lines.length === 0 ? (
-        <p className="text-muted-foreground text-sm">This sheet has no ink lines.</p>
+      ) : sheetId && sheet && selectedBrandId && brandLines.length === 0 ? (
+        <p className="text-muted-foreground text-sm">No lines found for this brand.</p>
       ) : null}
     </div>
   );

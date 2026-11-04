@@ -121,6 +121,19 @@ export type ColumnPickerItem = {
   pinned: boolean;
 };
 
+function dedupeColumnIds(keys: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const key of keys) {
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(key);
+  }
+  return result;
+}
+
 /** Pin first identity column on horizontal scroll; `top-0` comes from TableHead. */
 export const stickyIdentityHeadClass =
   "sticky left-0 z-30 bg-card shadow-[2px_0_6px_-2px_rgba(0,0,0,0.18)]";
@@ -250,18 +263,12 @@ export function columnPickerDraft<T>(
   const pinned = pinnedColumnIds(defs, pinnedCount);
   const pinnedSet = new Set(pinned);
   const known = new Map(customizable.map((column) => [column.id, column]));
+  const defOrder = customizable.map((column) => column.id);
   const savedOrder = (preference?.column_order ?? []).filter((id) => known.has(id));
-  const mergedOrder = [
+  const mergedOrder = dedupeColumnIds([
     ...savedOrder,
-    ...defaults.column_order.filter((id) => !savedOrder.includes(id)),
-  ];
-  const orderSet = new Set(mergedOrder);
-  for (const column of customizable) {
-    if (!orderSet.has(column.id)) {
-      mergedOrder.push(column.id);
-      orderSet.add(column.id);
-    }
-  }
+    ...defOrder.filter((id) => !savedOrder.includes(id)),
+  ]);
   const order = applyPinnedColumns([], mergedOrder, pinned).order;
   const visible = new Set(preferenceVisibleColumnIds(defs, preference));
   for (const id of pinned) {

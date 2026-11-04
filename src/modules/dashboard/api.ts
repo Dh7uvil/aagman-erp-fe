@@ -1,7 +1,9 @@
 import {
+  AdhesivesDashboardSchema,
   CylindersDashboardSchema,
   InksDashboardSchema,
   MaterialsDashboardSchema,
+  type AdhesivesDashboard,
   type DashboardRangeParams,
   type CylindersDashboard,
   type InksDashboard,
@@ -28,5 +30,9 @@ export const dashboardApi = {
   inks: async (params: DashboardRangeParams = {}): Promise<InksDashboard> =>
     InksDashboardSchema.parse(
       await apiClient.get("/inventory/dashboard/inks", { params: rangeQuery(params) }),
+    ),
+  adhesives: async (params: DashboardRangeParams = {}): Promise<AdhesivesDashboard> =>
+    AdhesivesDashboardSchema.parse(
+      await apiClient.get("/inventory/dashboard/adhesives", { params: rangeQuery(params) }),
     ),
 };

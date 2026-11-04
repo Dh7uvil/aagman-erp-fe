@@ -14,6 +14,7 @@ import {
 import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge, StatusBadge } from "@/shared/components/ui/badge";
+import { AuthenticatedFileDownloadButton } from "@/shared/components/authenticated-file-download-button";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/components/ui/dialog";
@@ -533,6 +534,15 @@ function AttachmentHistoryCard({
               {actorLabel(entry)} · {formatDateTime(entry.timestamp)}
             </span>
           </div>
+          {!removed && fileUrl ? (
+            <AuthenticatedFileDownloadButton
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              href={fileUrl}
+              filename={filename}
+            />
+          ) : null}
         </div>
       </article>
 

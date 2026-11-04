@@ -98,3 +98,28 @@ export const inkImagePermissions = {
   update: permissionsByModule.inventory.ink_image.update,
   delete: permissionsByModule.inventory.ink_image.delete,
 } as const satisfies Record<string, CatalogPermission>;
+
+export const adhesiveCodePermissions = {
+  read: permissionsByModule.inventory.adhesive_code.read,
+  create: permissionsByModule.inventory.adhesive_code.create,
+  update: permissionsByModule.inventory.adhesive_code.update,
+  delete: permissionsByModule.inventory.adhesive_code.delete,
+  history: permissionsByModule.inventory.adhesive_code.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const adhesivePermissions = {
+  read: permissionsByModule.inventory.adhesive.read,
+  create: permissionsByModule.inventory.adhesive.create,
+  update: permissionsByModule.inventory.adhesive.update,
+  delete: permissionsByModule.inventory.adhesive.delete,
+  viewPrice: permissionsByModule.inventory.adhesive.view_price,
+  history: permissionsByModule.inventory.adhesive.history,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const adhesivesReportPermissions = {
+  read: permissionsByModule.inventory.adhesives_report.read,
+} as const satisfies Record<string, CatalogPermission>;
+
+export const adhesivePricePermissions = {
+  read: permissionsByModule.inventory.adhesive.view_price,
+} as const satisfies Record<string, CatalogPermission>;

@@ -90,6 +90,8 @@ export const InkColorUsageLineSchema = z.object({
   total_qty: DecimalStringSchema,
   ink_rate: NullableDecimalStringSchema,
   total_rate: NullableDecimalStringSchema,
+  avg_price_per_unit: NullableDecimalStringSchema.optional(),
+  price_unit_code: z.string().nullable().optional(),
 });
 
 export const InkColorUsageSchema = z.object({

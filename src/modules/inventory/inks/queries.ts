@@ -7,7 +7,9 @@ import type { InkBrandListParams, InkListParams } from "@/modules/inventory/inks
 
 export const inkBrandKeys = {
   all: ["inventory", "ink-brands"] as const,
+  list: (params: InkBrandListParams) => [...inkBrandKeys.all, "list", params] as const,
   allItems: () => [...inkBrandKeys.all, "all"] as const,
+  detail: (id: string) => [...inkBrandKeys.all, "detail", id] as const,
 };
 
 export const inkKeys = {
@@ -15,6 +17,10 @@ export const inkKeys = {
   list: (params: InkListParams) => [...inkKeys.all, "list", params] as const,
   detail: (id: string) => [...inkKeys.all, "detail", id] as const,
   history: (id: string) => [...inkKeys.all, "history", id] as const,
+  lineHistory: (lineId: string, page: number) =>
+    [...inkKeys.all, "line-history", lineId, page] as const,
+  lineHistorySummary: (lineId: string) =>
+    [...inkKeys.all, "line-history-summary", lineId] as const,
 };
 
 export function useAllInkBrands(enabled = true) {
@@ -49,10 +55,35 @@ export function useInkHistory(id: string | null) {
   });
 }
 
+export function useInkLineHistory(lineId: string, page = 1) {
+  return useQuery({
+    queryKey: inkKeys.lineHistory(lineId, page),
+    queryFn: async () => (await inksApi.lineHistory(lineId, page)).data,
+    enabled: Boolean(lineId),
+  });
+}
+
+export function useInkLineHistorySummary(lineId: string) {
+  return useQuery({
+    queryKey: inkKeys.lineHistorySummary(lineId),
+    queryFn: () => inksApi.lineHistorySummary(lineId),
+    enabled: Boolean(lineId),
+  });
+}
+
 export function useInkBrandsList(params: InkBrandListParams, enabled = true) {
   return useQuery({
-    queryKey: [...inkBrandKeys.all, "list", params],
+    queryKey: inkBrandKeys.list(params),
     queryFn: () => inkBrandsApi.list(params),
+    placeholderData: keepPreviousData,
     enabled,
+  });
+}
+
+export function useInkBrand(id: string | null) {
+  return useQuery({
+    queryKey: inkBrandKeys.detail(id ?? ""),
+    queryFn: () => inkBrandsApi.get(id!),
+    enabled: Boolean(id),
   });
 }

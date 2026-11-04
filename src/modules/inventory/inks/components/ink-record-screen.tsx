@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { InkFormFields } from "@/modules/inventory/inks/components/ink-form-fields";
+import { InkSheetMovementsHeaderButton } from "@/modules/inventory/inks/components/ink-sheet-movements-header-button";
 import { InkStockOutDialog } from "@/modules/inventory/inks/components/ink-stock-out-dialog";
 import { stockOutButtonClassName } from "@/modules/inventory/materials/components/material-stock-out-button-styles";
 import { useCreateInkSheet, useUpdateInkSheet } from "@/modules/inventory/inks/mutations";
@@ -17,6 +18,8 @@ import {
   InkFormSchema,
   inkFormToCreatePayload,
   inkFormToUpdatePayload,
+  inkSheetFormRevision,
+  emptyInkLine,
   inkSheetToFormValues,
   type InkFormValues,
 } from "@/modules/inventory/inks/schemas";
@@ -26,16 +29,15 @@ import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
 import { DataTableError } from "@/shared/components/data-table/states";
 import { SubmitButton } from "@/shared/components/form/submit-button";
-import { HistoryHeaderButton } from "@/shared/components/document/history-header-button";
 import { RecordPageHeader } from "@/shared/components/layout/record-page-header";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { historyHref } from "@/shared/lib/history";
 import { Form } from "@/shared/components/ui/form";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
+import { useFormResetWhenServerChanges } from "@/shared/hooks/use-form-reset-when-server-changes";
 import { useCan } from "@/shared/providers/session-provider";
 
 export type InkRecordMode = "create" | "view" | "edit";
@@ -69,12 +71,18 @@ export function InkRecordScreen({ mode, sheetId }: { mode: InkRecordMode; sheetI
 
   const formValuesReady = mode === "create" ? Boolean(defaultUnitId) : Boolean(sheet && defaultUnitId);
 
+  const serverRevision = mode !== "create" && sheet ? inkSheetFormRevision(sheet) : undefined;
+
   const form = useForm<InkFormValues>({
     resolver: zodResolver(InkFormSchema),
-    values: formValues,
+    defaultValues: {
+      company_id: "",
+      lines: [emptyInkLine("")],
+    },
   });
 
   useFormResetOnRouteEntry(form, formValues, formValuesReady, `${mode}-${sheetId ?? "new"}`);
+  useFormResetWhenServerChanges(form, formValues, formValuesReady, serverRevision);
   useDirtyFormGuard(Boolean(canSubmit) && form.formState.isDirty);
 
   async function onSubmit(values: InkFormValues) {
@@ -87,19 +95,20 @@ export function InkRecordScreen({ mode, sheetId }: { mode: InkRecordMode; sheetI
         const created = await createSheet.mutateAsync(
           inkFormToCreatePayload(values, canViewPrice),
         );
-        toast.success("Ink sheet created");
+        toast.success("Ink stock saved");
         router.push(inkRoutes.view(created.id));
         return;
       }
       if (!sheetId) {
         return;
       }
-      await updateSheet.mutateAsync({
+      const updated = await updateSheet.mutateAsync({
         id: sheetId,
         values: inkFormToUpdatePayload(values, canViewPrice),
       });
+      form.reset(inkSheetToFormValues(updated, defaultUnitId));
       toast.success("Ink sheet updated");
-      router.push(inkRoutes.view(sheetId));
+      router.replace(inkRoutes.view(sheetId));
     } catch (error) {
       if (applyFieldErrors(error, form.setError)) {
         return;
@@ -175,9 +184,7 @@ export function InkRecordScreen({ mode, sheetId }: { mode: InkRecordMode; sheetI
         {mode === "view" && sheetId && canViewHistory ? (
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle className="text-base">Ink sheet</CardTitle>
-            <HistoryHeaderButton
-              href={historyHref("inks", sheetId, sheet?.company_name ?? null)}
-            />
+            {sheet?.lines.length ? <InkSheetMovementsHeaderButton lines={sheet.lines} /> : null}
           </CardHeader>
         ) : null}
         <CardContent className={mode === "view" && sheetId && canViewHistory ? undefined : "pt-6"}>

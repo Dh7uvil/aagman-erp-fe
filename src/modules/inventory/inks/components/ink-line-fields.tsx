@@ -30,6 +30,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/components/ui/form";
+import { formatPricePerUnit } from "@/modules/inventory/format";
 import { formatDecimal } from "@/shared/lib/format";
 import { setFormValueFromQuickCreate } from "@/shared/lib/form-quick-create";
 
@@ -50,15 +51,31 @@ const INK_LINE_DELETE_COL =
 const INK_LINE_DELETE_HEADER =
   "sticky right-0 z-30 flex min-h-10 shrink-0 items-center border-l border-border bg-muted lg:w-11 shadow-[-6px_0_10px_-2px_rgba(0,0,0,0.08)]";
 
-function inkLineGridClass(canViewPrice: boolean) {
+const INK_LINE_GRID_WITH_PRICE_AND_DELETE =
+  "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(7rem,1.05fr)_2.75rem] lg:items-center";
+const INK_LINE_GRID_WITH_PRICE_NO_DELETE =
+  "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(7rem,1.05fr)] lg:items-center";
+const INK_LINE_GRID_NO_PRICE_WITH_DELETE =
+  "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_2.75rem] lg:items-center";
+const INK_LINE_GRID_NO_PRICE_NO_DELETE =
+  "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)] lg:items-center";
+
+function inkLineGridClass(canViewPrice: boolean, includeDeleteColumn: boolean) {
   if (canViewPrice) {
-    return "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_minmax(7rem,7.5rem)_minmax(7rem,1.05fr)_2.75rem] lg:items-center";
+    return includeDeleteColumn
+      ? INK_LINE_GRID_WITH_PRICE_AND_DELETE
+      : INK_LINE_GRID_WITH_PRICE_NO_DELETE;
   }
-  return "lg:grid lg:grid-cols-[minmax(9rem,1.35fr)_minmax(9rem,1.35fr)_minmax(7.5rem,9rem)_minmax(7rem,7.5rem)_minmax(7rem,7.5rem)_minmax(6.5rem,1fr)_minmax(7rem,1.05fr)_2.75rem] lg:items-center";
+  return includeDeleteColumn
+    ? INK_LINE_GRID_NO_PRICE_WITH_DELETE
+    : INK_LINE_GRID_NO_PRICE_NO_DELETE;
 }
 
-function inkLineTableMinWidth(canViewPrice: boolean) {
-  return canViewPrice ? "lg:min-w-[78rem]" : "lg:min-w-[62rem]";
+function inkLineTableMinWidth(canViewPrice: boolean, includeDeleteColumn: boolean) {
+  if (canViewPrice) {
+    return includeDeleteColumn ? "lg:min-w-[86rem]" : "lg:min-w-[83.25rem]";
+  }
+  return includeDeleteColumn ? "lg:min-w-[62rem]" : "lg:min-w-[59.25rem]";
 }
 
 export function InkLineFields({
@@ -84,7 +101,11 @@ export function InkLineFields({
   const units = unitsQuery.data ?? [];
   const defaultUnitId = units.find((u) => u.code === "kg")?.id ?? "";
 
-  const { fields, append, remove } = useFieldArray({ control, name: "lines" });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "lines",
+    keyName: "fieldKey",
+  });
   const lines = useWatch({ control, name: "lines" });
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [brandDialogIndex, setBrandDialogIndex] = useState<number | null>(null);
@@ -94,7 +115,9 @@ export function InkLineFields({
   const [unitDialogIndex, setUnitDialogIndex] = useState<number | null>(null);
 
   const colorById = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
-  const gridClass = inkLineGridClass(canViewPrice);
+  const showDeleteColumn = !readOnly;
+  const gridClass = inkLineGridClass(canViewPrice, showDeleteColumn);
+  const tableMinWidth = inkLineTableMinWidth(canViewPrice, showDeleteColumn);
 
   function syncHexForLine(index: number, colorId: string) {
     const hex = colorById.get(colorId)?.hex_code ?? "";
@@ -108,7 +131,7 @@ export function InkLineFields({
   const linesContent = (
     <div className="flex flex-col gap-3">
       <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1">
-        <div className={`flex flex-col gap-3 ${inkLineTableMinWidth(canViewPrice)}`}>
+        <div className={`flex flex-col gap-3 ${tableMinWidth}`}>
         <div className={`hidden rounded-md border bg-muted shadow-sm ${gridClass}`}>
           <div className={INK_LINE_HEADER}>Brand</div>
           <div className={INK_LINE_HEADER}>Color</div>
@@ -120,10 +143,13 @@ export function InkLineFields({
           {canViewPrice ? (
             <>
               <div className={INK_LINE_HEADER}>Ink rate</div>
+              <div className={INK_LINE_HEADER}>Avg rate</div>
               <div className={`${INK_LINE_HEADER} ${INK_LINE_COL_DIVIDER}`}>Total rate</div>
             </>
           ) : null}
-          <div className={`${INK_LINE_HEADER} ${INK_LINE_DELETE_HEADER}`} aria-hidden />
+          {showDeleteColumn ? (
+            <div className={`${INK_LINE_HEADER} ${INK_LINE_DELETE_HEADER}`} aria-hidden />
+          ) : null}
         </div>
 
         {fields.map((field, index) => {
@@ -134,11 +160,20 @@ export function InkLineFields({
             line?.ink_rate ?? "",
           );
           const unitCode = units.find((u) => u.id === line?.drum_unit_id)?.code ?? "kg";
+          const avgRateLabel =
+            canViewPrice && line?.avg_price_per_unit?.trim()
+              ? formatPricePerUnit(
+                  line.avg_price_per_unit,
+                  line.price_unit_code?.trim() || unitCode,
+                )
+              : canViewPrice
+                ? "—"
+                : null;
           const showRemove = !readOnly && fields.length > 1;
 
           return (
             <div
-              key={field.id}
+              key={field.fieldKey}
               className={`grid grid-cols-1 gap-4 rounded-md border bg-card p-4 shadow-sm ${gridClass} lg:gap-0 lg:p-0`}
             >
               <FormField
@@ -293,6 +328,10 @@ export function InkLineFields({
                       </FormItem>
                     )}
                   />
+                  <FormItem className={INK_LINE_CELL}>
+                    <FormLabel className="lg:sr-only">Avg rate</FormLabel>
+                    <p className={`${INK_LINE_READOUT} text-muted-foreground`}>{avgRateLabel}</p>
+                  </FormItem>
                   <FormItem className={`${INK_LINE_CELL} ${INK_LINE_COL_DIVIDER}`}>
                     <FormLabel className="lg:sr-only">Total rate</FormLabel>
                     <p className={INK_LINE_READOUT}>
@@ -301,20 +340,22 @@ export function InkLineFields({
                   </FormItem>
                 </>
               ) : null}
-              <div className={INK_LINE_DELETE_COL}>
-                {showRemove ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => remove(index)}
-                    aria-label="Remove line"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                ) : null}
-              </div>
+              {showDeleteColumn ? (
+                <div className={INK_LINE_DELETE_COL}>
+                  {showRemove ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => remove(index)}
+                      aria-label="Remove line"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           );
         })}

@@ -10,6 +10,7 @@ import type { InkSheet } from "@/modules/inventory/inks/schemas";
 import { inkImagePermissions } from "@/modules/inventory/permissions";
 import { MAX_ATTACHMENT_BYTES } from "@/config/constants";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
+import { AuthenticatedFileDownloadButton } from "@/shared/components/authenticated-file-download-button";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/components/ui/dialog";
 import { getErrorMessage } from "@/shared/api/errors";
@@ -183,11 +184,13 @@ function FileSlot({
               Preview
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" asChild>
-            <a href={fileUrl} target="_blank" rel="noreferrer">
-              Download
-            </a>
-          </Button>
+          <AuthenticatedFileDownloadButton
+            variant="outline"
+            size="sm"
+            href={fileUrl}
+            filename={meta?.filename ?? "download"}
+            accept={meta?.content_type}
+          />
           {canUpload ? (
             <>
               <input

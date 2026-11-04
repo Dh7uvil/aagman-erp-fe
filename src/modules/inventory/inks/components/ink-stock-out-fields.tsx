@@ -25,8 +25,8 @@ import {
 import { Textarea } from "@/shared/components/ui/textarea";
 import { formatDecimal } from "@/shared/lib/format";
 
-function lineLabel(line: InkLine) {
-  return `${line.brand_name} · ${line.color_name} (${formatDecimal(line.total_qty)} ${line.drum_unit_code})`;
+function lineColorLabel(line: InkLine) {
+  return line.color_name;
 }
 
 function QuantitiesSectionHeader() {
@@ -129,15 +129,15 @@ export function InkStockOutFields({
           name="ink_line_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ink line</FormLabel>
+              <FormLabel>Color</FormLabel>
               <FormControl>
                 <SearchableSelect
                   value={field.value}
                   onValueChange={field.onChange}
-                  placeholder="Select line"
+                  placeholder="Select color"
                   options={lines.map((line) => ({
                     value: line.id,
-                    label: lineLabel(line),
+                    label: lineColorLabel(line),
                   }))}
                 />
               </FormControl>
@@ -149,8 +149,7 @@ export function InkStockOutFields({
 
       {selectedLine ? (
         <p className="text-muted-foreground text-sm">
-          {selectedLine.brand_name} · {selectedLine.color_name}
-          {" · On hand "}
+          On hand{" "}
           <span className="text-foreground font-medium tabular-nums">
             {formatDecimal(String(selectedLine.drum_count))} drums ·{" "}
             {formatDecimal(String(selectedLine.total_qty))} {selectedLine.drum_unit_code}

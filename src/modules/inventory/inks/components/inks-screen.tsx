@@ -1,6 +1,6 @@
 "use client";
 
-import { History, MinusCircle, Plus } from "lucide-react";
+import { FolderPlus, History, MinusCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
@@ -8,10 +8,13 @@ import { toast } from "sonner";
 
 import { InkHexSwatch } from "@/modules/inventory/ink-colors/components/ink-hex-swatch";
 import { formatPricePerUnit } from "@/modules/inventory/format";
-import { useDeleteInkSheet } from "@/modules/inventory/inks/mutations";
+import { BrandQuickCreateDialog } from "@/modules/inventory/inks/components/brand-quick-create-dialog";
+import { inksApi } from "@/modules/inventory/inks/api";
+import { useDeleteInkSheet, useUpdateInkSheet } from "@/modules/inventory/inks/mutations";
 import { useInks } from "@/modules/inventory/inks/queries";
 import { inkRoutes } from "@/modules/inventory/inks/routes";
-import type { InkLineListItem } from "@/modules/inventory/inks/schemas";
+import { inkBrandRoutes } from "@/modules/inventory/ink-brands/routes";
+import { inkLineRecordToUpsert, type InkLineListItem } from "@/modules/inventory/inks/schemas";
 import { inkPermissions, inkPricePermissions } from "@/modules/inventory/permissions";
 import { useCompanies } from "@/modules/users-management/companies/queries";
 import { getErrorMessage } from "@/shared/api/errors";
@@ -50,7 +53,12 @@ const SORT_FIELDS: SortFieldOption[] = [
 ];
 const SORT_BY = new Set(SORT_FIELDS.map((field) => field.value));
 
-type DeleteTarget = { inkSheetId: string; companyName: string };
+type DeleteTarget = {
+  inkSheetId: string;
+  lineId: string;
+  companyName: string;
+  lineLabel: string;
+};
 
 export function InksScreen() {
   const router = useRouter();
@@ -59,7 +67,9 @@ export function InksScreen() {
   const canViewHistory = can(inkPermissions.history);
   const canViewPrice = can(inkPricePermissions.read);
   const deleteSheet = useDeleteInkSheet();
+  const updateSheet = useUpdateInkSheet();
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
+  const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
     useTableParams();
   const companyId = filters.company_id;
@@ -112,7 +122,7 @@ export function InksScreen() {
     if (canViewHistory) {
       actions.push(
         <Button key="history" type="button" variant="ghost" size="icon-sm" aria-label="History" asChild>
-          <Link href={historyHref("inks", row.ink_sheet_id, row.company_name)}>
+          <Link href={historyHref("ink-lines", row.id, `${row.brand_name} · ${row.color_name}`)}>
             <History className="size-3.5" />
           </Link>
         </Button>,
@@ -133,8 +143,20 @@ export function InksScreen() {
       return;
     }
     try {
-      await deleteSheet.mutateAsync(deleting.inkSheetId);
-      toast.success("Ink sheet deleted");
+      const sheet = await inksApi.get(deleting.inkSheetId);
+      const remaining = sheet.lines.filter((line) => line.id !== deleting.lineId);
+      if (remaining.length === 0) {
+        await deleteSheet.mutateAsync(deleting.inkSheetId);
+        toast.success("Ink sheet deleted");
+      } else {
+        await updateSheet.mutateAsync({
+          id: deleting.inkSheetId,
+          values: {
+            lines: remaining.map((line) => inkLineRecordToUpsert(line, canViewPrice)),
+          },
+        });
+        toast.success("Ink line removed");
+      }
       setDeleting(null);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -158,7 +180,14 @@ export function InksScreen() {
       {
         id: "brand",
         header: "Brand",
-        cell: (row) => row.brand_name,
+        cell: (row) =>
+          canRead ? (
+            <Link href={inkBrandRoutes.view(row.brand_id)} className="hover:underline">
+              {row.brand_name}
+            </Link>
+          ) : (
+            row.brand_name
+          ),
       },
       {
         id: "color",
@@ -203,6 +232,13 @@ export function InksScreen() {
           cell: (row) => formatPricePerUnit(row.ink_rate, row.drum_unit_code),
         },
         {
+          id: "avg_price_per_unit",
+          header: "Avg. rate",
+          defaultVisible: false,
+          cell: (row) =>
+            formatPricePerUnit(row.avg_price_per_unit ?? null, row.price_unit_code ?? row.drum_unit_code),
+        },
+        {
           id: "total_rate",
           header: "Total rate",
           defaultVisible: false,
@@ -223,7 +259,9 @@ export function InksScreen() {
               ? () =>
                   setDeleting({
                     inkSheetId: row.ink_sheet_id,
+                    lineId: row.id,
                     companyName: row.company_name,
+                    lineLabel: `${row.brand_name} · ${row.color_name}`,
                   })
               : undefined
           }
@@ -250,6 +288,12 @@ export function InksScreen() {
                   <MinusCircle className="size-4" />
                   Stock out
                 </Link>
+              </Button>
+            ) : null}
+            {canCreate ? (
+              <Button variant="outline" type="button" onClick={() => setBrandDialogOpen(true)}>
+                <FolderPlus className="size-4" />
+                Add brand
               </Button>
             ) : null}
             {canCreate ? (
@@ -319,12 +363,17 @@ export function InksScreen() {
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
       />
+      <BrandQuickCreateDialog open={brandDialogOpen} onOpenChange={setBrandDialogOpen} />
       <ConfirmActionDialog
         open={Boolean(deleting)}
-        title="Delete ink sheet"
-        description={`Delete ink sheet for "${deleting?.companyName}"? This removes every line on that sheet and cannot be undone.`}
-        confirmLabel="Delete"
-        pending={deleteSheet.isPending}
+        title="Remove ink line"
+        description={
+          deleting
+            ? `Remove "${deleting.lineLabel}" for ${deleting.companyName}? Other lines on this company sheet are kept. If this is the only line, the whole sheet is deleted. Lines with stock must be stocked out first.`
+            : undefined
+        }
+        confirmLabel="Remove line"
+        pending={deleteSheet.isPending || updateSheet.isPending}
         onConfirm={confirmDelete}
         onOpenChange={(open) => !open && setDeleting(null)}
       />

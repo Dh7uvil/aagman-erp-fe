@@ -2,12 +2,18 @@
 
 import { useMemo, useState } from "react";
 
+import { AdhesivesOverviewSection } from "@/modules/dashboard/components/adhesives-overview-section";
 import { CylindersOverviewSection } from "@/modules/dashboard/components/cylinders-overview-section";
 import { InksOverviewSection } from "@/modules/dashboard/components/inks-overview-section";
 import { MaterialsOverviewSection } from "@/modules/dashboard/components/materials-overview-section";
 import { DashboardRangeTabs } from "@/modules/dashboard/components/range-tabs";
 import { dashboardRangeParams, type DashboardRangeDays } from "@/modules/dashboard/schemas";
-import { cylinderPermissions, inkPermissions, materialPermissions } from "@/modules/inventory/permissions";
+import {
+  adhesivePermissions,
+  cylinderPermissions,
+  inkPermissions,
+  materialPermissions,
+} from "@/modules/inventory/permissions";
 import { useCan } from "@/shared/providers/session-provider";
 
 export function DashboardScreen() {
@@ -15,11 +21,12 @@ export function DashboardScreen() {
   const canCylinders = can(cylinderPermissions.read);
   const canMaterials = can(materialPermissions.read);
   const canInks = can(inkPermissions.read);
+  const canAdhesives = can(adhesivePermissions.read);
   const [rangeDays, setRangeDays] = useState<DashboardRangeDays>(30);
 
   const rangeParams = useMemo(() => dashboardRangeParams(rangeDays), [rangeDays]);
 
-  if (!canCylinders && !canMaterials && !canInks) {
+  if (!canCylinders && !canMaterials && !canInks && !canAdhesives) {
     return (
       <p className="text-muted-foreground text-sm">
         You do not have permission to view inventory dashboard metrics.
@@ -34,8 +41,9 @@ export function DashboardScreen() {
         <DashboardRangeTabs value={rangeDays} onChange={setRangeDays} />
       </div>
       {canMaterials ? <MaterialsOverviewSection rangeParams={rangeParams} /> : null}
-      {canInks ? <InksOverviewSection rangeParams={rangeParams} /> : null}
       {canCylinders ? <CylindersOverviewSection rangeParams={rangeParams} /> : null}
+      {canInks ? <InksOverviewSection rangeParams={rangeParams} /> : null}
+      {canAdhesives ? <AdhesivesOverviewSection rangeParams={rangeParams} /> : null}
     </div>
   );
 }

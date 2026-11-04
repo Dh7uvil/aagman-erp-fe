@@ -6,6 +6,7 @@ import { inkBrandsApi, inksApi } from "@/modules/inventory/inks/api";
 import { inkBrandKeys, inkKeys } from "@/modules/inventory/inks/queries";
 import type {
   InkBrandCreateRequest,
+  InkBrandUpdateRequest,
   InkSheetCreateRequest,
   InkSheetUpdateRequest,
   InkStockOutRequest,
@@ -18,6 +19,28 @@ export function useCreateInkBrand() {
     mutationFn: (values: InkBrandCreateRequest) => inkBrandsApi.create(values),
     onSuccess: (data) => {
       upsertQueryListItem(queryClient, inkBrandKeys.allItems(), data);
+      void queryClient.invalidateQueries({ queryKey: inkBrandKeys.all });
+    },
+  });
+}
+
+export function useUpdateInkBrand() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: InkBrandUpdateRequest }) =>
+      inkBrandsApi.update(id, values),
+    onSuccess: (_, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: inkBrandKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: inkBrandKeys.all });
+    },
+  });
+}
+
+export function useDeleteInkBrand() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => inkBrandsApi.delete(id),
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: inkBrandKeys.all });
     },
   });
@@ -38,7 +61,8 @@ export function useUpdateInkSheet() {
   return useMutation({
     mutationFn: ({ id, values }: { id: string; values: InkSheetUpdateRequest }) =>
       inksApi.update(id, values),
-    onSuccess: (_, { id }) => {
+    onSuccess: (data, { id }) => {
+      queryClient.setQueryData(inkKeys.detail(id), data);
       void queryClient.invalidateQueries({ queryKey: inkKeys.detail(id) });
       void queryClient.invalidateQueries({ queryKey: inkKeys.all });
     },

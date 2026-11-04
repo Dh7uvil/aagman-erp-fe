@@ -3,6 +3,7 @@ import {
   InkBrandCreateRequestSchema,
   InkBrandListSchema,
   InkBrandSchema,
+  InkBrandUpdateRequestSchema,
   InkLineSchema,
   InkSheetCreateRequestSchema,
   InkSheetListSchema,
@@ -12,6 +13,7 @@ import {
   type InkBrand,
   type InkBrandCreateRequest,
   type InkBrandListParams,
+  type InkBrandUpdateRequest,
   type InkLine,
   type InkLineListItem,
   type InkListParams,
@@ -21,6 +23,10 @@ import {
   type InkStockOutRequest,
 } from "@/modules/inventory/inks/schemas";
 import { EntityHistoryEntrySchema } from "@/modules/inventory/cylinders/schemas";
+import {
+  DrumLineHistoryEntrySchema,
+  DrumLineHistorySummarySchema,
+} from "@/modules/inventory/schemas/drum-line-history";
 import { apiClient } from "@/shared/api/client";
 import type { ListResponse } from "@/shared/api/envelope";
 import { fetchAllPages } from "@/shared/api/paginate";
@@ -44,10 +50,18 @@ export const inkBrandsApi = {
     fetchAllPages((page, pageSize) =>
       inkBrandsApi.list({ page, page_size: pageSize, is_active: params.is_active }),
     ),
+  get: async (id: string): Promise<InkBrand> =>
+    InkBrandSchema.parse(await apiClient.get(`/inventory/ink-brands/${id}`)),
   create: async (values: InkBrandCreateRequest): Promise<InkBrand> =>
     InkBrandSchema.parse(
       await apiClient.post("/inventory/ink-brands", InkBrandCreateRequestSchema.parse(values)),
     ),
+  update: async (id: string, values: InkBrandUpdateRequest): Promise<InkBrand> =>
+    InkBrandSchema.parse(
+      await apiClient.patch(`/inventory/ink-brands/${id}`, InkBrandUpdateRequestSchema.parse(values)),
+    ),
+  delete: async (id: string): Promise<InkBrand> =>
+    InkBrandSchema.parse(await apiClient.delete(`/inventory/ink-brands/${id}`)),
 };
 
 export const inksApi = {
@@ -100,4 +114,14 @@ export const inksApi = {
   },
   historyAttachmentUrl: (sheetId: string, auditLogId: string) =>
     `/api/v1/inventory/inks/${sheetId}/history-attachments/${auditLogId}`,
+  lineHistory: async (lineId: string, page = 1) => {
+    const result = await apiClient.getList<unknown>(`/inventory/ink-lines/${lineId}/history`, {
+      params: { page, page_size: 50 },
+    });
+    return { data: DrumLineHistoryEntrySchema.array().parse(result.data), meta: result.meta };
+  },
+  lineHistorySummary: async (lineId: string) =>
+    DrumLineHistorySummarySchema.parse(
+      await apiClient.get(`/inventory/ink-lines/${lineId}/history-summary`),
+    ),
 };

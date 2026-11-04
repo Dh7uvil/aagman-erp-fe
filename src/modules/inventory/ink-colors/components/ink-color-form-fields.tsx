@@ -65,8 +65,8 @@ export function InkColorFormFields({
         control={control}
         name="is_active"
         render={({ field }) => (
-          <FormItem className="flex items-center justify-between gap-4 sm:col-span-2">
-            <FormLabel>Active</FormLabel>
+          <FormItem className="flex flex-row items-center gap-2 space-y-0 sm:col-span-2">
+            <FormLabel className="text-sm font-normal">Active</FormLabel>
             <FormControl>
               <Switch checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} />
             </FormControl>

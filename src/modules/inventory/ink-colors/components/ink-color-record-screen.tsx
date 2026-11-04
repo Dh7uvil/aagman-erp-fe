@@ -19,18 +19,25 @@ import {
   type InkColorFormValues,
   type InkColorUpdateRequest,
 } from "@/modules/inventory/ink-colors/schemas";
+import { useAllInkBrands } from "@/modules/inventory/inks/queries";
 import { inkRoutes } from "@/modules/inventory/inks/routes";
 import { formatPricePerUnit } from "@/modules/inventory/format";
+import { useCompanies } from "@/modules/users-management/companies/queries";
 import { inkColorPermissions, inkPricePermissions } from "@/modules/inventory/permissions";
 import { getErrorMessage } from "@/shared/api/errors";
 import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
+import { FilterSelect } from "@/shared/components/data-table/filter-select";
 import { type DataTableColumn } from "@/shared/components/data-table/columns";
 import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
+import { ListSearch } from "@/shared/components/data-table/list-search";
 import { DataTableError } from "@/shared/components/data-table/states";
+import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
 import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
 import { SubmitButton } from "@/shared/components/form/submit-button";
 import { HistoryHeaderButton } from "@/shared/components/document/history-header-button";
 import { RecordPageHeader } from "@/shared/components/layout/record-page-header";
+import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { historyHref } from "@/shared/lib/history";
 import { Form } from "@/shared/components/ui/form";
@@ -43,7 +50,34 @@ import { useListView } from "@/shared/hooks/use-list-view";
 import { useCan } from "@/shared/providers/session-provider";
 import type { InkColorUsageLine } from "@/modules/inventory/ink-colors/schemas";
 
+const ALL = "all";
+
 export type InkColorRecordMode = "create" | "view" | "edit";
+
+function filterInkColorUsageLines(
+  lines: InkColorUsageLine[],
+  {
+    search,
+    companyId,
+    brandId,
+  }: { search: string; companyId?: string; brandId?: string },
+): InkColorUsageLine[] {
+  const query = search.trim().toLowerCase();
+  return lines.filter((row) => {
+    if (companyId && row.company_id !== companyId) {
+      return false;
+    }
+    if (brandId && row.brand_id !== brandId) {
+      return false;
+    }
+    if (!query) {
+      return true;
+    }
+    return [row.company_name, row.brand_name, row.drum_unit_code].some((value) =>
+      value.toLowerCase().includes(query),
+    );
+  });
+}
 
 export function InkColorRecordScreen({
   mode,
@@ -60,6 +94,14 @@ export function InkColorRecordScreen({
   const createInkColor = useCreateInkColor();
   const updateInkColor = useUpdateInkColor();
   const [formError, setFormError] = useState<string | null>(null);
+  const [usageSearch, setUsageSearch] = useState("");
+  const [usageCompanyId, setUsageCompanyId] = useState<string | undefined>();
+  const [usageBrandId, setUsageBrandId] = useState<string | undefined>();
+
+  const companiesQuery = useCompanies({ page: 1, page_size: 200 });
+  const companies = companiesQuery.data?.data ?? [];
+  const brandsQuery = useAllInkBrands();
+  const brands = brandsQuery.data ?? [];
 
   const colorQuery = useInkColor(mode === "create" ? null : (colorId ?? null));
   const color = colorQuery.data;
@@ -121,34 +163,51 @@ export function InkColorRecordScreen({
       { id: "company", header: "Company", cell: (row) => row.company_name },
       { id: "brand", header: "Brand", cell: (row) => row.brand_name },
       {
-        id: "drums",
-        header: "Drums",
+        id: "drum_count",
+        header: "No. of drums",
         cell: (row) => formatDecimal(row.drum_count),
       },
       {
-        id: "per_drum",
-        header: "Qty / drum",
-        cell: (row) =>
-          `${formatDecimal(row.drum_qty)} ${row.drum_unit_code}`,
+        id: "drum_qty",
+        header: "Drum qty",
+        defaultVisible: false,
+        cell: (row) => formatDecimal(row.drum_qty),
+      },
+      {
+        id: "unit",
+        header: "Unit",
+        defaultVisible: false,
+        cell: (row) => row.drum_unit_code,
       },
       {
         id: "total_qty",
-        header: "Total qty",
+        header: "Total kg",
         cell: (row) => `${formatDecimal(row.total_qty)} ${row.drum_unit_code}`,
       },
     ];
     if (canViewPrice) {
-      cols.push({
-        id: "ink_rate",
-        header: "Ink rate",
-        cell: (row) => formatPricePerUnit(row.ink_rate, row.drum_unit_code),
-      });
-      cols.push({
-        id: "total_rate",
-        header: "Total rate",
-        cell: (row) =>
-          row.total_rate != null ? formatDecimal(row.total_rate) : "—",
-      });
+      cols.push(
+        {
+          id: "ink_rate",
+          header: "Ink rate",
+          defaultVisible: false,
+          cell: (row) => formatPricePerUnit(row.ink_rate, row.drum_unit_code),
+        },
+        {
+          id: "avg_price_per_unit",
+          header: "Avg. rate",
+          defaultVisible: false,
+          cell: (row) =>
+            formatPricePerUnit(row.avg_price_per_unit ?? null, row.price_unit_code ?? row.drum_unit_code),
+        },
+        {
+          id: "total_rate",
+          header: "Total rate",
+          defaultVisible: false,
+          cell: (row) =>
+            row.total_rate != null ? formatDecimal(row.total_rate) : "—",
+        },
+      );
     }
     cols.push({
       id: "sheet",
@@ -162,12 +221,23 @@ export function InkColorRecordScreen({
     return cols;
   }, [canViewPrice]);
 
-  const { columns: usageColumns, colSpan: usageColSpan } = useTableColumns(
-    "inventory.ink_color_usage",
-    usageColumnDefs,
-    { pinnedCount: 0 },
-  );
+  const {
+    columns: usageColumns,
+    columnsDialog: usageColumnsDialog,
+    colSpan: usageColSpan,
+  } = useTableColumns("inventory.ink_color_usage", usageColumnDefs, { pinnedCount: 0 });
   const usageListView = useListView("inventory.ink_color_usage");
+
+  const usageLines = useMemo(() => {
+    const lines = usageQuery.data?.lines ?? [];
+    return filterInkColorUsageLines(lines, {
+      search: usageSearch,
+      companyId: usageCompanyId,
+      brandId: usageBrandId,
+    });
+  }, [usageQuery.data?.lines, usageSearch, usageCompanyId, usageBrandId]);
+
+  const usageHasActiveFilters = Boolean(usageSearch.trim() || usageCompanyId || usageBrandId);
 
   const pending = createInkColor.isPending || updateInkColor.isPending;
 
@@ -256,11 +326,60 @@ export function InkColorRecordScreen({
               </span>
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
+            <DataTableToolbar>
+              <ListSearch
+                value={usageSearch}
+                onChange={setUsageSearch}
+                placeholder="Search company or brand…"
+              />
+              <FilterSelect
+                label="Company"
+                className="w-full sm:w-48"
+                placeholder="All companies"
+                value={usageCompanyId ?? ALL}
+                onValueChange={(value) =>
+                  setUsageCompanyId(value === ALL ? undefined : value)
+                }
+                options={[
+                  { value: ALL, label: "All companies" },
+                  ...companies.map((c) => ({ value: c.id, label: c.name })),
+                ]}
+              />
+              <FilterSelect
+                label="Brand"
+                className="w-full sm:w-48"
+                placeholder="All brands"
+                value={usageBrandId ?? ALL}
+                onValueChange={(value) => setUsageBrandId(value === ALL ? undefined : value)}
+                options={[
+                  { value: ALL, label: "All brands" },
+                  ...brands.map((b) => ({ value: b.id, label: b.name })),
+                ]}
+              />
+              <ListViewToolbarControls
+                listView={usageListView}
+                columnsDialog={usageColumnsDialog}
+              />
+              {usageHasActiveFilters ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setUsageSearch("");
+                    setUsageCompanyId(undefined);
+                    setUsageBrandId(undefined);
+                  }}
+                >
+                  Clear
+                </Button>
+              ) : null}
+            </DataTableToolbar>
             <ListView
               columns={usageColumns}
               colSpan={usageColSpan}
-              rows={usage?.lines ?? []}
+              rows={usageLines}
               getRowKey={(row) => row.ink_line_id}
               getRowLabel={(row) => row.company_name}
               isLoading={usageQuery.isLoading}
@@ -271,7 +390,13 @@ export function InkColorRecordScreen({
                   onRetry={() => usageQuery.refetch()}
                 />
               }
-              empty={<p className="text-muted-foreground text-sm">This ink is not on any sheet yet.</p>}
+              empty={
+                usageHasActiveFilters && (usage?.lines.length ?? 0) > 0 ? (
+                  <p className="text-muted-foreground text-sm">No usage rows match your filters.</p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">This ink is not on any sheet yet.</p>
+                )
+              }
               listView={usageListView}
             />
           </CardContent>
