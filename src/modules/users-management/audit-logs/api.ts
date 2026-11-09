@@ -32,6 +32,8 @@ export const auditLogsApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         ...filterQuery(params),
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: AuditLogListSchema.parse(result.data), meta: result.meta };

@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { unitsApi } from "@/modules/inventory/units/api";
 import type { UnitListParams } from "@/modules/inventory/units/schemas";
 
@@ -15,7 +17,7 @@ export const unitKeys = {
 export function useUnits(params: UnitListParams) {
   return useQuery({
     queryKey: unitKeys.list(params),
-    queryFn: () => unitsApi.list(params),
+    queryFn: () => unitsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

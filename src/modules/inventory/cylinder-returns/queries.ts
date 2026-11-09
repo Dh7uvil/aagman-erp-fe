@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { cylinderReturnsApi } from "@/modules/inventory/cylinder-returns/api";
 import type { CylinderReturnListParams } from "@/modules/inventory/cylinder-returns/schemas";
 
@@ -15,7 +17,7 @@ export const cylinderReturnKeys = {
 export function useCylinderReturns(params: CylinderReturnListParams, enabled = true) {
   return useQuery({
     queryKey: cylinderReturnKeys.list(params),
-    queryFn: () => cylinderReturnsApi.list(params),
+    queryFn: () => cylinderReturnsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
     enabled,
   });

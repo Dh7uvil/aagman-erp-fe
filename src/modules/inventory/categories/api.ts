@@ -22,6 +22,7 @@ export const categoriesApi = {
     page_size: number;
     is_active?: boolean;
     company_id?: string;
+    include_column_totals?: boolean;
   }): Promise<ListResponse<Category[]>> => {
     const result = await apiClient.getList<unknown>("/inventory/material-categories", {
       params: {
@@ -30,6 +31,7 @@ export const categoriesApi = {
         is_active: params.is_active,
         roots_only: true,
         company_id: params.company_id,
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: CategoryListSchema.parse(result.data), meta: result.meta };

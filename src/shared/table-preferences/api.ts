@@ -2,6 +2,7 @@ import { apiClient } from "@/shared/api/client";
 import {
   TablePreferenceSchema,
   type TablePreference,
+  type TableExportPreferenceUpdate,
   type TablePreferenceUpdate,
 } from "@/shared/table-preferences/schemas";
 
@@ -14,6 +15,13 @@ export const tablePreferencesApi = {
     TablePreferenceSchema.parse(await apiClient.get(pathFor(tableKey))),
   put: async (tableKey: string, values: TablePreferenceUpdate): Promise<TablePreference> =>
     TablePreferenceSchema.parse(await apiClient.put(pathFor(tableKey), values)),
+  putExport: async (
+    tableKey: string,
+    values: TableExportPreferenceUpdate,
+  ): Promise<TablePreference> =>
+    TablePreferenceSchema.parse(await apiClient.put(`${pathFor(tableKey)}/export`, values)),
+  resetExport: async (tableKey: string): Promise<TablePreference> =>
+    TablePreferenceSchema.parse(await apiClient.delete(`${pathFor(tableKey)}/export`)),
   reset: async (tableKey: string): Promise<TablePreference> =>
     TablePreferenceSchema.parse(await apiClient.delete(pathFor(tableKey))),
 };

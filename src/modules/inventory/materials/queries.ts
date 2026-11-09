@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { materialsApi } from "@/modules/inventory/materials/api";
 import type { MaterialListParams } from "@/modules/inventory/materials/schemas";
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
 
 export const materialKeys = {
   all: ["inventory", "materials"] as const,
@@ -18,7 +19,7 @@ export const materialKeys = {
 export function useMaterials(params: MaterialListParams, enabled = true) {
   return useQuery({
     queryKey: materialKeys.list(params),
-    queryFn: () => materialsApi.list(params),
+    queryFn: () => materialsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
     enabled,
   });

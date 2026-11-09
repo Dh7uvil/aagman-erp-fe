@@ -46,7 +46,10 @@ export function UserViewDialog({
 
   return (
     <Dialog open={Boolean(userId)} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-[min(32rem,calc(100vw-1.5rem))]">
+      <DialogContent
+        mobileSheet
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-[min(32rem,calc(100vw-1.5rem))]"
+      >
         <DialogHeader>
           <DialogTitle>{user?.name ?? "User details"}</DialogTitle>
           <DialogDescription className="sr-only">User account details</DialogDescription>

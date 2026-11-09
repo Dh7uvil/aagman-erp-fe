@@ -112,7 +112,11 @@ export function RoleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent nested={nested}>
+      <DialogContent
+        nested={nested}
+        mobileSheet
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-[min(32rem,calc(100vw-1.5rem))]"
+      >
         <DialogHeader>
           <DialogTitle>{formDialogTitle("Role", mode)}</DialogTitle>
         </DialogHeader>

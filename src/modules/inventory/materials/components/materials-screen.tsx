@@ -3,7 +3,7 @@
 import { FolderPlus, History, MinusCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { formatPricePerUnit } from "@/modules/inventory/format";
@@ -47,6 +47,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatDecimal } from "@/shared/lib/format";
 import {
@@ -243,11 +244,15 @@ export function MaterialsScreen() {
         {
           id: "rolls",
           header: "Total rolls",
+          numeric: true,
+          totalValue: (row) => Number(row.rolls_on_hand),
           cell: (row) => formatDecimal(row.rolls_on_hand),
         },
         {
           id: "total_kg",
           header: "Total kg",
+          numeric: true,
+          totalValue: (row) => Number(row.total_kg),
           cell: (row) => formatDecimal(row.total_kg),
         },
       ];
@@ -311,11 +316,15 @@ export function MaterialsScreen() {
       {
         id: "rolls",
         header: "Rolls",
+        numeric: true,
+        totalValue: (row) => Number(row.rolls_on_hand),
         cell: (row) => formatDecimal(row.rolls_on_hand),
       },
       {
         id: "total_kg",
         header: "Total kg",
+        numeric: true,
+        totalValue: (row) => Number(row.total_kg),
         cell: (row) => formatDecimal(row.total_kg),
       },
     ];
@@ -372,6 +381,40 @@ export function MaterialsScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.materials", columnDefs);
   const listView = useListView("inventory.materials");
+
+  const buildExportParams = useCallback(() => {
+    const stock = materialsListQueryFromFilters(filters);
+    return {
+      search: search ?? undefined,
+      sort_by: effectiveSortBy,
+      sort_order: effectiveSortOrder,
+      company_id: companyId,
+      product_id: productId,
+      parent_id: micronId,
+      is_active: parseListActiveFilter(filters.active),
+      size: filters.size,
+      rolls: stock.rolls,
+      kg_lt: stock.kg_lt,
+      kg_gt: stock.kg_gt,
+    };
+  }, [
+    companyId,
+    effectiveSortBy,
+    effectiveSortOrder,
+    filters,
+    micronId,
+    productId,
+    search,
+  ]);
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.materials",
+    columnDefs,
+    exportPath: "/inventory/material-subcategories/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
 
   const emptyMessage = !productId
     ? "Select a product to view width variants."
@@ -515,6 +558,7 @@ export function MaterialsScreen() {
         <ListViewToolbarControls
           listView={listView}
           columnsDialog={columnsDialog}
+          exportDialog={exportDialog}
           mobileFullRow
         />
       </DataTableToolbar>
@@ -543,6 +587,7 @@ export function MaterialsScreen() {
         empty={<DataTableEmpty message={emptyMessage} />}
         sort={{ sortBy: effectiveSortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
+        columnTotals={meta?.column_totals ?? null}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
       />
       <CategoryQuickCreateDialog

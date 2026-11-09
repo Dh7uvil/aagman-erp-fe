@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useDeleteAdhesiveCode } from "@/modules/inventory/adhesive-codes/mutations";
@@ -32,6 +32,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import {
   LIST_ACTIVE_ALL,
@@ -119,6 +120,22 @@ export function AdhesiveCodesScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.adhesive_codes", columnDefs);
   const listView = useListView("inventory.adhesive_codes");
+  const buildExportParams = useCallback(() => ({
+    search: search ?? undefined,
+    sort_by: sortBy,
+    sort_order: sortBy ? sort_order : undefined,
+    is_active: isActive,
+  }), [isActive, sortBy, sort_order, search]);
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.adhesive_codes",
+    columnDefs,
+    exportPath: "/inventory/adhesive-codes/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   return (
     <ListPage>
@@ -159,7 +176,7 @@ export function AdhesiveCodesScreen() {
           ]}
         />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -189,6 +206,7 @@ export function AdhesiveCodesScreen() {
           />
         }
         empty={<DataTableEmpty message="No adhesive codes in master yet." />}
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}

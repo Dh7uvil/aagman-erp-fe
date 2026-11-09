@@ -24,6 +24,8 @@ export const micronsApi = {
         sort_order: params.sort_order,
         product_id: params.product_id,
         is_active: params.is_active,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: MicronListSchema.parse(result.data), meta: result.meta };

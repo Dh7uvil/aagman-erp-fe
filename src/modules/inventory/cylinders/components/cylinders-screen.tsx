@@ -2,7 +2,7 @@
 
 import { ImageIcon, Pause, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import {useEffect, useMemo, useState, useCallback} from "react";
 import { toast } from "sonner";
 
 import {
@@ -43,11 +43,15 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatFixedDecimal, multiplyDecimals } from "@/shared/lib/format";
 import { useCan } from "@/shared/providers/session-provider";
 
 function cylinderTotalCost(row: CylinderListItem): string {
+  if (row.total_cylinder_cost != null && String(row.total_cylinder_cost).trim()) {
+    return formatFixedDecimal(row.total_cylinder_cost, 2);
+  }
   if (row.cylinder_cost == null || !String(row.cylinder_cost).trim()) {
     return "—";
   }
@@ -137,7 +141,12 @@ export function CylindersScreen() {
         header: "Status",
         cell: (row) => <CylinderStatusBadge status={row.status} />,
       },
-      { id: "cylinder_count", header: "Cylinders", cell: (row) => String(row.cylinder_count) },
+      {
+        id: "cylinder_count",
+        header: "Cylinders",
+        numeric: true,
+        cell: (row) => String(row.cylinder_count),
+      },
     ];
     if (canViewPrice) {
       cols.push(
@@ -150,6 +159,7 @@ export function CylindersScreen() {
         {
           id: "total_cylinder_cost",
           header: "Total cost",
+        numeric: true,
           defaultVisible: false,
           cell: (row) => cylinderTotalCost(row),
         },
@@ -238,6 +248,24 @@ export function CylindersScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.cylinders", columnDefs);
   const listView = useListView("inventory.cylinders");
+  const buildExportParams = useCallback(() => ({
+    search: search ?? undefined,
+    sort_by: sortBy,
+    sort_order: sortBy ? sort_order : undefined,
+    company_id: companyId,
+    status,
+    include_closed: includeClosed,
+  }), [companyId, includeClosed, sortBy, sort_order, search, status]);
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.cylinders",
+    columnDefs,
+    exportPath: "/inventory/cylinders/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   async function confirmDelete() {
     if (!deleting) {
@@ -299,7 +327,7 @@ export function CylindersScreen() {
           ]}
         />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
       </DataTableToolbar>
       <ListView
         columns={columns}
@@ -317,6 +345,7 @@ export function CylindersScreen() {
           />
         }
         empty={<DataTableEmpty message="No cylinders found." />}
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}

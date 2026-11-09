@@ -238,59 +238,116 @@ export function MaterialHistoryCard({
         <CardHeader className="border-border/60 bg-muted/15 border-b pt-4 pb-3 [.border-b]:pb-3">
           <CardTitle className="text-base font-semibold tracking-tight">Stock in &amp; out</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0 sm:px-6 sm:pb-4 sm:pt-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Datetime</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Rolls</TableHead>
-                <TableHead>Kg</TableHead>
-                <TableHead>Company</TableHead>
-                {canViewPrice ? <TableHead>Price</TableHead> : null}
-                <TableHead>User</TableHead>
-                <TableHead>Note</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ledgerEntries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={canViewPrice ? 8 : 7} className="text-muted-foreground">
-                    No stock movements yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                ledgerEntries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="whitespace-nowrap text-sm">
+        <CardContent className="min-w-0 p-0 sm:px-6 sm:pb-4 sm:pt-0">
+          {ledgerEntries.length === 0 ? (
+            <p className="text-muted-foreground px-3 py-6 text-sm sm:px-0">No stock movements yet.</p>
+          ) : (
+            <ul className="flex flex-col gap-2 p-3 sm:hidden">
+              {ledgerEntries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="border-border/80 space-y-2 rounded-lg border px-3 py-2.5 text-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-muted-foreground text-xs tabular-nums">
                       {formatDateTime(entry.timestamp)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{stockDirectionLabel(entry)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {entry.rolls != null ? formatDecimal(qty(entry.rolls)) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {entry.kilograms != null ? formatDecimal(qty(entry.kilograms)) : "—"}
-                    </TableCell>
-                    <TableCell>{entry.company_name || "—"}</TableCell>
+                    </span>
+                    <Badge variant="outline">{stockDirectionLabel(entry)}</Badge>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    <div>
+                      <dt className="text-muted-foreground text-xs">Rolls</dt>
+                      <dd className="font-medium tabular-nums">
+                        {entry.rolls != null ? formatDecimal(qty(entry.rolls)) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground text-xs">Kg</dt>
+                      <dd className="font-medium tabular-nums">
+                        {entry.kilograms != null ? formatDecimal(qty(entry.kilograms)) : "—"}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-muted-foreground text-xs">Company</dt>
+                      <dd>{entry.company_name || "—"}</dd>
+                    </div>
                     {canViewPrice ? (
-                      <TableCell>
-                        {entry.price_per_unit != null
-                          ? formatPricePerUnit(qty(entry.price_per_unit), entry.price_unit_code)
-                          : "—"}
-                      </TableCell>
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground text-xs">Price</dt>
+                        <dd className="font-medium tabular-nums">
+                          {entry.price_per_unit != null
+                            ? formatPricePerUnit(qty(entry.price_per_unit), entry.price_unit_code)
+                            : "—"}
+                        </dd>
+                      </div>
                     ) : null}
-                    <TableCell>{entry.user?.name ?? "—"}</TableCell>
-                    <TableCell className="max-w-[14rem] truncate text-sm">
-                      {entry.note ?? "—"}
+                    <div>
+                      <dt className="text-muted-foreground text-xs">User</dt>
+                      <dd>{entry.user?.name ?? "—"}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-muted-foreground text-xs">Note</dt>
+                      <dd className="break-words">{entry.note ?? "—"}</dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="hidden min-w-0 sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Datetime</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Rolls</TableHead>
+                  <TableHead>Kg</TableHead>
+                  <TableHead>Company</TableHead>
+                  {canViewPrice ? <TableHead>Price</TableHead> : null}
+                  <TableHead>User</TableHead>
+                  <TableHead>Note</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ledgerEntries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={canViewPrice ? 8 : 7} className="text-muted-foreground">
+                      No stock movements yet.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  ledgerEntries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {formatDateTime(entry.timestamp)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{stockDirectionLabel(entry)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {entry.rolls != null ? formatDecimal(qty(entry.rolls)) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {entry.kilograms != null ? formatDecimal(qty(entry.kilograms)) : "—"}
+                      </TableCell>
+                      <TableCell>{entry.company_name || "—"}</TableCell>
+                      {canViewPrice ? (
+                        <TableCell>
+                          {entry.price_per_unit != null
+                            ? formatPricePerUnit(qty(entry.price_per_unit), entry.price_unit_code)
+                            : "—"}
+                        </TableCell>
+                      ) : null}
+                      <TableCell>{entry.user?.name ?? "—"}</TableCell>
+                      <TableCell className="max-w-[14rem] truncate text-sm">
+                        {entry.note ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

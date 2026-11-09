@@ -92,7 +92,7 @@ export function CylinderCloneDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent mobileSheet className="sm:max-w-[min(28rem,calc(100vw-1.5rem))]">
         <DialogHeader>
           <DialogTitle>Clone cylinder</DialogTitle>
         </DialogHeader>

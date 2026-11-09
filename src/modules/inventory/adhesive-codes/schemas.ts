@@ -78,4 +78,5 @@ export type AdhesiveCodeListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   is_active?: boolean;
+  include_column_totals?: boolean;
 };

@@ -213,6 +213,7 @@ export function MaterialProductViewScreen({ materialId }: { materialId: string }
           editHref={editHref}
           canUpdate={canUpdate}
           mode="view"
+          splitSecondaryActionsOnMobile
           extraActions={
             <>
               {canUpdate && selectedMicronId ? (

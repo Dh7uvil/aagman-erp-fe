@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { adhesiveBrandsApi, adhesivesApi } from "@/modules/inventory/adhesives/api";
 import type { AdhesiveBrandListParams, AdhesiveListParams } from "@/modules/inventory/adhesives/schemas";
 
@@ -34,7 +36,7 @@ export function useAllAdhesiveBrands(enabled = true) {
 export function useAdhesives(params: AdhesiveListParams) {
   return useQuery({
     queryKey: adhesiveKeys.list(params),
-    queryFn: () => adhesivesApi.list(params),
+    queryFn: () => adhesivesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }
@@ -74,7 +76,7 @@ export function useAdhesiveLineHistorySummary(lineId: string) {
 export function useAdhesiveBrandsList(params: AdhesiveBrandListParams, enabled = true) {
   return useQuery({
     queryKey: adhesiveBrandKeys.list(params),
-    queryFn: () => adhesiveBrandsApi.list(params),
+    queryFn: () => adhesiveBrandsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
     enabled,
   });

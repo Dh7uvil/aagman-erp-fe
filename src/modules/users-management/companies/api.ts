@@ -21,6 +21,8 @@ export const companiesApi = {
         search: params.search,
         sort_by: params.sort_by,
         sort_order: params.sort_order,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: CompanyListSchema.parse(result.data), meta: result.meta };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useSolventDayReport } from "@/modules/inventory/solvent-movements/queries";
 import type { SolventDayReportRow } from "@/modules/inventory/solvent-movements/schemas";
@@ -18,6 +18,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useCan } from "@/shared/providers/session-provider";
 
 function todayIsoDate(): string {
@@ -30,7 +31,8 @@ export function SolventMovementsScreen() {
   const [startDate, setStartDate] = useState(todayIsoDate);
   const [endDate, setEndDate] = useState(todayIsoDate);
   const reportQuery = useSolventDayReport(startDate, endDate);
-  const reportRows = reportQuery.data ?? [];
+  const reportRows = reportQuery.data?.data ?? [];
+  const reportMeta = reportQuery.data?.meta;
 
   const columnDefs = useMemo((): Array<DataTableColumn<SolventDayReportRow>> => {
     const cols: Array<DataTableColumn<SolventDayReportRow>> = [
@@ -41,26 +43,40 @@ export function SolventMovementsScreen() {
         header: "Name",
         cell: (row) => row.name,
       },
-      { id: "in_drums", header: "In drums", cell: (row) => formatDecimal(row.in_drums) },
+      {
+        id: "in_drums",
+        header: "In drums",
+        numeric: true,
+        cell: (row) => formatDecimal(row.in_drums),
+      },
       {
         id: "in_qty",
         header: "In qty",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.in_qty)} ${row.drum_unit_code}`,
       },
-      { id: "out_drums", header: "Out drums", cell: (row) => formatDecimal(row.out_drums) },
+      {
+        id: "out_drums",
+        header: "Out drums",
+        numeric: true,
+        cell: (row) => formatDecimal(row.out_drums),
+      },
       {
         id: "out_qty",
         header: "Out qty",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.out_qty)} ${row.drum_unit_code}`,
       },
       {
         id: "closing_drums",
         header: "Closing drums",
+        numeric: true,
         cell: (row) => formatDecimal(row.closing_drums),
       },
       {
         id: "closing_qty",
         header: "Closing qty",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.closing_qty)} ${row.drum_unit_code}`,
       },
     ];
@@ -80,6 +96,23 @@ export function SolventMovementsScreen() {
     { pinnedCount: 0 },
   );
   const listView = useListView("inventory.solvents_report");
+
+  const buildExportParams = useCallback(
+    () => ({
+      start_date: startDate,
+      end_date: endDate,
+    }),
+    [startDate, endDate],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.solvents_report",
+    columnDefs,
+    exportPath: "/inventory/solvent-movements/report/export",
+    buildParams: buildExportParams,
+    filteredRowCount: reportMeta?.total,
+    enabled: true,
+  });
 
   return (
     <ListPage>
@@ -105,7 +138,7 @@ export function SolventMovementsScreen() {
             setEndDate(today);
           }}
         />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
       </DataTableToolbar>
       <ListView
         columns={columns}
@@ -121,6 +154,7 @@ export function SolventMovementsScreen() {
             onRetry={() => reportQuery.refetch()}
           />
         }
+        columnTotals={reportQuery.data?.meta?.column_totals ?? null}
         empty={<DataTableEmpty message="No solvent movements for this date." />}
         listView={listView}
       />

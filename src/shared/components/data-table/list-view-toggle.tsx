@@ -62,11 +62,13 @@ export function ListViewToggle({
 export function ListViewToolbarControls({
   listView,
   columnsDialog,
+  exportDialog,
   mobileFullRow = false,
   className,
 }: {
   listView: ReturnType<typeof useListView>;
   columnsDialog?: ReactNode;
+  exportDialog?: ReactNode;
   mobileFullRow?: boolean;
   className?: string;
 }) {
@@ -82,6 +84,7 @@ export function ListViewToolbarControls({
       )}
     >
       <ListViewToggle view={listView.view} setView={listView.setView} />
+      {exportDialog ? <div className="shrink-0">{exportDialog}</div> : null}
       {columnsDialog ? <div className="shrink-0">{columnsDialog}</div> : null}
     </div>
   );

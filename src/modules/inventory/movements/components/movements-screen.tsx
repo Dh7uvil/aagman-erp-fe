@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useDayReport } from "@/modules/inventory/movements/queries";
 import type { DayReportRow } from "@/modules/inventory/movements/schemas";
@@ -18,6 +18,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useCan } from "@/shared/providers/session-provider";
 
 function todayIsoDate(): string {
@@ -30,7 +31,8 @@ export function MovementsScreen() {
   const [startDate, setStartDate] = useState(todayIsoDate);
   const [endDate, setEndDate] = useState(todayIsoDate);
   const reportQuery = useDayReport(startDate, endDate);
-  const reportRows = reportQuery.data ?? [];
+  const reportRows = reportQuery.data?.data ?? [];
+  const reportMeta = reportQuery.data?.meta;
 
   const columnDefs = useMemo((): Array<DataTableColumn<DayReportRow>> => {
     const cols: Array<DataTableColumn<DayReportRow>> = [
@@ -49,16 +51,32 @@ export function MovementsScreen() {
         header: "Size",
         cell: (row) => formatDecimal(row.size) + (row.size_unit_code ? ` ${row.size_unit_code}` : ""),
       },
-      { id: "in_rolls", header: "In rolls", cell: (row) => formatDecimal(row.in_rolls) },
-      { id: "in_kg", header: "In kg", cell: (row) => formatDecimal(row.in_kg) },
-      { id: "out_rolls", header: "Out rolls", cell: (row) => formatDecimal(row.out_rolls) },
-      { id: "out_kg", header: "Out kg", cell: (row) => formatDecimal(row.out_kg) },
+      {
+        id: "in_rolls",
+        header: "In rolls",
+        numeric: true,
+        cell: (row) => formatDecimal(row.in_rolls),
+      },
+      { id: "in_kg", header: "In kg", numeric: true, cell: (row) => formatDecimal(row.in_kg) },
+      {
+        id: "out_rolls",
+        header: "Out rolls",
+        numeric: true,
+        cell: (row) => formatDecimal(row.out_rolls),
+      },
+      { id: "out_kg", header: "Out kg", numeric: true, cell: (row) => formatDecimal(row.out_kg) },
       {
         id: "closing_rolls",
         header: "Closing rolls",
+        numeric: true,
         cell: (row) => formatDecimal(row.closing_rolls),
       },
-      { id: "closing_kg", header: "Closing kg", cell: (row) => formatDecimal(row.closing_kg) },
+      {
+        id: "closing_kg",
+        header: "Closing kg",
+        numeric: true,
+        cell: (row) => formatDecimal(row.closing_kg),
+      },
     ];
     if (canViewPrice) {
       cols.push({
@@ -82,6 +100,23 @@ export function MovementsScreen() {
     { pinnedCount: 0 },
   );
   const listView = useListView("inventory.materials_report");
+
+  const buildExportParams = useCallback(
+    () => ({
+      start_date: startDate,
+      end_date: endDate,
+    }),
+    [startDate, endDate],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.materials_report",
+    columnDefs,
+    exportPath: "/inventory/material-movements/report/export",
+    buildParams: buildExportParams,
+    filteredRowCount: reportMeta?.total,
+    enabled: true,
+  });
 
   return (
     <ListPage>
@@ -107,7 +142,7 @@ export function MovementsScreen() {
             setEndDate(today);
           }}
         />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
       </DataTableToolbar>
       <ListView
         columns={columns}
@@ -123,6 +158,7 @@ export function MovementsScreen() {
             onRetry={() => reportQuery.refetch()}
           />
         }
+        columnTotals={reportQuery.data?.meta?.column_totals ?? null}
         empty={<DataTableEmpty message="No active materials to report." />}
         listView={listView}
       />

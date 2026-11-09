@@ -47,6 +47,7 @@ export const cylindersApi = {
         status: params.status,
         company_id: params.company_id,
         include_closed: params.include_closed,
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: CylinderListSchema.parse(result.data), meta: result.meta };

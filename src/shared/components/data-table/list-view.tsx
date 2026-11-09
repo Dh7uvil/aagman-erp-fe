@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { DataTableColumnHeads, DataTableCells } from "@/shared/components/data-table/column-cells";
+import { DataTableNumericFooter } from "@/shared/components/data-table/data-table-numeric-footer";
 import { DataTableCards } from "@/shared/components/data-table/data-table-cards";
 import { DataTable } from "@/shared/components/data-table/data-table";
 import type { DataTableColumn } from "@/shared/components/data-table/columns";
@@ -36,6 +37,7 @@ export function ListView<T>({
   sort,
   listView,
   footer,
+  columnTotals,
   className,
 }: {
   columns: readonly DataTableColumn<T>[];
@@ -58,6 +60,7 @@ export function ListView<T>({
     mounted: boolean;
   };
   footer?: ReactNode;
+  columnTotals?: Record<string, string> | null;
   className?: string;
 }) {
   const isMobile = useMediaQuery("(max-width: 767px)");
@@ -138,6 +141,9 @@ export function ListView<T>({
             ))
           )}
         </TableBody>
+        {columnTotals && rows.length > 0 && !isLoading && !isError ? (
+          <DataTableNumericFooter columns={columns} columnTotals={columnTotals} />
+        ) : null}
       </DataTable>
     </div>
   ) : null;

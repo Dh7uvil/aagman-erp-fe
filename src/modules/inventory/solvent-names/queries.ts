@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { solventNamesApi } from "@/modules/inventory/solvent-names/api";
 import type { SolventNameListParams } from "@/modules/inventory/solvent-names/schemas";
 
@@ -17,7 +19,7 @@ export const solventNameKeys = {
 export function useSolventNames(params: SolventNameListParams) {
   return useQuery({
     queryKey: solventNameKeys.list(params),
-    queryFn: () => solventNamesApi.list(params),
+    queryFn: () => solventNamesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

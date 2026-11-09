@@ -55,4 +55,5 @@ export type WarehouseListParams = {
   sort_order?: "asc" | "desc";
   is_active?: boolean;
   is_default?: boolean;
+  include_column_totals?: boolean;
 };

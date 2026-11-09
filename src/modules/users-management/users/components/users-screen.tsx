@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, KeyRound, UserCheck, UserPlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DeactivateUserDialog } from "@/modules/users-management/users/components/deactivate-user-dialog";
 import { ResetUserPasswordDialog } from "@/modules/users-management/users/components/reset-user-password-dialog";
@@ -26,6 +26,7 @@ import { DataTableRowActions, hasRowActions } from "@/shared/components/data-tab
 import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
 import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
@@ -231,6 +232,28 @@ export function UsersScreen() {
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.users", columnDefs);
   const listView = useListView("identity.users");
 
+  const buildExportParams = useCallback(
+    () =>
+      userListParamsFromTable({
+        page,
+        page_size,
+        search,
+        sort_by,
+        sort_order,
+        filters,
+      }),
+    [filters, page, page_size, search, sort_by, sort_order],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "identity.users",
+    columnDefs,
+    exportPath: "/users/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
   return (
     <ListPage>
       <PageHeader
@@ -245,7 +268,11 @@ export function UsersScreen() {
           ) : undefined
         }
       />
-      <UsersTableFilters columnsDialog={columnsDialog} listView={listView} />
+      <UsersTableFilters
+        columnsDialog={columnsDialog}
+        listView={listView}
+        exportDialog={exportDialog}
+      />
       <ListView
         columns={columns}
         colSpan={colSpan}
@@ -265,6 +292,7 @@ export function UsersScreen() {
           <DataTableEmpty title="No users found" message="Try a different search or filter." />
         }
         sort={{ sortBy: sort_by, sortOrder: sort_order, onSort: setParams }}
+        columnTotals={meta?.column_totals ?? null}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
       />

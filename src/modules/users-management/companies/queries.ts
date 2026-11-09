@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { companiesApi } from "@/modules/users-management/companies/api";
 import type { CompanyListParams } from "@/modules/users-management/companies/schemas";
 
@@ -14,7 +16,7 @@ export const companyKeys = {
 export function useCompanies(params: CompanyListParams) {
   return useQuery({
     queryKey: companyKeys.list(params),
-    queryFn: () => companiesApi.list(params),
+    queryFn: () => companiesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

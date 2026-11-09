@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { adhesiveCodesApi } from "@/modules/inventory/adhesive-codes/api";
 import type { AdhesiveCodeListParams } from "@/modules/inventory/adhesive-codes/schemas";
 
@@ -17,7 +19,7 @@ export const adhesiveCodeKeys = {
 export function useAdhesiveCodes(params: AdhesiveCodeListParams) {
   return useQuery({
     queryKey: adhesiveCodeKeys.list(params),
-    queryFn: () => adhesiveCodesApi.list(params),
+    queryFn: () => adhesiveCodesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

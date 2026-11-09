@@ -23,6 +23,8 @@ export const departmentsApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         branch_id: params.branch_id,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: DepartmentListSchema.parse(result.data), meta: result.meta };

@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { branchesApi } from "@/modules/users-management/branches/api";
 import type { BranchListParams } from "@/modules/users-management/branches/schemas";
 
@@ -15,7 +17,7 @@ export const branchKeys = {
 export function useBranches(params: BranchListParams) {
   return useQuery({
     queryKey: branchKeys.list(params),
-    queryFn: () => branchesApi.list(params),
+    queryFn: () => branchesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

@@ -38,4 +38,5 @@ export type CylinderReturnListParams = {
   sort_order?: "asc" | "desc";
   company_id?: string;
   cylinder_id?: string;
+  include_column_totals?: boolean;
 };

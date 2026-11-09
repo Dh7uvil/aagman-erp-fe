@@ -214,9 +214,11 @@ export function userListParamsFromTable(input: {
 export function UsersTableFilters({
   columnsDialog,
   listView,
+  exportDialog,
 }: {
   columnsDialog?: ReactNode;
   listView?: ReturnType<typeof useListView>;
+  exportDialog?: ReactNode;
 }) {
   const { search, sort_by, sort_order, filters, setParams } = useTableParams();
   const extraFilters = extraFromUrl(filters);
@@ -592,6 +594,7 @@ export function UsersTableFilters({
         <ListViewToolbarControls
           listView={listView}
           columnsDialog={columnsDialog}
+          exportDialog={exportDialog}
           mobileFullRow
         />
       ) : (

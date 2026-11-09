@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { WarehouseFormDialog } from "@/modules/users-management/warehouses/components/warehouse-form-dialog";
@@ -32,6 +32,7 @@ import { PageHeader } from "@/shared/components/layout/page-header";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import {
   LIST_ACTIVE_ALL,
@@ -152,6 +153,21 @@ export function WarehousesScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.warehouses", columnDefs);
   const listView = useListView("identity.warehouses");
+  const buildExportParams = useCallback(() => ({
+    search: search ?? undefined,
+    sort_by: sortBy,
+    sort_order: sortBy ? sort_order : undefined,
+  }), [sortBy, sort_order, search]);
+
+  const { exportDialog } = useReportExport({
+    tableKey: "identity.warehouses",
+    columnDefs,
+    exportPath: "/warehouses/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   return (
     <ListPage>
@@ -195,7 +211,7 @@ export function WarehousesScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -234,6 +250,7 @@ export function WarehousesScreen() {
             message="Try a different search or filter."
           />
         }
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
