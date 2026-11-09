@@ -44,7 +44,16 @@ import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
 import { useTableParams } from "@/shared/hooks/use-table-params";
+import { formatFixedDecimal, multiplyDecimals } from "@/shared/lib/format";
 import { useCan } from "@/shared/providers/session-provider";
+
+function cylinderTotalCost(row: CylinderListItem): string {
+  if (row.cylinder_cost == null || !String(row.cylinder_cost).trim()) {
+    return "—";
+  }
+  const total = multiplyDecimals(row.cylinder_cost, String(row.cylinder_count));
+  return total != null ? formatFixedDecimal(total, 2) : "—";
+}
 
 const SORT_FIELDS: SortFieldOption[] = [
   { value: "cylinder_number", label: "Cylinder number" },
@@ -131,12 +140,20 @@ export function CylindersScreen() {
       { id: "cylinder_count", header: "Cylinders", cell: (row) => String(row.cylinder_count) },
     ];
     if (canViewPrice) {
-      cols.push({
-        id: "cylinder_cost",
-        header: "Cylinder cost",
-        defaultVisible: false,
-        cell: (row) => row.cylinder_cost ?? "—",
-      });
+      cols.push(
+        {
+          id: "cylinder_cost",
+          header: "Cylinder cost",
+          defaultVisible: false,
+          cell: (row) => row.cylinder_cost ?? "—",
+        },
+        {
+          id: "total_cylinder_cost",
+          header: "Total cost",
+          defaultVisible: false,
+          cell: (row) => cylinderTotalCost(row),
+        },
+      );
     }
     cols.push(
       { id: "pet_size", header: "Pet size", defaultVisible: false, cell: (row) => row.pet_size ?? "—" },

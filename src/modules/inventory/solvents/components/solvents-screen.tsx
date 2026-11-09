@@ -192,7 +192,7 @@ export function SolventsScreen() {
           ),
       },
       {
-        id: "code",
+        id: "name",
         header: "Name",
         cell: (row) => row.name,
       },
@@ -307,7 +307,7 @@ export function SolventsScreen() {
         <ListSearch
           value={search ?? ""}
           onChange={(value) => setParams({ search: value || null })}
-          placeholder="Search company, brand, or code…"
+          placeholder="Search company, brand, or name…"
         />
         <FilterSelect
           label="Company"

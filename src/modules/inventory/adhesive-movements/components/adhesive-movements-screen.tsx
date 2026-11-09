@@ -37,7 +37,7 @@ export function AdhesiveMovementsScreen() {
       { id: "company", header: "Company", cell: (row) => row.company_name },
       { id: "brand", header: "Brand", cell: (row) => row.brand_name },
       {
-        id: "color",
+        id: "code",
         header: "Code",
         cell: (row) => row.code,
       },
