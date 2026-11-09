@@ -78,7 +78,7 @@ export function DataTablePanel({
   return (
     <div
       ref={ref}
-      className={cn(LIST_TABLE_PANEL_CLASS, className)}
+      className={cn(LIST_TABLE_PANEL_CLASS, "min-w-0", className)}
       style={maxHeight === undefined ? undefined : { maxHeight }}
     >
       {children}

@@ -114,7 +114,13 @@ export function AuditLogDetailSheet({
               <div className="space-y-2.5">
                 <InfoRow label="User" value={log.user?.name ?? "Unknown"} />
                 <InfoRow label="Module" value={titleCase(log.module)} />
-                <InfoRow label="Entity ID" value={log.entity_id ?? "—"} />
+                <InfoRow
+                  label="Record"
+                  value={log.entity_label?.trim() || log.entity_id || "—"}
+                />
+                {log.entity_id && log.entity_label?.trim() ? (
+                  <InfoRow label="Entity ID" value={log.entity_id} />
+                ) : null}
                 <InfoRow label="IP address" value={log.ip_address ?? "—"} />
                 <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-[7.5rem_1fr] sm:items-center sm:gap-3">
                   <span className="text-muted-foreground">Status</span>

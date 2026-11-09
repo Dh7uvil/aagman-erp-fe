@@ -36,6 +36,7 @@ import {
 import { FormDialogFooter } from "@/shared/components/form/form-dialog-footer";
 import { FormDialogHeader } from "@/shared/components/form/form-dialog-header";
 import { MasterSelect } from "@/shared/components/form/master-select";
+import { SearchableSelect } from "@/shared/components/form/searchable-select";
 import { Dialog, DialogContent } from "@/shared/components/ui/dialog";
 import {
   Form,
@@ -46,13 +47,6 @@ import {
   FormMessage,
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { applyFieldErrors } from "@/shared/lib/form-errors";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useFormResetOnDialogOpen } from "@/shared/hooks/use-form-reset-on-dialog-open";
@@ -173,7 +167,7 @@ export function DepartmentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent nested={nested} className="sm:max-w-2xl">
+      <DialogContent nested={nested} className="max-w-[min(42rem,calc(100vw-1.5rem))]">
         <FormDialogHeader
           title={formDialogTitle("Department", mode)}
           entity="Department"
@@ -228,25 +222,18 @@ export function DepartmentFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Manager</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={usersQuery.isLoading || readOnly}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Optional" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={DEPARTMENT_SELECT_NONE}>None</SelectItem>
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={usersQuery.isLoading || readOnly}
+                          placeholder="Optional"
+                          options={[
+                            { value: DEPARTMENT_SELECT_NONE, label: "None" },
+                            ...users.map((user) => ({ value: user.id, label: user.name })),
+                          ]}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

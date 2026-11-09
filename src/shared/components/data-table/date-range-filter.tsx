@@ -2,6 +2,7 @@
 
 import { FilterField } from "@/shared/components/data-table/more-filters-dialog";
 import { toolbarLabelClass } from "@/shared/components/data-table/toolbar";
+import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { cn } from "@/shared/lib/cn";
@@ -18,6 +19,8 @@ export function DateRangeFilter({
   disabled = false,
   layout = "stacked",
   className,
+  showToday = false,
+  onToday,
 }: {
   from: string;
   to: string;
@@ -30,6 +33,8 @@ export function DateRangeFilter({
   disabled?: boolean;
   layout?: "stacked" | "inline";
   className?: string;
+  showToday?: boolean;
+  onToday?: () => void;
 }) {
   if (layout === "inline") {
     return (
@@ -63,6 +68,11 @@ export function DateRangeFilter({
             onChange={(event) => onToChange(event.target.value)}
           />
         </div>
+        {showToday && onToday ? (
+          <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={onToday}>
+            Today
+          </Button>
+        ) : null}
       </div>
     );
   }

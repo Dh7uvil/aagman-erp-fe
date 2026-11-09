@@ -69,7 +69,7 @@ export function UnitQuickCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <FormDialogHeader title="New unit" entity="Unit" />
         <Form {...form}>
           <form onSubmit={isolatedFormSubmitHandler(form, onSubmit)} className="space-y-4">

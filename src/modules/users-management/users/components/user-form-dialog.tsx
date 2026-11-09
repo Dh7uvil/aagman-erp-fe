@@ -281,7 +281,7 @@ export function UserFormDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-[min(48rem,calc(100vw-1.5rem))]">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit User" : "New User"}</DialogTitle>
         </DialogHeader>

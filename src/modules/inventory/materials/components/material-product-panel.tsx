@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 import { formatMicronLabel, formatPricePerUnit } from "@/modules/inventory/format";
 import type { Micron } from "@/modules/inventory/microns/schemas";
@@ -10,6 +10,7 @@ import type { Material } from "@/modules/inventory/materials/schemas";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import { ActiveBadge } from "@/shared/components/feedback/active-badge";
 import { Button } from "@/shared/components/ui/button";
+import { Card } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { formatDecimal } from "@/shared/lib/format";
@@ -217,7 +218,119 @@ export function MaterialVariantTable({
   const headCenter = cn(headBase, "text-center");
   const cellCenter = "px-3 py-3 text-center align-middle";
 
-  return (
+  function variantHighlightClass(material: Material) {
+    return cn(
+      selectableWidths && "cursor-pointer",
+      selectableWidths &&
+        highlightMaterialId !== material.id &&
+        previewMaterialId !== material.id &&
+        "hover:bg-muted/45",
+      highlightMaterialId === material.id && "bg-primary/5",
+      previewMaterialId === material.id &&
+        previewMaterialId !== highlightMaterialId &&
+        "bg-muted/60",
+    );
+  }
+
+  function variantSelectHandler(material: Material) {
+    return selectableWidths
+      ? (event: MouseEvent) => {
+          if (isRowActionTarget(event.target)) {
+            return;
+          }
+          onWidthSelect?.(material);
+        }
+      : undefined;
+  }
+
+  const emptyContent = (
+    <>
+      <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+      {emptyAction ? <div className="mt-3 flex justify-center">{emptyAction}</div> : null}
+    </>
+  );
+
+  const variantCards = (
+    <ul className="flex flex-col gap-2.5 lg:hidden">
+      {materials.length === 0 ? (
+        <li className="px-4 py-10 text-center">{emptyContent}</li>
+      ) : (
+        materials.map((material) => (
+          <li key={material.id}>
+            <Card
+              className={cn("overflow-hidden py-0", variantHighlightClass(material))}
+              onMouseEnter={selectableWidths ? () => onWidthHover?.(material) : undefined}
+              onClick={variantSelectHandler(material)}
+            >
+              <div className="flex flex-col gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="text-muted-foreground text-xs font-medium">{`Width (${sizeUnitCode})`}</p>
+                  <p
+                    className={cn(
+                      "font-medium tabular-nums",
+                      selectableWidths &&
+                        highlightMaterialId === material.id &&
+                        "text-primary",
+                    )}
+                  >
+                    {widthCellContent(material, sizeUnitCode, linkWidths)}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Total rolls</p>
+                    <p className="tabular-nums font-medium">{formatDecimal(material.rolls_on_hand)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Total kg</p>
+                    <p className="tabular-nums font-medium">
+                      {formatDecimal(material.total_kg)}
+                      {material.unit_code ? (
+                        <span className="text-muted-foreground ml-1 text-xs uppercase">
+                          {material.unit_code}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground ml-1 text-xs uppercase">kg</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Status</p>
+                    <ActiveBadge active={material.is_active} />
+                  </div>
+                  {canViewPrice ? (
+                    <div>
+                      <p className="text-muted-foreground text-xs font-medium">Avg price</p>
+                      <p className="tabular-nums text-sm">
+                        {formatPricePerUnit(
+                          material.avg_price_per_unit ?? null,
+                          material.price_unit_code,
+                        )}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+                {showActionsColumn ? (
+                  <div
+                    className="flex flex-wrap items-center gap-0.5"
+                    data-row-action
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {rowActions?.(material) ?? (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+          </li>
+        ))
+      )}
+    </ul>
+  );
+
+  const variantTable = (
+    <div className="hidden lg:block">
     <Table className="table-fixed">
       <colgroup>
         {variantColWidths.map((width, index) => (
@@ -242,36 +355,16 @@ export function MaterialVariantTable({
         {materials.length === 0 ? (
           <TableRow>
             <TableCell colSpan={colSpan} className="px-4 py-10 text-center">
-              <p className="text-muted-foreground text-sm">{emptyMessage}</p>
-              {emptyAction ? <div className="mt-3 flex justify-center">{emptyAction}</div> : null}
+              {emptyContent}
             </TableCell>
           </TableRow>
         ) : (
           materials.map((material) => (
             <TableRow
               key={material.id}
-              className={cn(
-                selectableWidths && "cursor-pointer",
-                selectableWidths &&
-                  highlightMaterialId !== material.id &&
-                  previewMaterialId !== material.id &&
-                  "hover:bg-muted/45",
-                highlightMaterialId === material.id && "bg-primary/5",
-                previewMaterialId === material.id &&
-                  previewMaterialId !== highlightMaterialId &&
-                  "bg-muted/60",
-              )}
+              className={variantHighlightClass(material)}
               onMouseEnter={selectableWidths ? () => onWidthHover?.(material) : undefined}
-              onClick={
-                selectableWidths
-                  ? (event) => {
-                      if (isRowActionTarget(event.target)) {
-                        return;
-                      }
-                      onWidthSelect?.(material);
-                    }
-                  : undefined
-              }
+              onClick={variantSelectHandler(material)}
             >
               <TableCell
                 className={cn(
@@ -327,6 +420,14 @@ export function MaterialVariantTable({
         )}
       </TableBody>
     </Table>
+    </div>
+  );
+
+  return (
+    <>
+      {variantCards}
+      {variantTable}
+    </>
   );
 }
 

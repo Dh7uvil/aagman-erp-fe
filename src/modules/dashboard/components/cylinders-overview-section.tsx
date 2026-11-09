@@ -80,7 +80,6 @@ export function CylindersOverviewSection({ rangeParams }: { rangeParams: Dashboa
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Cylinders</h2>
         <p className="text-muted-foreground text-sm">
           Production jobs, cylinder circulation, and returns for the selected period.
         </p>
@@ -93,7 +92,7 @@ export function CylindersOverviewSection({ rangeParams }: { rangeParams: Dashboa
       <div
         className={
           canViewPrice
-            ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+            ? "grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5"
             : "grid grid-cols-2 gap-3 lg:grid-cols-4"
         }
       >

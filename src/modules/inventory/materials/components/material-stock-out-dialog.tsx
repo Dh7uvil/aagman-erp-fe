@@ -16,6 +16,7 @@ import { useAllMaterials } from "@/modules/inventory/materials/queries";
 import type { Material } from "@/modules/inventory/materials/schemas";
 import { useCreateMovement } from "@/modules/inventory/movements/mutations";
 import { getErrorMessage } from "@/shared/api/errors";
+import { SearchableSelect } from "@/shared/components/form/searchable-select";
 import { FormDialogFooter } from "@/shared/components/form/form-dialog-footer";
 import { FormDialogHeader } from "@/shared/components/form/form-dialog-header";
 import {
@@ -27,13 +28,6 @@ import {
   FormMessage,
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent } from "@/shared/components/ui/dialog";
@@ -94,27 +88,21 @@ function MaterialStockOutFields({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Width</FormLabel>
-              <Select
-                value={field.value || undefined}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  onMaterialIdChange(value);
-                  form.clearErrors(["rolls", "kilograms"]);
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select width" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {activeMaterials.map((row) => (
-                    <SelectItem key={row.id} value={row.id}>
-                      {row.size_label || formatDecimal(row.size)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <SearchableSelect
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    onMaterialIdChange(value);
+                    form.clearErrors(["rolls", "kilograms"]);
+                  }}
+                  placeholder="Select width"
+                  options={activeMaterials.map((row) => ({
+                    value: row.id,
+                    label: row.size_label || formatDecimal(row.size),
+                  }))}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -302,7 +290,7 @@ function MaterialStockOutDialogWithPicker({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <FormDialogHeader title="Stock out" entity="Material" />
         <Form {...form}>
           <form
@@ -312,8 +300,9 @@ function MaterialStockOutDialogWithPicker({
             <div className="space-y-3">
               <div className="grid gap-2">
                 <Label>Company</Label>
-                <Select
-                  value={companyId || undefined}
+                <SearchableSelect
+                  asFormControl={false}
+                  value={companyId}
                   onValueChange={(value) => {
                     setCompanyId(value);
                     setProductId("");
@@ -321,23 +310,15 @@ function MaterialStockOutDialogWithPicker({
                     setSelectedMaterialId("");
                     form.setValue("material_id", "");
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select company"
+                  options={companies.map((row) => ({ value: row.id, label: row.name }))}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Product</Label>
-                <Select
-                  value={productId || undefined}
+                <SearchableSelect
+                  asFormControl={false}
+                  value={productId}
                   disabled={!companyId}
                   onValueChange={(value) => {
                     setProductId(value);
@@ -345,45 +326,24 @@ function MaterialStockOutDialogWithPicker({
                     setSelectedMaterialId("");
                     form.setValue("material_id", "");
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={companyId ? "Select product" : "Select company first"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={companyId ? "Select product" : "Select company first"}
+                  options={categories.map((row) => ({ value: row.id, label: row.name }))}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Micron</Label>
-                <Select
-                  value={micronId || undefined}
+                <SearchableSelect
+                  asFormControl={false}
+                  value={micronId}
                   disabled={!productId}
                   onValueChange={(value) => {
                     setMicronId(value);
                     setSelectedMaterialId("");
                     form.setValue("material_id", "");
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={productId ? "Select micron" : "Select product first"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {microns.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={productId ? "Select micron" : "Select product first"}
+                  options={microns.map((row) => ({ value: row.id, label: row.name }))}
+                />
               </div>
             </div>
             <MaterialStockOutFields
@@ -493,7 +453,7 @@ function MaterialStockOutDialogScoped({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <FormDialogHeader title="Stock out" entity="Material" />
         <Form {...form}>
           <form

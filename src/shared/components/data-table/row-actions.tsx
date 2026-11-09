@@ -56,16 +56,27 @@ function wrapLabeledActions(node: ReactNode): ReactNode {
     if (child.type === TableActionTooltip) {
       return child;
     }
-    const props = child.props as { "aria-label"?: string; title?: string };
+    const props = child.props as {
+      "aria-label"?: string;
+      title?: string;
+      children?: ReactNode;
+    };
     const label = props["aria-label"] ?? props.title;
-    if (!label) {
-      return child;
+    if (label) {
+      return (
+        <TableActionTooltip label={label}>
+          {cloneElement(child as ReactElement<Record<string, unknown>>, { title: undefined })}
+        </TableActionTooltip>
+      );
     }
-    return (
-      <TableActionTooltip label={label}>
-        {cloneElement(child as ReactElement<Record<string, unknown>>, { title: undefined })}
-      </TableActionTooltip>
-    );
+    if (props.children != null) {
+      return cloneElement(
+        child as ReactElement<Record<string, unknown>>,
+        {},
+        wrapLabeledActions(props.children),
+      );
+    }
+    return child;
   });
 }
 

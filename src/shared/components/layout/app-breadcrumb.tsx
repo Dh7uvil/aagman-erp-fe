@@ -41,11 +41,11 @@ export function AppBreadcrumb() {
         </nav>
       ) : null}
       <nav
-        className="hidden min-w-0 items-center gap-1.5 text-xs sm:flex"
+        className="hidden min-w-0 max-w-full items-center gap-1.5 overflow-hidden text-xs sm:flex"
         aria-label="Breadcrumb"
         suppressHydrationWarning
       >
-        <ol className="flex min-w-0 items-center gap-1.5" suppressHydrationWarning>
+        <ol className="flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden" suppressHydrationWarning>
           {crumbs.map((crumb, index) => {
             const isLast = index === crumbs.length - 1;
             return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronRight, Columns3, GripVertical, Lock } from "lucide-react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { Columns3, GripVertical, Lock } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -61,20 +61,12 @@ export function ColumnsDialog<T>({
   const triggerId = useId();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ColumnPickerItem[]>([]);
-  const [showExtras, setShowExtras] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const customized = Boolean(preference && !preference.is_default);
-
-  const visibleItems = useMemo(
-    () => draft.filter((item) => !item.extra || item.visible || showExtras),
-    [draft, showExtras],
-  );
-  const hiddenExtraCount = draft.filter((item) => item.extra && !item.visible).length;
 
   function handleOpenChange(next: boolean) {
     if (next) {
       setDraft(columnPickerDraft(columns, preference, pinnedCount));
-      setShowExtras(false);
     }
     setOpen(next);
   }
@@ -104,7 +96,6 @@ export function ColumnsDialog<T>({
     try {
       await onReset();
       setDraft(columnPickerDraft(columns, null));
-      setShowExtras(false);
     } catch {
       // Toast is handled by the caller.
     }
@@ -131,7 +122,7 @@ export function ColumnsDialog<T>({
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-80 p-0"
+          className="w-80 max-w-[calc(100vw-2rem)] p-0"
           onPointerDownOutside={(event) => {
             if (draggingId) {
               event.preventDefault();
@@ -142,7 +133,7 @@ export function ColumnsDialog<T>({
             <p className="text-sm font-medium">{title}</p>
           </div>
           <ul className="max-h-80 overflow-y-auto px-1 pb-1">
-            {visibleItems.map((item) => (
+            {draft.map((item) => (
               <li
                 key={item.id}
                 onDragOver={(event) => {
@@ -216,18 +207,6 @@ export function ColumnsDialog<T>({
                 )}
               </li>
             ))}
-            {!showExtras && hiddenExtraCount > 0 ? (
-              <li className="px-2 py-1">
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline"
-                  onClick={() => setShowExtras(true)}
-                >
-                  <ChevronRight className="size-3.5" />
-                  Show {hiddenExtraCount} more
-                </button>
-              </li>
-            ) : null}
           </ul>
           {customized ? (
             <div className="border-t px-2 py-1.5">

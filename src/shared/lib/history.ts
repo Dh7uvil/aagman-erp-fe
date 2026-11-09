@@ -1,5 +1,11 @@
 import { cylinderReturnRoutes } from "@/modules/inventory/cylinder-returns/routes";
 import { cylinderRoutes } from "@/modules/inventory/cylinders/routes";
+import { adhesiveCodeRoutes } from "@/modules/inventory/adhesive-codes/routes";
+import { adhesiveRoutes } from "@/modules/inventory/adhesives/routes";
+import { solventNameRoutes } from "@/modules/inventory/solvent-names/routes";
+import { solventRoutes } from "@/modules/inventory/solvents/routes";
+import { inkColorRoutes } from "@/modules/inventory/ink-colors/routes";
+import { inkRoutes } from "@/modules/inventory/inks/routes";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 
 export const MASTER_HISTORY_PAGE_TITLE = "History";
@@ -29,6 +35,60 @@ const HISTORY_RESOURCES = [
     slug: "materials",
     listHref: materialRoutes.list,
     label: "Materials",
+    supportsAttachments: false,
+  },
+  {
+    slug: "ink-colors",
+    listHref: inkColorRoutes.list,
+    label: "Ink master",
+    supportsAttachments: false,
+  },
+  {
+    slug: "inks",
+    listHref: inkRoutes.list,
+    label: "Ink sheets",
+    supportsAttachments: true,
+  },
+  {
+    slug: "ink-lines",
+    listHref: inkRoutes.list,
+    label: "Ink lines",
+    supportsAttachments: false,
+  },
+  {
+    slug: "adhesive-codes",
+    listHref: adhesiveCodeRoutes.list,
+    label: "Adhesive master",
+    supportsAttachments: false,
+  },
+  {
+    slug: "adhesives",
+    listHref: adhesiveRoutes.list,
+    label: "Adhesive sheets",
+    supportsAttachments: false,
+  },
+  {
+    slug: "adhesive-lines",
+    listHref: adhesiveRoutes.list,
+    label: "Adhesive lines",
+    supportsAttachments: false,
+  },
+  {
+    slug: "solvent-names",
+    listHref: solventNameRoutes.list,
+    label: "Solvent master",
+    supportsAttachments: false,
+  },
+  {
+    slug: "solvents",
+    listHref: solventRoutes.list,
+    label: "Solvent sheets",
+    supportsAttachments: false,
+  },
+  {
+    slug: "solvent-lines",
+    listHref: solventRoutes.list,
+    label: "Solvent lines",
     supportsAttachments: false,
   },
 ] as const satisfies readonly HistoryResourceSpec[];

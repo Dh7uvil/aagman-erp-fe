@@ -22,7 +22,7 @@ export function HelpDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[min(28rem,calc(100vw-1.5rem))]">
         <DialogHeader>
           <DialogTitle>Help &amp; shortcuts</DialogTitle>
           <DialogDescription>Keyboard shortcuts available in the app shell.</DialogDescription>

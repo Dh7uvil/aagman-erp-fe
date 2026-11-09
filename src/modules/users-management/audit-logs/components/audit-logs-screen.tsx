@@ -186,10 +186,11 @@ export function AuditLogsScreen() {
     () =>
       uniqueSorted([
         AUDIT_MODULE_IDENTITY,
+        ...(summaryQuery.data?.modules ?? []),
         ...(logsQuery.data?.data ?? []).map((row) => row.module),
         ...(moduleFilter !== ALL ? [moduleFilter] : []),
       ]),
-    [logsQuery.data?.data, moduleFilter],
+    [summaryQuery.data?.modules, logsQuery.data?.data, moduleFilter],
   );
 
   const actionOptions = useMemo(
@@ -260,14 +261,17 @@ export function AuditLogsScreen() {
         ),
       },
       {
-        id: "resource_id",
-        header: "ID",
-        className: "text-muted-foreground font-mono text-xs",
-        cell: (log) => (
-          <span title={log.entity_id ?? undefined}>
-            {log.entity_id ? shortId(log.entity_id) : "—"}
-          </span>
-        ),
+        id: "resource_record",
+        header: "Record",
+        className: "text-sm",
+        cell: (log) => {
+          const label = log.entity_label?.trim();
+          return (
+            <span title={log.entity_id ?? undefined}>
+              {label || (log.entity_id ? shortId(log.entity_id) : "—")}
+            </span>
+          );
+        },
       },
       {
         id: "module",

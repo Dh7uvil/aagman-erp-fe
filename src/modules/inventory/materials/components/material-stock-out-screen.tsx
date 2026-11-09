@@ -19,6 +19,7 @@ import { useAllMaterials } from "@/modules/inventory/materials/queries";
 import { materialRoutes } from "@/modules/inventory/materials/routes";
 import { useCreateMovement } from "@/modules/inventory/movements/mutations";
 import { getErrorMessage } from "@/shared/api/errors";
+import { SearchableSelect } from "@/shared/components/form/searchable-select";
 import { SubmitButton } from "@/shared/components/form/submit-button";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { BackLabel } from "@/shared/components/ui/action-button-labels";
@@ -34,13 +35,6 @@ import {
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
@@ -168,7 +162,7 @@ export function MaterialStockOutScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-5">
       <PageHeader
         title="Stock out"
         subtitle="Remove rolls and kg from on-hand stock. This creates a stock-out movement in history."
@@ -194,8 +188,10 @@ export function MaterialStockOutScreen() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
                 <Label htmlFor="stock-out-company">Company</Label>
-                <Select
-                  value={companyId || undefined}
+                <SearchableSelect
+                  id="stock-out-company"
+                  asFormControl={false}
+                  value={companyId}
                   onValueChange={(value) => {
                     setCompanyId(value);
                     setProductId("");
@@ -203,23 +199,16 @@ export function MaterialStockOutScreen() {
                     setSelectedMaterialId("");
                     form.setValue("material_id", "");
                   }}
-                >
-                  <SelectTrigger id="stock-out-company">
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select company"
+                  options={companies.map((row) => ({ value: row.id, label: row.name }))}
+                />
               </div>
               <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
                 <Label htmlFor="stock-out-product">Product</Label>
-                <Select
-                  value={productId || undefined}
+                <SearchableSelect
+                  id="stock-out-product"
+                  asFormControl={false}
+                  value={productId}
                   disabled={!companyId}
                   onValueChange={(value) => {
                     setProductId(value);
@@ -227,45 +216,25 @@ export function MaterialStockOutScreen() {
                     setSelectedMaterialId("");
                     form.setValue("material_id", "");
                   }}
-                >
-                  <SelectTrigger id="stock-out-product">
-                    <SelectValue
-                      placeholder={companyId ? "Select product" : "Select company first"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={companyId ? "Select product" : "Select company first"}
+                  options={categories.map((row) => ({ value: row.id, label: row.name }))}
+                />
               </div>
               <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
                 <Label htmlFor="stock-out-micron">Micron</Label>
-                <Select
-                  value={micronId || undefined}
+                <SearchableSelect
+                  id="stock-out-micron"
+                  asFormControl={false}
+                  value={micronId}
                   disabled={!productId}
                   onValueChange={(value) => {
                     setMicronId(value);
                     setSelectedMaterialId("");
                     form.setValue("material_id", "");
                   }}
-                >
-                  <SelectTrigger id="stock-out-micron">
-                    <SelectValue
-                      placeholder={productId ? "Select micron" : "Select product first"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {microns.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={productId ? "Select micron" : "Select product first"}
+                  options={microns.map((row) => ({ value: row.id, label: row.name }))}
+                />
               </div>
               <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
                 <Label htmlFor="stock-out-width">Width</Label>
@@ -277,36 +246,29 @@ export function MaterialStockOutScreen() {
                     name="material_id"
                     render={({ field }) => (
                       <FormItem className="space-y-0">
-                        <Select
-                          value={field.value || undefined}
-                          disabled={!micronId || activeMaterials.length === 0}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            setSelectedMaterialId(value);
-                            form.clearErrors(["rolls", "kilograms"]);
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger id="stock-out-width">
-                              <SelectValue
-                                placeholder={
-                                  !micronId
-                                    ? "Select micron first"
-                                    : activeMaterials.length === 0
-                                      ? "No widths for this micron"
-                                      : "Select width"
-                                }
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {activeMaterials.map((row) => (
-                              <SelectItem key={row.id} value={row.id}>
-                                {row.size_label || formatDecimal(row.size)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <SearchableSelect
+                            id="stock-out-width"
+                            value={field.value}
+                            disabled={!micronId || activeMaterials.length === 0}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedMaterialId(value);
+                              form.clearErrors(["rolls", "kilograms"]);
+                            }}
+                            placeholder={
+                              !micronId
+                                ? "Select micron first"
+                                : activeMaterials.length === 0
+                                  ? "No widths for this micron"
+                                  : "Select width"
+                            }
+                            options={activeMaterials.map((row) => ({
+                              value: row.id,
+                              label: row.size_label || formatDecimal(row.size),
+                            }))}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

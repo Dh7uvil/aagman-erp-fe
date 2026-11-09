@@ -11,6 +11,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  ScrollText,
   Trash2,
   UserX,
   X,
@@ -59,6 +60,10 @@ export function ResumeLabel({ children = "Resume" }: { children?: ReactNode }) {
 
 export function HistoryLabel({ children = "History" }: { children?: ReactNode }) {
   return <ActionLabel icon={History}>{children}</ActionLabel>;
+}
+
+export function MovementsLabel({ children = "Movements" }: { children?: ReactNode }) {
+  return <ActionLabel icon={ScrollText}>{children}</ActionLabel>;
 }
 
 export function ClearFiltersLabel({ children = "Clear" }: { children?: ReactNode }) {

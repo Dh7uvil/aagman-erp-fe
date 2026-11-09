@@ -26,6 +26,7 @@ export type SearchableSelectCreateAction = {
   onSelect: () => void;
 };
 
+/** When option count is at or above this value, show an in-dropdown search field. */
 export const SEARCHABLE_SELECT_MIN_OPTIONS = 10;
 
 export function shouldSearchOptions({
@@ -40,7 +41,7 @@ export function shouldSearchOptions({
   if (searchable != null) {
     return searchable;
   }
-  return Boolean(remote) || optionCount > SEARCHABLE_SELECT_MIN_OPTIONS;
+  return Boolean(remote) || optionCount >= SEARCHABLE_SELECT_MIN_OPTIONS;
 }
 
 type SelectTriggerButtonProps = {
