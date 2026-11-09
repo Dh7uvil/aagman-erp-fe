@@ -33,6 +33,7 @@ function toListQuery(params: UserListParams): RequestParams {
     last_login_from: params.last_login_from,
     last_login_to: params.last_login_to,
     phone: params.phone,
+    include_column_totals: params.include_column_totals,
   };
 }
 

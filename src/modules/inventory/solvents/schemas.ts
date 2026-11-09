@@ -137,6 +137,7 @@ export type SolventListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   company_id?: string;
+  include_column_totals?: boolean;
 };
 
 export type SolventBrandListParams = {
@@ -146,6 +147,7 @@ export type SolventBrandListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   is_active?: boolean;
+  include_column_totals?: boolean;
 };
 
 export const SolventLineFormSchema = z.object({

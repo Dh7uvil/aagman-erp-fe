@@ -3,7 +3,7 @@
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -46,6 +46,7 @@ import { formatDecimal } from "@/shared/lib/format";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useCan } from "@/shared/providers/session-provider";
 import type { SolventNameUsageLine } from "@/modules/inventory/solvent-names/schemas";
 
@@ -161,6 +162,7 @@ export function SolventNameRecordScreen({
       {
         id: "drum_count",
         header: "No. of drums",
+        numeric: true,
         cell: (row) => formatDecimal(row.drum_count),
       },
       {
@@ -178,6 +180,7 @@ export function SolventNameRecordScreen({
       {
         id: "total_qty",
         header: "Total kg",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.total_qty)} ${row.drum_unit_code}`,
       },
     ];
@@ -199,6 +202,7 @@ export function SolventNameRecordScreen({
         {
           id: "total_rate",
           header: "Total rate",
+          numeric: true,
           defaultVisible: false,
           cell: (row) =>
             row.total_rate != null ? formatDecimal(row.total_rate) : "—",
@@ -223,6 +227,16 @@ export function SolventNameRecordScreen({
     colSpan: usageColSpan,
   } = useTableColumns("inventory.solvent_name_usage", usageColumnDefs, { pinnedCount: 0 });
   const usageListView = useListView("inventory.solvent_name_usage");
+
+  const buildUsageExportParams = useCallback(() => ({}), []);
+
+  const { exportDialog: usageExportDialog } = useReportExport({
+    tableKey: "inventory.solvent_name_usage",
+    columnDefs: usageColumnDefs,
+    exportPath: `/inventory/solvent-names/${codeId}/usage/export`,
+    buildParams: buildUsageExportParams,
+    enabled: Boolean(codeId) && mode === "view",
+  });
 
   const usageLines = useMemo(() => {
     const lines = usageQuery.data?.lines ?? [];
@@ -356,6 +370,7 @@ export function SolventNameRecordScreen({
               <ListViewToolbarControls
                 listView={usageListView}
                 columnsDialog={usageColumnsDialog}
+                exportDialog={usageExportDialog}
               />
               {usageHasActiveFilters ? (
                 <Button

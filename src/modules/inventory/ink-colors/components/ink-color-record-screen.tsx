@@ -3,7 +3,7 @@
 import { zodResolver } from "@/shared/lib/zod-resolver";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -47,6 +47,7 @@ import { formatDecimal } from "@/shared/lib/format";
 import { useDirtyFormGuard } from "@/shared/hooks/use-dirty-form-guard";
 import { useFormResetOnRouteEntry } from "@/shared/hooks/use-form-reset-on-route-entry";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useCan } from "@/shared/providers/session-provider";
 import type { InkColorUsageLine } from "@/modules/inventory/ink-colors/schemas";
 
@@ -165,6 +166,7 @@ export function InkColorRecordScreen({
       {
         id: "drum_count",
         header: "No. of drums",
+        numeric: true,
         cell: (row) => formatDecimal(row.drum_count),
       },
       {
@@ -182,6 +184,7 @@ export function InkColorRecordScreen({
       {
         id: "total_qty",
         header: "Total kg",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.total_qty)} ${row.drum_unit_code}`,
       },
     ];
@@ -203,6 +206,7 @@ export function InkColorRecordScreen({
         {
           id: "total_rate",
           header: "Total rate",
+          numeric: true,
           defaultVisible: false,
           cell: (row) =>
             row.total_rate != null ? formatDecimal(row.total_rate) : "—",
@@ -227,6 +231,16 @@ export function InkColorRecordScreen({
     colSpan: usageColSpan,
   } = useTableColumns("inventory.ink_color_usage", usageColumnDefs, { pinnedCount: 0 });
   const usageListView = useListView("inventory.ink_color_usage");
+
+  const buildUsageExportParams = useCallback(() => ({}), []);
+
+  const { exportDialog: usageExportDialog } = useReportExport({
+    tableKey: "inventory.ink_color_usage",
+    columnDefs: usageColumnDefs,
+    exportPath: `/inventory/ink-colors/${colorId}/usage/export`,
+    buildParams: buildUsageExportParams,
+    enabled: Boolean(colorId) && mode === "view",
+  });
 
   const usageLines = useMemo(() => {
     const lines = usageQuery.data?.lines ?? [];
@@ -360,6 +374,7 @@ export function InkColorRecordScreen({
               <ListViewToolbarControls
                 listView={usageListView}
                 columnsDialog={usageColumnsDialog}
+                exportDialog={usageExportDialog}
               />
               {usageHasActiveFilters ? (
                 <Button

@@ -90,4 +90,5 @@ export type AuditLogListParams = AuditLogFilterParams & {
   page_size?: number;
   sort_by?: AuditLogSortBy;
   sort_order?: "asc" | "desc";
+  include_column_totals?: boolean;
 };

@@ -62,4 +62,5 @@ export type RoleListParams = {
   search?: string;
   sort_by?: string;
   sort_order?: "asc" | "desc";
+  include_column_totals?: boolean;
 };

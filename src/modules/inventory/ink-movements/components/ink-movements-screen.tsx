@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { InkHexSwatch } from "@/modules/inventory/ink-colors/components/ink-hex-swatch";
 import { useInkDayReport } from "@/modules/inventory/ink-movements/queries";
@@ -19,6 +19,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useCan } from "@/shared/providers/session-provider";
 
 function todayIsoDate(): string {
@@ -31,7 +32,8 @@ export function InkMovementsScreen() {
   const [startDate, setStartDate] = useState(todayIsoDate);
   const [endDate, setEndDate] = useState(todayIsoDate);
   const reportQuery = useInkDayReport(startDate, endDate);
-  const reportRows = reportQuery.data ?? [];
+  const reportRows = reportQuery.data?.data ?? [];
+  const reportMeta = reportQuery.data?.meta;
 
   const columnDefs = useMemo((): Array<DataTableColumn<InkDayReportRow>> => {
     const cols: Array<DataTableColumn<InkDayReportRow>> = [
@@ -47,26 +49,40 @@ export function InkMovementsScreen() {
           </span>
         ),
       },
-      { id: "in_drums", header: "In drums", cell: (row) => formatDecimal(row.in_drums) },
+      {
+        id: "in_drums",
+        header: "In drums",
+        numeric: true,
+        cell: (row) => formatDecimal(row.in_drums),
+      },
       {
         id: "in_qty",
         header: "In qty",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.in_qty)} ${row.drum_unit_code}`,
       },
-      { id: "out_drums", header: "Out drums", cell: (row) => formatDecimal(row.out_drums) },
+      {
+        id: "out_drums",
+        header: "Out drums",
+        numeric: true,
+        cell: (row) => formatDecimal(row.out_drums),
+      },
       {
         id: "out_qty",
         header: "Out qty",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.out_qty)} ${row.drum_unit_code}`,
       },
       {
         id: "closing_drums",
         header: "Closing drums",
+        numeric: true,
         cell: (row) => formatDecimal(row.closing_drums),
       },
       {
         id: "closing_qty",
         header: "Closing qty",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.closing_qty)} ${row.drum_unit_code}`,
       },
     ];
@@ -86,6 +102,23 @@ export function InkMovementsScreen() {
     { pinnedCount: 0 },
   );
   const listView = useListView("inventory.inks_report");
+
+  const buildExportParams = useCallback(
+    () => ({
+      start_date: startDate,
+      end_date: endDate,
+    }),
+    [startDate, endDate],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.inks_report",
+    columnDefs,
+    exportPath: "/inventory/ink-movements/report/export",
+    buildParams: buildExportParams,
+    filteredRowCount: reportMeta?.total,
+    enabled: true,
+  });
 
   return (
     <ListPage>
@@ -111,7 +144,7 @@ export function InkMovementsScreen() {
             setEndDate(today);
           }}
         />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
       </DataTableToolbar>
       <ListView
         columns={columns}
@@ -127,6 +160,7 @@ export function InkMovementsScreen() {
             onRetry={() => reportQuery.refetch()}
           />
         }
+        columnTotals={reportQuery.data?.meta?.column_totals ?? null}
         empty={<DataTableEmpty message="No ink movements for this date." />}
         listView={listView}
       />

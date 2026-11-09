@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { inkBrandsApi, inksApi } from "@/modules/inventory/inks/api";
 import type { InkBrandListParams, InkListParams } from "@/modules/inventory/inks/schemas";
 
@@ -34,7 +36,7 @@ export function useAllInkBrands(enabled = true) {
 export function useInks(params: InkListParams) {
   return useQuery({
     queryKey: inkKeys.list(params),
-    queryFn: () => inksApi.list(params),
+    queryFn: () => inksApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }
@@ -74,7 +76,7 @@ export function useInkLineHistorySummary(lineId: string) {
 export function useInkBrandsList(params: InkBrandListParams, enabled = true) {
   return useQuery({
     queryKey: inkBrandKeys.list(params),
-    queryFn: () => inkBrandsApi.list(params),
+    queryFn: () => inkBrandsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
     enabled,
   });

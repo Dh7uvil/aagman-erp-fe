@@ -19,6 +19,10 @@ export function useSaveTableColumnPreferences(tableKey: string) {
         visible_columns: values.visible_columns,
         column_order: values.column_order,
         is_default: false,
+        export_visible_columns: previous?.export_visible_columns ?? values.visible_columns,
+        export_column_order: previous?.export_column_order ?? values.column_order,
+        export_format: previous?.export_format ?? null,
+        export_is_default: previous?.export_is_default ?? true,
       });
       return { previous };
     },

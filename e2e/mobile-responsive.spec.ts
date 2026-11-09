@@ -174,6 +174,78 @@ test.describe("mobile list views", () => {
     });
     await expectPageFitsViewport(page);
   });
+
+  test("dashboard fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/");
+    await expect(page.getByText("Overview for inventory operations")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("material product view fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto(
+      `/inventory/materials/33333333-3333-4333-8333-333333333333?micron=55555555-5555-4555-8555-555555555555`,
+    );
+    await expect(page.getByRole("heading", { name: "E2E Film" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("material history fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/history/materials/33333333-3333-4333-8333-333333333333");
+    await expect(page.getByRole("heading", { name: "History" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("audit logs list fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/administration/audit-logs");
+    await expect(page.getByRole("heading", { name: "Audit Logs" })).toBeVisible();
+    await expectPageFitsViewport(page);
+  });
+
+  test("profile settings fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/settings/profile");
+    await expect(page.getByRole("heading", { name: "My Profile" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("organization settings fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/administration/organization-settings");
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("material movement report fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/materials/report");
+    await expect(page.getByRole("heading", { name: "Materials report" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
+
+  test("material stock-out screen fits viewport on mobile", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/inventory/materials/stock-out");
+    await expect(page.getByRole("heading", { name: "Stock out" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expectPageFitsViewport(page);
+  });
 });
 
 test.describe("tablet viewport", () => {

@@ -164,4 +164,5 @@ export type UserListParams = {
   joining_date_from?: string;
   joining_date_to?: string;
   manager_id?: string;
+  include_column_totals?: boolean;
 };

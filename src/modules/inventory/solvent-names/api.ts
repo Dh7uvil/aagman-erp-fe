@@ -27,6 +27,8 @@ export const solventNamesApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         is_active: params.is_active,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: SolventNameListSchema.parse(result.data), meta: result.meta };

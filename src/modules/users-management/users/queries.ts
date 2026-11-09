@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { usersApi } from "@/modules/users-management/users/api";
 import type { UserListParams } from "@/modules/users-management/users/schemas";
 
@@ -15,7 +17,7 @@ export const userKeys = {
 export function useUsers(params: UserListParams) {
   return useQuery({
     queryKey: userKeys.list(params),
-    queryFn: () => usersApi.list(params),
+    queryFn: () => usersApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

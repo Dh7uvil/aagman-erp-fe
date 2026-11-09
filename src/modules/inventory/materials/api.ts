@@ -34,6 +34,7 @@ export const materialsApi = {
         rolls: params.rolls,
         kg_lt: params.kg_lt,
         kg_gt: params.kg_gt,
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: MaterialListSchema.parse(result.data), meta: result.meta };

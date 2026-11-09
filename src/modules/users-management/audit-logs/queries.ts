@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { auditLogsApi } from "@/modules/users-management/audit-logs/api";
 import type {
   AuditLogFilterParams,
@@ -18,7 +20,7 @@ export const auditLogKeys = {
 export function useAuditLogs(params: AuditLogListParams) {
   return useQuery({
     queryKey: auditLogKeys.list(params),
-    queryFn: () => auditLogsApi.list(params),
+    queryFn: () => auditLogsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

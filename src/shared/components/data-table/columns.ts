@@ -18,6 +18,10 @@ export type DataTableColumn<T> = {
   className?: string;
   headerClassName?: string;
   hideable?: boolean;
+  /** When true, column participates in numeric footer totals when server meta is present. */
+  numeric?: boolean;
+  /** Raw numeric value for a row when server totals are unavailable (optional fallback). */
+  totalValue?: (row: T) => number | null;
   card?: {
     slot?: CardColumnSlot;
   };
@@ -189,6 +193,85 @@ export function customizableColumns<T>(
   defs: readonly DataTableColumn<T>[],
 ): Array<DataTableColumn<T>> {
   return defs.filter((column) => !column.locked);
+}
+
+export function exportableColumns<T>(defs: readonly DataTableColumn<T>[]): Array<DataTableColumn<T>> {
+  return customizableColumns(defs).filter((column) => column.hideable !== false);
+}
+
+export type ExportPreferencePatch = {
+  export_visible_columns: string[];
+  export_column_order: string[];
+  export_format?: "csv" | "xlsx" | null;
+};
+
+export function exportVisibleColumnIds<T>(
+  defs: readonly DataTableColumn<T>[],
+  preference:
+    | {
+        export_visible_columns?: string[];
+        export_column_order?: string[];
+        visible_columns?: string[];
+        column_order?: string[];
+      }
+    | null
+    | undefined,
+): string[] {
+  const exportable = exportableColumns(defs);
+  const known = new Set(exportable.map((column) => column.id));
+  const defaults = defaultColumnPreference(defs);
+  const savedExport = (preference?.export_visible_columns ?? []).filter((id) => known.has(id));
+  if (savedExport.length > 0) {
+    return savedExport;
+  }
+  const savedList = (preference?.visible_columns ?? []).filter((id) => known.has(id));
+  if (savedList.length > 0) {
+    return savedList;
+  }
+  return defaults.visible_columns;
+}
+
+export function exportColumnPickerDraft<T>(
+  defs: readonly DataTableColumn<T>[],
+  preference:
+    | {
+        export_visible_columns?: string[];
+        export_column_order?: string[];
+        visible_columns?: string[];
+        column_order?: string[];
+      }
+    | null
+    | undefined,
+): ColumnPickerItem[] {
+  const exportable = exportableColumns(defs);
+  const defaults = defaultColumnPreference(defs);
+  const known = new Map(exportable.map((column) => [column.id, column]));
+  const defOrder = exportable.map((column) => column.id);
+  const savedOrder = (
+    preference?.export_column_order?.length
+      ? preference.export_column_order
+      : preference?.column_order
+  )?.filter((id) => known.has(id));
+  const mergedOrder = dedupeColumnIds([
+    ...(savedOrder ?? []),
+    ...defOrder.filter((id) => !savedOrder?.includes(id)),
+  ]);
+  const visible = new Set(exportVisibleColumnIds(defs, preference));
+  return mergedOrder.flatMap((id) => {
+    const column = known.get(id);
+    if (!column) {
+      return [];
+    }
+    return [
+      {
+        id,
+        header: column.header,
+        visible: visible.has(id),
+        extra: column.defaultVisible === false,
+        pinned: false,
+      },
+    ];
+  });
 }
 
 export function defaultColumnPreference<T>(

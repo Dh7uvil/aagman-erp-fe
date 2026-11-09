@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { warehousesApi } from "@/modules/users-management/warehouses/api";
 import type { WarehouseListParams } from "@/modules/users-management/warehouses/schemas";
 
@@ -15,7 +17,7 @@ export const warehouseKeys = {
 export function useWarehouses(params: WarehouseListParams) {
   return useQuery({
     queryKey: warehouseKeys.list(params),
-    queryFn: () => warehousesApi.list(params),
+    queryFn: () => warehousesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

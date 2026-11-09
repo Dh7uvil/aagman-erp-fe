@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, ClipboardList, Download, Shield, Users } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AuditLogDetailSheet } from "@/modules/users-management/audit-logs/components/audit-log-detail-sheet";
 import { auditLogsApi } from "@/modules/users-management/audit-logs/api";
@@ -40,6 +40,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { KpiCard } from "@/modules/dashboard/components/kpi-card";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatDate, formatDateTime, initials, titleCase } from "@/shared/lib/format";
 
@@ -302,6 +303,24 @@ export function AuditLogsScreen() {
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.audit_logs", columnDefs);
   const listView = useListView("identity.audit_logs");
 
+  const buildExportParams = useCallback(
+    () => ({
+      ...filterParams,
+      sort_by: sortBy,
+      sort_order,
+    }),
+    [filterParams, sortBy, sort_order],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "identity.audit_logs",
+    columnDefs,
+    exportPath: "/audit-logs/export/download",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
   async function exportCsv() {
     setCsvPending(true);
     try {
@@ -532,6 +551,7 @@ export function AuditLogsScreen() {
         <ListViewToolbarControls
           listView={listView}
           columnsDialog={columnsDialog}
+          exportDialog={exportDialog}
           mobileFullRow
         />
       </DataTableToolbar>
@@ -566,6 +586,7 @@ export function AuditLogsScreen() {
           />
         }
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        columnTotals={logsQuery.data?.meta?.column_totals ?? null}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
       />

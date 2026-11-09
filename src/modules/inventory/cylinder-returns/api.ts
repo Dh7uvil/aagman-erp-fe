@@ -23,6 +23,8 @@ export const cylinderReturnsApi = {
         sort_order: params.sort_order,
         company_id: params.company_id,
         cylinder_id: params.cylinder_id,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: CylinderReturnListSchema.parse(result.data), meta: result.meta };

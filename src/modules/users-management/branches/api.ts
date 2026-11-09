@@ -23,6 +23,8 @@ export const branchesApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         status: params.status,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: BranchListSchema.parse(result.data), meta: result.meta };

@@ -3,7 +3,7 @@
 import { FolderPlus, History, MinusCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import {useMemo, useState, type ReactNode, useCallback} from "react";
 import { toast } from "sonner";
 
 import { formatPricePerUnit } from "@/modules/inventory/format";
@@ -43,6 +43,7 @@ import {
 } from "@/modules/inventory/materials/components/material-stock-out-button-styles";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { historyHref } from "@/shared/lib/history";
 import { formatDecimal } from "@/shared/lib/format";
@@ -199,6 +200,7 @@ export function AdhesivesScreen() {
       {
         id: "drum_count",
         header: "No. of drums",
+        numeric: true,
         cell: (row) => formatDecimal(row.drum_count),
       },
       {
@@ -216,6 +218,7 @@ export function AdhesivesScreen() {
       {
         id: "total_qty",
         header: "Total kg",
+        numeric: true,
         cell: (row) => `${formatDecimal(row.total_qty)} ${row.drum_unit_code}`,
       },
     ];
@@ -237,6 +240,7 @@ export function AdhesivesScreen() {
         {
           id: "total_rate",
           header: "Total rate",
+        numeric: true,
           defaultVisible: false,
           cell: (row) =>
             row.total_rate != null ? formatDecimal(row.total_rate) : "—",
@@ -270,6 +274,22 @@ export function AdhesivesScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.adhesives", columnDefs);
   const listView = useListView("inventory.adhesives");
+  const buildExportParams = useCallback(() => ({
+    search: search ?? undefined,
+    sort_by: sortBy,
+    sort_order: sortBy ? sort_order : undefined,
+    company_id: companyId,
+  }), [companyId, sortBy, sort_order, search]);
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.adhesives",
+    columnDefs,
+    exportPath: "/inventory/adhesives/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   return (
     <ListPage>
@@ -325,7 +345,7 @@ export function AdhesivesScreen() {
           ]}
         />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -355,6 +375,7 @@ export function AdhesivesScreen() {
           />
         }
         empty={<DataTableEmpty message="No adhesive lines yet." />}
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}

@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { rolesApi } from "@/modules/users-management/roles/api";
 import type { RoleListParams } from "@/modules/users-management/roles/schemas";
 
@@ -15,7 +17,7 @@ export const roleKeys = {
 export function useRoles(params: RoleListParams) {
   return useQuery({
     queryKey: roleKeys.list(params),
-    queryFn: () => rolesApi.list(params),
+    queryFn: () => rolesApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

@@ -65,6 +65,11 @@ export const CylinderListItemSchema = z.object({
     .nullable()
     .optional()
     .transform((value) => (value === null || value === undefined ? null : String(value))),
+  total_cylinder_cost: z
+    .union([z.string(), z.number()])
+    .nullable()
+    .optional()
+    .transform((value) => (value === null || value === undefined ? null : String(value))),
   cylinder_location: z.string().nullable(),
   status: z.enum(CYLINDER_STATUSES),
   cylinder_image: CylinderFileMetaSchema.nullable().optional(),
@@ -156,6 +161,7 @@ export type CylinderListParams = {
   status?: CylinderStatus;
   company_id?: string;
   include_closed?: boolean;
+  include_column_totals?: boolean;
 };
 
 export const EntityHistoryEntrySchema = z.object({

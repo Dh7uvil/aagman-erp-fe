@@ -44,7 +44,7 @@ export function CylinderPauseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent mobileSheet className="sm:max-w-[min(28rem,calc(100vw-1.5rem))]">
         <DialogHeader>
           <DialogTitle>Pause cylinder</DialogTitle>
         </DialogHeader>

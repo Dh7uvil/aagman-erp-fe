@@ -62,4 +62,5 @@ export type DepartmentListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   branch_id?: string;
+  include_column_totals?: boolean;
 };

@@ -24,6 +24,8 @@ export const warehousesApi = {
         sort_order: params.sort_order,
         is_active: params.is_active,
         is_default: params.is_default,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: WarehouseListSchema.parse(result.data), meta: result.meta };

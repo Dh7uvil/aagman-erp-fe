@@ -2,7 +2,7 @@
 
 import { Loader2, Plus, Shield } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { RoleFormDialog } from "@/modules/users-management/roles/components/role-form-dialog";
@@ -40,6 +40,7 @@ import { CancelLabel, DeleteLabel } from "@/shared/components/ui/action-button-l
 import { Button } from "@/shared/components/ui/button";
 import { formatDate } from "@/shared/lib/format";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { useCan } from "@/shared/providers/session-provider";
 
@@ -129,6 +130,7 @@ export function RolesScreen() {
       {
         id: "users_count",
         header: "Users",
+        numeric: true,
         cell: (role) => <Badge variant="info">{role.user_count}</Badge>,
       },
       {
@@ -159,6 +161,24 @@ export function RolesScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("identity.roles", columnDefs);
   const listView = useListView("identity.roles");
+  const buildExportParams = useCallback(
+    () => ({
+      search: search ?? undefined,
+      sort_by,
+      sort_order,
+    }),
+    [search, sort_by, sort_order],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "identity.roles",
+    columnDefs,
+    exportPath: "/roles/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   return (
     <ListPage>
@@ -186,7 +206,7 @@ export function RolesScreen() {
           sortOrder={sort_order}
           onApply={setParams}
         />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
         {search || sort_by ? (
           <Button
             type="button"
@@ -214,6 +234,7 @@ export function RolesScreen() {
           />
         }
         empty={<DataTableEmpty title="No roles" message="No roles are available yet." />}
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sort_by, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}

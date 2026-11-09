@@ -3,7 +3,7 @@
 import { Plus, Printer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { usePrintCylinderReturnMemo } from "@/modules/inventory/cylinder-returns/lib/print-cylinder-return-memo";
@@ -30,6 +30,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import { formatDate } from "@/shared/lib/format";
 
@@ -99,6 +100,24 @@ export function CylinderReturnsScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.cylinder_returns", columnDefs);
   const listView = useListView("inventory.cylinder_returns");
+  const buildExportParams = useCallback(
+    () => ({
+      search: search ?? undefined,
+      sort_by: sortBy,
+      sort_order: sortBy ? sort_order : undefined,
+    }),
+    [sortBy, sort_order, search],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.cylinder_returns",
+    columnDefs,
+    exportPath: "/inventory/cylinder-returns/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   return (
     <ListPage>
@@ -119,7 +138,7 @@ export function CylinderReturnsScreen() {
       <DataTableToolbar>
         <ListSearch value={search ?? ""} onChange={(value) => setParams({ search: value || null })} />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
       </DataTableToolbar>
       <ListView
         columns={columns}
@@ -134,6 +153,7 @@ export function CylinderReturnsScreen() {
           <DataTableError message={getErrorMessage(query.error)} onRetry={() => query.refetch()} />
         }
         empty={<DataTableEmpty message="No cylinder returns yet." />}
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}

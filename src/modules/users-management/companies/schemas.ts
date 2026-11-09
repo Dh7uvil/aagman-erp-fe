@@ -76,6 +76,7 @@ export type CompanyListParams = {
   search?: string;
   sort_by?: string;
   sort_order?: "asc" | "desc";
+  include_column_totals?: boolean;
 };
 
 function sameAsPrimary(

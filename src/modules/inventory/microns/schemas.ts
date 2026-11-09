@@ -48,4 +48,5 @@ export type MicronListParams = {
   sort_order?: "asc" | "desc";
   product_id?: string;
   is_active?: boolean;
+  include_column_totals?: boolean;
 };

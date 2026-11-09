@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { solventBrandsApi, solventsApi } from "@/modules/inventory/solvents/api";
 import type { SolventBrandListParams, SolventListParams } from "@/modules/inventory/solvents/schemas";
 
@@ -34,7 +36,7 @@ export function useAllSolventBrands(enabled = true) {
 export function useSolvents(params: SolventListParams) {
   return useQuery({
     queryKey: solventKeys.list(params),
-    queryFn: () => solventsApi.list(params),
+    queryFn: () => solventsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }
@@ -74,7 +76,7 @@ export function useSolventLineHistorySummary(lineId: string) {
 export function useSolventBrandsList(params: SolventBrandListParams, enabled = true) {
   return useQuery({
     queryKey: solventBrandKeys.list(params),
-    queryFn: () => solventBrandsApi.list(params),
+    queryFn: () => solventBrandsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
     enabled,
   });

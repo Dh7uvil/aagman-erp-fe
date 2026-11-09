@@ -61,4 +61,5 @@ export type BranchListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   status?: BranchStatus;
+  include_column_totals?: boolean;
 };

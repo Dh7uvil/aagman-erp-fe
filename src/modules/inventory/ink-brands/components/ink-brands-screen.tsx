@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { inkBrandRoutes } from "@/modules/inventory/ink-brands/routes";
@@ -32,6 +32,7 @@ import { ListPage } from "@/shared/components/layout/list-page";
 import { PageHeader } from "@/shared/components/layout/page-header";
 import { Button } from "@/shared/components/ui/button";
 import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
 import { useTableParams } from "@/shared/hooks/use-table-params";
 import {
   LIST_ACTIVE_ALL,
@@ -119,6 +120,22 @@ export function InkBrandsScreen() {
 
   const { columns, columnsDialog, colSpan } = useTableColumns("inventory.ink_brands", columnDefs);
   const listView = useListView("inventory.ink_brands");
+  const buildExportParams = useCallback(() => ({
+    search: search ?? undefined,
+    sort_by: sortBy,
+    sort_order: sortBy ? sort_order : undefined,
+    is_active: isActive,
+  }), [isActive, sortBy, sort_order, search]);
+
+  const { exportDialog } = useReportExport({
+    tableKey: "inventory.ink_brands",
+    columnDefs,
+    exportPath: "/inventory/ink-brands/export",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
 
   return (
     <ListPage>
@@ -159,7 +176,7 @@ export function InkBrandsScreen() {
           ]}
         />
         <SortDialog fields={SORT_FIELDS} sortBy={sortBy} sortOrder={sort_order} onApply={setParams} />
-        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} />
+        <ListViewToolbarControls listView={listView} columnsDialog={columnsDialog} exportDialog={exportDialog} />
         {hasActiveFilters ? (
           <Button
             type="button"
@@ -189,6 +206,7 @@ export function InkBrandsScreen() {
           />
         }
         empty={<DataTableEmpty message="No ink brands yet. Add one from here or while editing a sheet." />}
+        columnTotals={meta?.column_totals ?? null}
         sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
         listView={listView}
         footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}

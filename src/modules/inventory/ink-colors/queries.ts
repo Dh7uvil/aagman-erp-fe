@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { inkColorsApi } from "@/modules/inventory/ink-colors/api";
 import type { InkColorListParams } from "@/modules/inventory/ink-colors/schemas";
 
@@ -17,7 +19,7 @@ export const inkColorKeys = {
 export function useInkColors(params: InkColorListParams) {
   return useQuery({
     queryKey: inkColorKeys.list(params),
-    queryFn: () => inkColorsApi.list(params),
+    queryFn: () => inkColorsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

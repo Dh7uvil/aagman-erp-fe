@@ -680,4 +680,5 @@ export type MaterialListParams = {
   rolls?: string;
   kg_lt?: string;
   kg_gt?: string;
+  include_column_totals?: boolean;
 };

@@ -146,6 +146,7 @@ export type InkListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   company_id?: string;
+  include_column_totals?: boolean;
 };
 
 export type InkBrandListParams = {
@@ -155,6 +156,7 @@ export type InkBrandListParams = {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   is_active?: boolean;
+  include_column_totals?: boolean;
 };
 
 export const InkLineFormSchema = z.object({

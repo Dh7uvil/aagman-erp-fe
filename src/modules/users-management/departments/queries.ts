@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { LIST_COLUMN_TOTALS_PARAM } from "@/shared/lib/list-export";
+
 import { departmentsApi } from "@/modules/users-management/departments/api";
 import type { DepartmentListParams } from "@/modules/users-management/departments/schemas";
 
@@ -16,7 +18,7 @@ export const departmentKeys = {
 export function useDepartments(params: DepartmentListParams) {
   return useQuery({
     queryKey: departmentKeys.list(params),
-    queryFn: () => departmentsApi.list(params),
+    queryFn: () => departmentsApi.list({ ...params, ...LIST_COLUMN_TOTALS_PARAM }),
     placeholderData: keepPreviousData,
   });
 }

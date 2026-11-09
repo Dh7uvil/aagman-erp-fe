@@ -42,6 +42,8 @@ export const adhesiveBrandsApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         is_active: params.is_active,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: AdhesiveBrandListSchema.parse(result.data), meta: result.meta };
@@ -77,6 +79,8 @@ export const adhesivesApi = {
         sort_by: params.sort_by,
         sort_order: params.sort_order,
         company_id: params.company_id,
+      
+        include_column_totals: params.include_column_totals,
       },
     });
     return { data: AdhesiveSheetListSchema.parse(result.data), meta: result.meta };
