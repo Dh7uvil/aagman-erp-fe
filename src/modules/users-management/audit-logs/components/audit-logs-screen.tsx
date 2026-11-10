@@ -1,0 +1,628 @@
+"use client";
+
+import { AlertCircle, ClipboardList, Download, Shield, Users } from "lucide-react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { AuditLogDetailSheet } from "@/modules/users-management/audit-logs/components/audit-log-detail-sheet";
+import { auditLogsApi } from "@/modules/users-management/audit-logs/api";
+import { auditLogPermissions } from "@/modules/users-management/audit-logs/permissions";
+import { useAuditLogs, useAuditLogSummary } from "@/modules/users-management/audit-logs/queries";
+import {
+  AUDIT_ACTIONS,
+  AUDIT_MODULE_IDENTITY,
+  parseAuditLogSortBy,
+  type AuditLog,
+  type AuditLogFilterParams,
+  type AuditLogListParams,
+} from "@/modules/users-management/audit-logs/schemas";
+import { useAllUsers } from "@/modules/users-management/users/queries";
+import { getErrorMessage } from "@/shared/api/errors";
+import { useCrudPermissions } from "@/shared/auth/use-crud-permissions";
+import { actionsColumn, type DataTableColumn } from "@/shared/components/data-table/columns";
+import { ListView } from "@/shared/components/data-table/list-view";
+import { ListViewToolbarControls } from "@/shared/components/data-table/list-view-toggle";
+import { ActiveFilterPills, type ActiveFilterPill } from "@/shared/components/data-table/filter-chip";
+import { DateRangeFilter } from "@/shared/components/data-table/date-range-filter";
+import { FilterSelect } from "@/shared/components/data-table/filter-select";
+import { ListSearch } from "@/shared/components/data-table/list-search";
+import { FilterField, MoreFiltersDialog } from "@/shared/components/data-table/more-filters-dialog";
+import { DataTablePagination } from "@/shared/components/data-table/pagination";
+import { DataTableRowActions, hasRowActions } from "@/shared/components/data-table/row-actions";
+import { SortDialog } from "@/shared/components/data-table/sort-dialog";
+import { sortFilterPillLabel } from "@/shared/components/data-table/sort-filter-label";
+import { DataTableEmpty, DataTableError } from "@/shared/components/data-table/states";
+import { DataTableToolbar } from "@/shared/components/data-table/toolbar";
+import { useTableColumns } from "@/shared/components/data-table/use-table-columns";
+import { ListPage } from "@/shared/components/layout/list-page";
+import { PageHeader } from "@/shared/components/layout/page-header";
+import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { KpiCard } from "@/modules/dashboard/components/kpi-card";
+import { useListView } from "@/shared/hooks/use-list-view";
+import { useReportExport } from "@/shared/hooks/use-report-export";
+import { useTableParams } from "@/shared/hooks/use-table-params";
+import { formatDate, formatDateTime, initials, titleCase } from "@/shared/lib/format";
+
+const SORT_FIELDS = [
+  { value: "created_at", label: "Timestamp" },
+  { value: "action", label: "Action" },
+  { value: "module", label: "Module" },
+] as const;
+
+const ALL = "all";
+
+type ExtraFilters = {
+  action: string;
+  userId: string;
+  dateFrom: string;
+  dateTo: string;
+};
+
+const EMPTY_EXTRA: ExtraFilters = {
+  action: ALL,
+  userId: ALL,
+  dateFrom: "",
+  dateTo: "",
+};
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
+}
+
+function startOfDayIso(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+}
+
+function endOfDayIso(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
+function shortId(value: string): string {
+  return value.slice(0, 8);
+}
+
+type ActionBadgeVariant = "success" | "info" | "destructive" | "muted" | "default" | "warning";
+
+function actionVariant(action: string): ActionBadgeVariant {
+  switch (action.toUpperCase()) {
+    case "CREATE":
+    case "APPROVE":
+    case "POST":
+      return "success";
+    case "UPDATE":
+      return "info";
+    case "DELETE":
+      return "destructive";
+    case "REJECT":
+    case "CANCEL":
+      return "warning";
+    case "LOGIN":
+    case "LOGOUT":
+      return "default";
+    default:
+      return "muted";
+  }
+}
+
+function statusVariant(status: string): "success" | "destructive" | "muted" {
+  switch (status.toUpperCase()) {
+    case "SUCCESS":
+      return "success";
+    case "FAILED":
+      return "destructive";
+    default:
+      return "muted";
+  }
+}
+
+export function AuditLogsScreen() {
+  const { canRead } = useCrudPermissions(auditLogPermissions);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [csvPending, setCsvPending] = useState(false);
+  const { page, page_size, search, sort_by, sort_order, filters, setParams, setPage } =
+    useTableParams();
+  const showActions = hasRowActions(canRead);
+  const moduleFilter = filters.module ?? ALL;
+  const extraFilters: ExtraFilters = {
+    action: filters.action ?? ALL,
+    userId: filters.user_id ?? ALL,
+    dateFrom: filters.date_from ?? "",
+    dateTo: filters.date_to ?? "",
+  };
+  const [draftExtra, setDraftExtra] = useState<ExtraFilters>(EMPTY_EXTRA);
+
+  const extraCount = [
+    extraFilters.action !== ALL,
+    extraFilters.userId !== ALL,
+    Boolean(extraFilters.dateFrom),
+    Boolean(extraFilters.dateTo),
+  ].filter(Boolean).length;
+
+  const filterParams: AuditLogFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      module: moduleFilter === ALL ? undefined : moduleFilter,
+      action: extraFilters.action === ALL ? undefined : extraFilters.action,
+      user_id: extraFilters.userId === ALL ? undefined : extraFilters.userId,
+      date_from: extraFilters.dateFrom ? startOfDayIso(extraFilters.dateFrom) : undefined,
+      date_to: extraFilters.dateTo ? endOfDayIso(extraFilters.dateTo) : undefined,
+    }),
+    [
+      search,
+      moduleFilter,
+      extraFilters.action,
+      extraFilters.userId,
+      extraFilters.dateFrom,
+      extraFilters.dateTo,
+    ],
+  );
+
+  const sortBy = parseAuditLogSortBy(sort_by);
+
+  const listParams: AuditLogListParams = useMemo(
+    () => ({
+      page,
+      page_size,
+      sort_by: sortBy,
+      sort_order,
+      ...filterParams,
+    }),
+    [page, page_size, sortBy, sort_order, filterParams],
+  );
+
+  const logsQuery = useAuditLogs(listParams);
+  const summaryQuery = useAuditLogSummary(filterParams);
+  const usersQuery = useAllUsers();
+
+  const rows = logsQuery.data?.data ?? [];
+  const meta = logsQuery.data?.meta;
+  const users = usersQuery.data ?? [];
+
+  const hasActiveFilters = Boolean(search || moduleFilter !== ALL || extraCount > 0 || sortBy);
+
+  const moduleOptions = useMemo(
+    () =>
+      uniqueSorted([
+        AUDIT_MODULE_IDENTITY,
+        ...(summaryQuery.data?.modules ?? []),
+        ...(logsQuery.data?.data ?? []).map((row) => row.module),
+        ...(moduleFilter !== ALL ? [moduleFilter] : []),
+      ]),
+    [summaryQuery.data?.modules, logsQuery.data?.data, moduleFilter],
+  );
+
+  const actionOptions = useMemo(
+    () =>
+      uniqueSorted([
+        ...AUDIT_ACTIONS,
+        ...(logsQuery.data?.data ?? []).map((row) => row.action),
+        ...(extraFilters.action !== ALL ? [extraFilters.action] : []),
+        ...(draftExtra.action !== ALL ? [draftExtra.action] : []),
+      ]),
+    [logsQuery.data?.data, extraFilters.action, draftExtra.action],
+  );
+
+  const columnDefs = useMemo((): Array<DataTableColumn<AuditLog>> => {
+    return [
+      {
+        id: "log_id",
+        header: "Log ID",
+        className: "text-muted-foreground font-mono text-xs",
+        cell: (log) => (
+          <span title={log.id}>
+            <ViewTrigger
+              enabled={canRead}
+              onView={() => setViewingId(log.id)}
+              className="cursor-pointer font-mono hover:underline"
+            >
+              {shortId(log.id)}
+            </ViewTrigger>
+          </span>
+        ),
+      },
+      {
+        id: "action",
+        header: "Action",
+        sortableField: "action",
+        cell: (log) => <Badge variant={actionVariant(log.action)}>{titleCase(log.action)}</Badge>,
+      },
+      {
+        id: "timestamp",
+        header: "Timestamp",
+        sortableField: "created_at",
+        className: "text-muted-foreground text-xs",
+        cell: (log) => formatDateTime(log.timestamp),
+      },
+      {
+        id: "user",
+        header: "User",
+        cell: (log) => {
+          const userName = log.user?.name ?? "Unknown";
+          return (
+            <div className="flex items-center gap-1.5">
+              <Avatar className="size-6">
+                <AvatarFallback className="text-[9px]">{initials(userName)}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm">{userName}</span>
+            </div>
+          );
+        },
+      },
+      {
+        id: "resource",
+        header: "Resource",
+        className: "text-sm",
+        cell: (log) => (
+          <ViewTrigger enabled={canRead} onView={() => setViewingId(log.id)}>
+            {titleCase(log.entity_type)}
+          </ViewTrigger>
+        ),
+      },
+      {
+        id: "resource_record",
+        header: "Record",
+        className: "text-sm",
+        cell: (log) => {
+          const label = log.entity_label?.trim();
+          return (
+            <span title={log.entity_id ?? undefined}>
+              {label || (log.entity_id ? shortId(log.entity_id) : "—")}
+            </span>
+          );
+        },
+      },
+      {
+        id: "module",
+        header: "Module",
+        sortableField: "module",
+        cell: (log) => <Badge variant="muted">{titleCase(log.module)}</Badge>,
+      },
+      {
+        id: "ip_address",
+        header: "IP Address",
+        className: "text-muted-foreground font-mono text-xs",
+        cell: (log) => log.ip_address ?? "—",
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: (log) => <Badge variant={statusVariant(log.status)}>{titleCase(log.status)}</Badge>,
+      },
+      ...actionsColumn<AuditLog>(showActions, (log) => (
+        <DataTableRowActions
+          entityName={`audit log ${shortId(log.id)}`}
+          onView={canRead ? () => setViewingId(log.id) : undefined}
+        />
+      )),
+    ];
+  }, [canRead, showActions]);
+
+  const { columns, columnsDialog, colSpan } = useTableColumns("identity.audit_logs", columnDefs);
+  const listView = useListView("identity.audit_logs");
+
+  const buildExportParams = useCallback(
+    () => ({
+      ...filterParams,
+      sort_by: sortBy,
+      sort_order,
+    }),
+    [filterParams, sortBy, sort_order],
+  );
+
+  const { exportDialog } = useReportExport({
+    tableKey: "identity.audit_logs",
+    columnDefs,
+    exportPath: "/audit-logs/export/download",
+    buildParams: buildExportParams,
+    filteredRowCount: meta?.total,
+    enabled: canRead,
+  });
+
+  async function exportCsv() {
+    setCsvPending(true);
+    try {
+      await auditLogsApi.exportCsv(filterParams);
+      toast.success("Audit log export downloaded");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setCsvPending(false);
+    }
+  }
+
+  function extraToUrlPatch(extra: ExtraFilters): Record<string, string | null> {
+    return {
+      action: extra.action === ALL ? null : extra.action,
+      user_id: extra.userId === ALL ? null : extra.userId,
+      date_from: extra.dateFrom || null,
+      date_to: extra.dateTo || null,
+    };
+  }
+
+  function clearFilters() {
+    setDraftExtra(EMPTY_EXTRA);
+    setParams({
+      search: null,
+      sort_by: null,
+      sort_order: null,
+      filters: {
+        module: null,
+        ...extraToUrlPatch(EMPTY_EXTRA),
+      },
+    });
+  }
+
+  function patchExtra(partial: Partial<ExtraFilters>) {
+    setParams({ filters: extraToUrlPatch({ ...extraFilters, ...partial }) });
+  }
+
+  const filterPills = useMemo(() => {
+    const pills: ActiveFilterPill[] = [];
+    const trimmedSearch = search?.trim();
+    if (trimmedSearch) {
+      pills.push({
+        id: "search",
+        label: `Search: ${trimmedSearch}`,
+        onRemove: () => setParams({ search: null }),
+      });
+    }
+    if (moduleFilter !== ALL) {
+      pills.push({
+        id: "module",
+        label: `Module: ${titleCase(moduleFilter)}`,
+        onRemove: () => setParams({ filters: { module: null } }),
+      });
+    }
+    if (extraFilters.action !== ALL) {
+      pills.push({
+        id: "action",
+        label: `Action: ${titleCase(extraFilters.action)}`,
+        onRemove: () => patchExtra({ action: ALL }),
+      });
+    }
+    if (extraFilters.userId !== ALL) {
+      const user = users.find((item) => item.id === extraFilters.userId);
+      pills.push({
+        id: "user",
+        label: `User: ${user?.name ?? extraFilters.userId}`,
+        onRemove: () => patchExtra({ userId: ALL }),
+      });
+    }
+    if (extraFilters.dateFrom) {
+      pills.push({
+        id: "date_from",
+        label: `From: ${formatDate(extraFilters.dateFrom)}`,
+        onRemove: () => patchExtra({ dateFrom: "" }),
+      });
+    }
+    if (extraFilters.dateTo) {
+      pills.push({
+        id: "date_to",
+        label: `To: ${formatDate(extraFilters.dateTo)}`,
+        onRemove: () => patchExtra({ dateTo: "" }),
+      });
+    }
+    const sortLabel = sortFilterPillLabel(sortBy, sort_order, SORT_FIELDS);
+    if (sortLabel) {
+      pills.push({
+        id: "sort",
+        label: sortLabel,
+        onRemove: () => setParams({ sort_by: null, sort_order: null }),
+      });
+    }
+    return pills;
+  }, [
+    extraFilters,
+    moduleFilter,
+    search,
+    setParams,
+    sortBy,
+    sort_order,
+    users,
+  ]);
+
+  return (
+    <ListPage>
+      <PageHeader
+        title="Audit Logs"
+        subtitle="System activity and security trail — all user actions recorded"
+        actions={
+          canRead ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void exportCsv()}
+              disabled={csvPending}
+            >
+              {csvPending ? null : <Download className="size-3.5" />}
+              Export CSV
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          label="Total Events"
+          icon={ClipboardList}
+          value={summaryQuery.data?.total_events}
+          isLoading={summaryQuery.isLoading}
+        />
+        <KpiCard
+          label="Unique Users"
+          icon={Users}
+          value={summaryQuery.data?.unique_users}
+          isLoading={summaryQuery.isLoading}
+        />
+        <KpiCard
+          label="Failed Attempts"
+          icon={AlertCircle}
+          value={summaryQuery.data?.failed_attempts}
+          isLoading={summaryQuery.isLoading}
+        />
+        <KpiCard
+          label="Admin Actions"
+          icon={Shield}
+          value={summaryQuery.data?.admin_actions}
+          isLoading={summaryQuery.isLoading}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+      <DataTableToolbar>
+        <ListSearch
+          value={search ?? ""}
+          onChange={(value) => setParams({ search: value.trim() || null })}
+          placeholder="Search user, module, action, IP…"
+        />
+        <FilterSelect
+          label="Module"
+          className="w-full sm:w-36 md:w-40"
+          placeholder="Module"
+          value={moduleFilter}
+          onValueChange={(value) =>
+            setParams({ filters: { module: value === ALL ? null : value } })
+          }
+          options={[
+            { value: ALL, label: "All Modules" },
+            ...moduleOptions.map((module) => ({ value: module, label: titleCase(module) })),
+          ]}
+        />
+        <MoreFiltersDialog
+          extraCount={extraCount}
+          draftCount={
+            [
+              draftExtra.action !== ALL,
+              draftExtra.userId !== ALL,
+              Boolean(draftExtra.dateFrom),
+              Boolean(draftExtra.dateTo),
+            ].filter(Boolean).length
+          }
+          description="Filter by action, user, and date range."
+          onOpen={() => setDraftExtra(extraFilters)}
+          onApply={() => setParams({ filters: extraToUrlPatch(draftExtra) })}
+          onClearDraft={() => setDraftExtra(EMPTY_EXTRA)}
+        >
+          <FilterField label="Action" htmlFor="audit-filter-action">
+            <FilterSelect
+              id="audit-filter-action"
+              className="w-full"
+              placeholder="All Actions"
+              value={draftExtra.action}
+              onValueChange={(value) => setDraftExtra((current) => ({ ...current, action: value }))}
+              options={[
+                { value: ALL, label: "All Actions" },
+                ...actionOptions.map((action) => ({ value: action, label: titleCase(action) })),
+              ]}
+            />
+          </FilterField>
+          <FilterField label="User" htmlFor="audit-filter-user">
+            <FilterSelect
+              id="audit-filter-user"
+              className="w-full"
+              placeholder="All Users"
+              value={draftExtra.userId}
+              onValueChange={(value) =>
+                setDraftExtra((current) => ({ ...current, userId: value }))
+              }
+              options={[
+                { value: ALL, label: "All Users" },
+                  ...users.map((user) => ({ value: user.id, label: user.name })),
+                ]}
+              />
+            </FilterField>
+          <DateRangeFilter
+            fromId="audit-filter-from"
+            toId="audit-filter-to"
+            from={draftExtra.dateFrom}
+            to={draftExtra.dateTo}
+            onFromChange={(value) => setDraftExtra((current) => ({ ...current, dateFrom: value }))}
+            onToChange={(value) => setDraftExtra((current) => ({ ...current, dateTo: value }))}
+          />
+        </MoreFiltersDialog>
+        <SortDialog
+          fields={[...SORT_FIELDS]}
+          sortBy={sortBy}
+          sortOrder={sort_order}
+          onApply={setParams}
+        />
+        <ListViewToolbarControls
+          listView={listView}
+          columnsDialog={columnsDialog}
+          exportDialog={exportDialog}
+          mobileFullRow
+        />
+      </DataTableToolbar>
+      <ActiveFilterPills
+        pills={filterPills}
+        onClearAll={hasActiveFilters ? clearFilters : undefined}
+      />
+      </div>
+      <ListView
+        columns={columns}
+        colSpan={colSpan}
+        rows={rows}
+        getRowKey={(log) => log.id}
+        getRowLabel={(log) => shortId(log.id)}
+        onRowClick={canRead ? (log) => setViewingId(log.id) : undefined}
+        isLoading={logsQuery.isLoading}
+        isError={logsQuery.isError}
+        error={
+          <DataTableError
+            message={getErrorMessage(logsQuery.error)}
+            onRetry={() => logsQuery.refetch()}
+          />
+        }
+        empty={
+          <DataTableEmpty
+            title="No audit logs"
+            message={
+              hasActiveFilters
+                ? "Try a different search or filter."
+                : "No activity has been recorded yet."
+            }
+          />
+        }
+        sort={{ sortBy: sortBy, sortOrder: sort_order, onSort: setParams }}
+        columnTotals={logsQuery.data?.meta?.column_totals ?? null}
+        listView={listView}
+        footer={meta ? <DataTablePagination meta={meta} onPageChange={setPage} /> : null}
+      />
+      <AuditLogDetailSheet
+        logId={viewingId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingId(null);
+          }
+        }}
+      />
+    </ListPage>
+  );
+}
+
+function ViewTrigger({
+  enabled,
+  onView,
+  children,
+  className,
+}: {
+  enabled: boolean;
+  onView: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  if (!enabled) {
+    return children;
+  }
+  return (
+    <button
+      type="button"
+      className={className ?? "cursor-pointer hover:underline"}
+      onClick={onView}
+    >
+      {children}
+    </button>
+  );
+}

@@ -1,48 +1,20 @@
-# Plumbit ERP front-end
+# Aagman ERP front-end
 
-Next.js 16 App Router client for the Plumbit ERP API.
+Next.js App Router client for the Aagman ERP API: administration (users, roles, permissions, branches, departments, warehouses, organization settings, audit logs), company master, and inventory (units, materials, daily stock in/out).
 
-## Requirements
-
-- Node.js 20.9+
-
-## Setup
+## Development
 
 ```bash
-cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Required variables are documented in `.env.example`. Server-only values never use the `NEXT_PUBLIC_` prefix.
+Set `NEXT_PUBLIC_API_BASE_URL` to the backend API origin (see `.env.example` if present).
 
-## Scripts
+## Permissions catalog
 
-```bash
-npm run dev          # Next.js dev server (Turbopack)
-npm run build        # Production build
-npm run start        # Production server
-npm run typecheck    # TypeScript
-npm run lint         # ESLint
-npm run format       # Prettier
-npm run test:e2e     # Playwright auth flows (starts a mock API)
-```
-
-First-time e2e setup:
+After changing backend permission seeds, update `src/shared/lib/permissions-catalog.json` and run:
 
 ```bash
-npx playwright install chromium
+npm run generate:permissions
 ```
-
-## Adding a documentation page
-
-In-app user documentation lives under `src/content/docs/` as MDX files, with metadata in `src/config/docs-catalog.ts`.
-
-1. Add a page entry to the appropriate category in `docs-catalog.ts` (`slug`, `title`, `description`, optional `keywords`, `related`, `appHrefs`).
-2. Create `src/content/docs/<category>/<slug>.mdx` using MDX components such as `<Callout>`, `<Steps>`, `<Prerequisites>`, `<ImpactTable>`, `<AppLink>`, and `<DocLink>`.
-3. Regenerate loaders: `node scripts/generate-docs-loaders.mjs`
-4. Run tests: `npm test` (validates catalog ↔ file ↔ loader parity)
-
-Optional: `node scripts/generate-docs-mdx.mjs` scaffolds new pages; `node scripts/enhance-docs-content.mjs` updates key workflow pages.
-
-Documentation routes are under `/docs` and are visible to all authenticated users (no permission gate).

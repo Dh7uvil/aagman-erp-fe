@@ -1,0 +1,111 @@
+import { z } from "zod";
+
+import { DEFAULT_PAGE_SIZE } from "@/config/constants";
+
+export const PaginationMetaSchema = z.object({
+  page: z.coerce.number().int(),
+  page_size: z.coerce.number().int(),
+  total: z.coerce.number().int(),
+  total_pages: z.coerce.number().int(),
+});
+
+export type PaginationMeta = z.infer<typeof PaginationMetaSchema>;
+
+export type ListMeta = PaginationMeta & {
+  column_totals?: Record<string, string>;
+};
+
+export type ListResponse<T> = {
+  data: T;
+  meta: ListMeta;
+};
+
+export function parseListMeta(meta: unknown, itemCount: number): ListMeta {
+  const parsed = PaginationMetaSchema.safeParse(meta);
+  const column_totals =
+    meta && typeof meta === "object" && "column_totals" in meta
+      ? (meta as { column_totals?: Record<string, string> }).column_totals
+      : undefined;
+  if (parsed.success) {
+    return { ...parsed.data, column_totals };
+  }
+  return {
+    page: 1,
+    page_size: DEFAULT_PAGE_SIZE,
+    total: itemCount,
+    total_pages: itemCount > 0 ? 1 : 0,
+    column_totals,
+  };
+}
+
+export const ApiErrorBodySchema = z.object({
+  code: z.string(),
+  message: z.string().optional(),
+  details: z.unknown().optional(),
+});
+
+export type ApiErrorBody = z.infer<typeof ApiErrorBodySchema>;
+
+export const EnvelopeSchema = z.object({
+  success: z.boolean(),
+  data: z.unknown().optional(),
+  message: z.string().nullable().optional(),
+  meta: z.unknown().optional(),
+  error: ApiErrorBodySchema.optional(),
+});
+
+export type Envelope = z.infer<typeof EnvelopeSchema>;
+
+export const SuccessEnvelopeSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.unknown().optional(),
+  message: z.string().nullable().optional(),
+  meta: z.unknown().optional(),
+});
+
+export const ErrorEnvelopeSchema = z.object({
+  success: z.boolean().optional(),
+  error: ApiErrorBodySchema,
+});
+
+export const FastApiValidationSchema = z.object({
+  detail: z.array(
+    z.object({
+      loc: z.array(z.union([z.string(), z.number()])),
+      msg: z.string(),
+      type: z.string().optional(),
+    }),
+  ),
+});
+
+export type UnwrappedResponse<T> = {
+  data: T;
+  meta?: unknown;
+  message?: string;
+};
+
+export function parseEnvelope(payload: unknown): Envelope {
+  const parsed = EnvelopeSchema.safeParse(payload);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const fastApi = FastApiValidationSchema.safeParse(payload);
+  if (fastApi.success) {
+    return {
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Validation failed",
+        details: fastApi.data.detail,
+      },
+    };
+  }
+
+  return {
+    success: false,
+    error: {
+      code: "INTERNAL_ERROR",
+    },
+  };
+}
